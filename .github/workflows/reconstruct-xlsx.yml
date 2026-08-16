@@ -1,0 +1,38 @@
+name: Reconstruct XLSX bundle
+
+on:
+  push:
+    paths:
+      - ".upload_parts/xlsx_bundle.part*"
+      - ".github/workflows/reconstruct-xlsx.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  reconstruct:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Reconstruct and validate bundle
+        run: |
+          cat .upload_parts/xlsx_bundle.part* > xlsx_bundle.b64
+          base64 -d xlsx_bundle.b64 > xlsx_bundle.zip
+          unzip -t xlsx_bundle.zip
+          unzip -o xlsx_bundle.zip
+          rm -f xlsx_bundle.b64 xlsx_bundle.zip
+          rm -rf .upload_parts .xlsx_stage
+
+      - name: Commit reconstructed files
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git commit -m "Add research spreadsheets"
+          git push
