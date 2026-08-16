@@ -1,0 +1,40 @@
+{
+  "period": {
+    "start": "2015-01-01",
+    "end": "2026-08-14"
+  },
+  "datasets": {
+    "oni": {
+      "rows": 138,
+      "provider": "NOAA CPC"
+    },
+    "precipitation": {
+      "rows": 25464,
+      "provider": "NASA POWER",
+      "points": 6
+    },
+    "P": {
+      "rows": 2823,
+      "provider": "Tushare contract + dominant mapping",
+      "quality": {
+        "rows": 2823,
+        "invalid_dates": 0,
+        "duplicate_dates": 0,
+        "missing_price": 0,
+        "nonpositive_price": 0
+      }
+    },
+    "SR": {
+      "rows": 2823,
+      "provider": "Tushare contract + dominant mapping",
+      "quality": {
+        "rows": 2823,
+        "invalid_dates": 0,
+        "duplicate_dates": 0,
+        "missing_price": 0,
+        "nonpositive_price": 0
+      }
+    }
+  },
+  "warnings": []
+}
