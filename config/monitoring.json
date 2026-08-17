@@ -1,0 +1,21 @@
+{
+  "freshness_days": {
+    "futures": 4,
+    "precipitation": 7,
+    "oni": 95,
+    "fundamentals": 45
+  },
+  "dry_day_threshold_mm": 1.0,
+  "rainfall_warning_pct": -0.10,
+  "trend_confirmation_days": 20,
+  "required_fundamentals": [
+    {"dataset": "mpob_production", "label": "MPOB 产量", "symbol": "P", "frequency": "monthly"},
+    {"dataset": "mpob_inventory", "label": "MPOB 库存", "symbol": "P", "frequency": "monthly"},
+    {"dataset": "mpob_exports", "label": "MPOB 出口", "symbol": "P", "frequency": "monthly"},
+    {"dataset": "ffb_yield", "label": "FFB 单产", "symbol": "P", "frequency": "monthly"},
+    {"dataset": "india_sugar_output", "label": "印度糖产量/压榨", "symbol": "SR", "frequency": "monthly"},
+    {"dataset": "unica_crush", "label": "UNICA 甘蔗压榨", "symbol": "SR", "frequency": "semimonthly"},
+    {"dataset": "unica_sugar_mix", "label": "UNICA 制糖比", "symbol": "SR", "frequency": "semimonthly"},
+    {"dataset": "global_sugar_stock_use", "label": "全球糖库销比", "symbol": "SR", "frequency": "quarterly"}
+  ]
+}

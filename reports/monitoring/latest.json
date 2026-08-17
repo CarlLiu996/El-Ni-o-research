@@ -1,0 +1,333 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-08-17T12:31:47.576198+00:00",
+  "as_of": "2026-08-17",
+  "data_as_of": "2026-08-14",
+  "research_gate": {
+    "climate": "CONFIRMED",
+    "fundamentals": "INCOMPLETE",
+    "market_cta": "NOT_CONFIRMED",
+    "overall": "KEEP_MONITORING"
+  },
+  "market_confirmation": {
+    "status": "NOT_CONFIRMED",
+    "symbols_confirmed": 0,
+    "symbols_required": 2
+  },
+  "layers": {
+    "climate": {
+      "oni": {
+        "date": "2026-06-01",
+        "staleness_days": 77,
+        "oni": 1.39,
+        "change_3m": 1.2799999999999998,
+        "phase": "El Nino",
+        "strengthening": true
+      },
+      "rainfall": {
+        "date": "2026-08-14",
+        "staleness_days": 3,
+        "regions": {
+          "india_sugar": {
+            "rain_30d_mm": 294.78666666666675,
+            "historical_median_30d_mm": 185.16666666666669,
+            "anomaly_pct": 0.5920072007200723,
+            "dry_days_30d": 0,
+            "consecutive_dry_days": 1
+          },
+          "malaysia_palm": {
+            "rain_30d_mm": 233.92666666666668,
+            "historical_median_30d_mm": 242.25333333333333,
+            "anomaly_pct": -0.034371732071110106,
+            "dry_days_30d": 4,
+            "consecutive_dry_days": 5
+          }
+        },
+        "minimum_latest_points": 0,
+        "missing_point_observations": 6
+      }
+    },
+    "fundamentals": {
+      "status": "INCOMPLETE",
+      "available": 0,
+      "required": 8,
+      "items": [
+        {
+          "dataset": "mpob_production",
+          "label": "MPOB 产量",
+          "symbol": "P",
+          "frequency": "monthly",
+          "path": "data/processed/fundamentals/mpob_production.csv",
+          "status": "MISSING",
+          "last_date": null,
+          "staleness_days": null
+        },
+        {
+          "dataset": "mpob_inventory",
+          "label": "MPOB 库存",
+          "symbol": "P",
+          "frequency": "monthly",
+          "path": "data/processed/fundamentals/mpob_inventory.csv",
+          "status": "MISSING",
+          "last_date": null,
+          "staleness_days": null
+        },
+        {
+          "dataset": "mpob_exports",
+          "label": "MPOB 出口",
+          "symbol": "P",
+          "frequency": "monthly",
+          "path": "data/processed/fundamentals/mpob_exports.csv",
+          "status": "MISSING",
+          "last_date": null,
+          "staleness_days": null
+        },
+        {
+          "dataset": "ffb_yield",
+          "label": "FFB 单产",
+          "symbol": "P",
+          "frequency": "monthly",
+          "path": "data/processed/fundamentals/ffb_yield.csv",
+          "status": "MISSING",
+          "last_date": null,
+          "staleness_days": null
+        },
+        {
+          "dataset": "india_sugar_output",
+          "label": "印度糖产量/压榨",
+          "symbol": "SR",
+          "frequency": "monthly",
+          "path": "data/processed/fundamentals/india_sugar_output.csv",
+          "status": "MISSING",
+          "last_date": null,
+          "staleness_days": null
+        },
+        {
+          "dataset": "unica_crush",
+          "label": "UNICA 甘蔗压榨",
+          "symbol": "SR",
+          "frequency": "semimonthly",
+          "path": "data/processed/fundamentals/unica_crush.csv",
+          "status": "MISSING",
+          "last_date": null,
+          "staleness_days": null
+        },
+        {
+          "dataset": "unica_sugar_mix",
+          "label": "UNICA 制糖比",
+          "symbol": "SR",
+          "frequency": "semimonthly",
+          "path": "data/processed/fundamentals/unica_sugar_mix.csv",
+          "status": "MISSING",
+          "last_date": null,
+          "staleness_days": null
+        },
+        {
+          "dataset": "global_sugar_stock_use",
+          "label": "全球糖库销比",
+          "symbol": "SR",
+          "frequency": "quarterly",
+          "path": "data/processed/fundamentals/global_sugar_stock_use.csv",
+          "status": "MISSING",
+          "last_date": null,
+          "staleness_days": null
+        }
+      ]
+    },
+    "market": {
+      "P": {
+        "date": "2026-08-14",
+        "staleness_days": 3,
+        "contract": "P2701.DCE",
+        "close": 9838.0,
+        "realized_vol_20d": 0.19469028406219685,
+        "max_price_drawdown_60d": -0.06778619701003485,
+        "quality": {
+          "rows": 2823,
+          "invalid_dates": 0,
+          "duplicate_dates": 0,
+          "missing_price": 0,
+          "nonpositive_price": 0
+        },
+        "price_return_5d": 0.051517742625053486,
+        "price_return_20d": 0.06564124783362213,
+        "price_return_60d": 0.03362050851019127,
+        "price_return_120d": 0.12024595764062851,
+        "price_return_250d": 0.11314777098891149,
+        "term_structure": {
+          "date": "2026-08-14",
+          "status": "OK",
+          "front_contract": "P2609.DCE",
+          "second_contract": "P2610.DCE",
+          "front_close": 9499.0,
+          "second_close": 9549.0,
+          "front_second_spread_pct": -0.005236150382239013,
+          "curve": "contango"
+        }
+      },
+      "SR": {
+        "date": "2026-08-14",
+        "staleness_days": 3,
+        "contract": "SR2701.ZCE",
+        "close": 5309.0,
+        "realized_vol_20d": 0.1326697903865588,
+        "max_price_drawdown_60d": -0.07216305545354385,
+        "quality": {
+          "rows": 2823,
+          "invalid_dates": 0,
+          "duplicate_dates": 0,
+          "missing_price": 0,
+          "nonpositive_price": 0
+        },
+        "price_return_5d": 0.030273627013390314,
+        "price_return_20d": 0.03610460577673691,
+        "price_return_60d": -0.010068991236248381,
+        "price_return_120d": 0.010468214693566846,
+        "price_return_250d": -0.071528506470794,
+        "term_structure": {
+          "date": "2026-08-14",
+          "status": "OK",
+          "front_contract": "SR2609.ZCE",
+          "second_contract": "SR2611.ZCE",
+          "front_close": 5167.0,
+          "second_close": 5181.0,
+          "front_second_spread_pct": -0.00270218104613007,
+          "curve": "contango"
+        }
+      }
+    },
+    "cta": {
+      "P": {
+        "fast": {
+          "date": "2026-08-14",
+          "target_position": 0.5136363146301307,
+          "position": 0.5172676792493714,
+          "realized_vol": 0.1946902840621967,
+          "equity": 0.9553863664786344,
+          "net_return_5d": 0.007715990089685265,
+          "net_return_20d": -0.025713037236025582,
+          "net_return_60d": -0.03424085417319922,
+          "max_drawdown_60d": -0.053943966431548085,
+          "position_persistence_days": 2,
+          "turnover_20d": 3.353136558200365
+        },
+        "medium": {
+          "date": "2026-08-14",
+          "target_position": 0.5807882460277328,
+          "position": 0.5668332765291124,
+          "realized_vol": 0.1721797930380722,
+          "equity": 0.8517686579026789,
+          "net_return_5d": 0.008471409703478816,
+          "net_return_20d": 0.009988029924066444,
+          "net_return_60d": 0.0039050445824995172,
+          "max_drawdown_60d": -0.01701757687681804,
+          "position_persistence_days": 2,
+          "turnover_20d": 1.7163284676684087
+        },
+        "slow": {
+          "date": "2026-08-14",
+          "target_position": 0.4840454363561638,
+          "position": 0.4825227497516159,
+          "realized_vol": 0.2065921760419601,
+          "equity": 0.8216200324783093,
+          "net_return_5d": 0.024898237771840304,
+          "net_return_20d": 0.033361219178018375,
+          "net_return_60d": 0.0184572461255883,
+          "max_drawdown_60d": -0.03390209915873321,
+          "position_persistence_days": 9,
+          "turnover_20d": 1.0102884425385315
+        }
+      },
+      "SR": {
+        "fast": {
+          "date": "2026-08-14",
+          "target_position": 0.0,
+          "position": -1.1778832451404453,
+          "realized_vol": 0.1326697903865589,
+          "equity": 0.8779909332183485,
+          "net_return_5d": -0.036680272314420614,
+          "net_return_20d": -0.04240596552060405,
+          "net_return_60d": -0.017199405377989474,
+          "max_drawdown_60d": -0.05846717284889513,
+          "position_persistence_days": 27,
+          "turnover_20d": 0.7281800360786976
+        },
+        "medium": {
+          "date": "2026-08-14",
+          "target_position": 0.0,
+          "position": -1.1292983134754748,
+          "realized_vol": 0.1079903187947818,
+          "equity": 0.9319123427763708,
+          "net_return_5d": -0.034448380143525914,
+          "net_return_20d": -0.047106241241935964,
+          "net_return_60d": -0.04919574453665532,
+          "max_drawdown_60d": -0.056034924365435224,
+          "position_persistence_days": 15,
+          "turnover_20d": 2.3983940581456182
+        },
+        "slow": {
+          "date": "2026-08-14",
+          "target_position": 0.0,
+          "position": -1.096630347336157,
+          "realized_vol": 0.1009847973004438,
+          "equity": 1.0565095637651192,
+          "net_return_5d": -0.03346706444372516,
+          "net_return_20d": -0.045743429416969184,
+          "net_return_60d": -0.03511397252417969,
+          "max_drawdown_60d": -0.05430584294044871,
+          "position_persistence_days": 15,
+          "turnover_20d": 2.276326231926992
+        }
+      }
+    }
+  },
+  "alerts": [
+    {
+      "severity": "critical",
+      "code": "FUND_MPOB_PRODUCTION",
+      "message": "基本面指标缺失或过期：MPOB 产量"
+    },
+    {
+      "severity": "critical",
+      "code": "FUND_MPOB_INVENTORY",
+      "message": "基本面指标缺失或过期：MPOB 库存"
+    },
+    {
+      "severity": "critical",
+      "code": "FUND_MPOB_EXPORTS",
+      "message": "基本面指标缺失或过期：MPOB 出口"
+    },
+    {
+      "severity": "critical",
+      "code": "FUND_FFB_YIELD",
+      "message": "基本面指标缺失或过期：FFB 单产"
+    },
+    {
+      "severity": "critical",
+      "code": "FUND_INDIA_SUGAR_OUTPUT",
+      "message": "基本面指标缺失或过期：印度糖产量/压榨"
+    },
+    {
+      "severity": "critical",
+      "code": "FUND_UNICA_CRUSH",
+      "message": "基本面指标缺失或过期：UNICA 甘蔗压榨"
+    },
+    {
+      "severity": "critical",
+      "code": "FUND_UNICA_SUGAR_MIX",
+      "message": "基本面指标缺失或过期：UNICA 制糖比"
+    },
+    {
+      "severity": "critical",
+      "code": "FUND_GLOBAL_SUGAR_STOCK_USE",
+      "message": "基本面指标缺失或过期：全球糖库销比"
+    }
+  ],
+  "critical_alerts": 8,
+  "warning_alerts": 0,
+  "scope_gaps": [
+    "境外 BMD FCPO、ICE Sugar No.11、ICE Coffee 长历史尚未接入，1982/83 与 1997/98 事件无法验证",
+    "管理人映射按项目目标延后至尽调数据可用后"
+  ],
+  "changes": null
+}
