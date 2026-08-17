@@ -1,0 +1,12 @@
+{
+  "malaysia_palm": [
+    {"name": "Johor", "latitude": 1.86, "longitude": 103.11},
+    {"name": "Sabah", "latitude": 5.98, "longitude": 116.07},
+    {"name": "Sarawak", "latitude": 1.55, "longitude": 110.36}
+  ],
+  "india_sugar": [
+    {"name": "Maharashtra", "latitude": 19.75, "longitude": 75.71},
+    {"name": "Uttar Pradesh", "latitude": 26.85, "longitude": 80.91},
+    {"name": "Karnataka", "latitude": 15.32, "longitude": 75.71}
+  ]
+}
