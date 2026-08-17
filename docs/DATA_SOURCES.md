@@ -22,6 +22,16 @@
 
 该路径支持审计换月，但仍需在研究阶段明确：换月成交时点、价差处理、涨跌停、滑点、手续费和夜盘时间戳。
 
+## 供给基本面
+
+- MPOB棕榈油产量、库存、出口：Wind EDB `S5022944`、`S5022948`、`S5022955`，底层来源为 Malaysian Palm Oil Board；
+- 马来西亚FFB单产：MPOB BEPI官方月表，页面 `https://bepi.mpob.gov.my/index.php/component/content/article/1241-ffb-yield-crude-palm-oil-yield-of-oil-palm-estates-2026?Itemid=482&catid=339`；
+- 印度糖月度产量：Wind EDB `Z9808072`，底层来源为 ChiniMandi，单位为10万吨；
+- 巴西中南部累计甘蔗压榨与制糖比：Wind EDB `S5201214`、`W5495204`，底层来源为 UNICA；
+- 全球糖期末库存与总消费：Wind EDB `S5010514`、`S5010513`，底层来源为 USDA；库销比由本项目计算为期末库存÷总消费。
+
+结构化文件位于 `data/processed/fundamentals/`。同季节同比用于月度/双周位置判断；UNICA累计压榨每个榨季重置，不能直接用相邻期增速解释；印度糖月度值季节性强，下一步还需增加榨季累计口径。
+
 ## AkShare/Sina（探索性后备）
 
 - 代码：`P0`、`SR0`；

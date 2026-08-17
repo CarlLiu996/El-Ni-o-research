@@ -73,3 +73,31 @@ def test_monitoring_builds_gate_history_and_debrief(tmp_path):
     debrief = write_debrief(snapshot, report_dir)
     assert latest.exists() and history.exists() and debrief.exists()
     assert "基本面=INCOMPLETE" in debrief.read_text(encoding="utf-8")
+
+
+def test_fundamental_freshness_uses_publication_date_and_per_dataset_threshold(tmp_path):
+    from elnino_cta.monitoring import _fundamental_status
+
+    data = tmp_path / "data"
+    fundamentals = data / "fundamentals"
+    fundamentals.mkdir(parents=True)
+    pd.DataFrame({
+        "date": ["2025-12-31"],
+        "value": [0.24],
+        "published_at": ["2026-06-02"],
+    }).to_csv(fundamentals / "global_sugar_stock_use.csv", index=False)
+    config = {
+        "freshness_days": {"fundamentals": 45},
+        "required_fundamentals": [{
+            "dataset": "global_sugar_stock_use",
+            "label": "全球糖库销比",
+            "symbol": "SR",
+            "frequency": "yearly",
+            "max_stale_days": 180,
+        }],
+    }
+    status = _fundamental_status(data, config, pd.Timestamp("2026-08-18"))
+    assert status["status"] == "OK"
+    assert status["items"][0]["last_date"] == "2025-12-31"
+    assert status["items"][0]["last_published_at"] == "2026-06-02"
+    assert status["items"][0]["freshness_basis"] == "published_at"

@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-08-17T12:31:47.576198+00:00",
-  "as_of": "2026-08-17",
+  "generated_at": "2026-08-17T16:52:48.848287+00:00",
+  "as_of": "2026-08-18",
   "data_as_of": "2026-08-14",
   "research_gate": {
     "climate": "CONFIRMED",
@@ -18,7 +18,7 @@
     "climate": {
       "oni": {
         "date": "2026-06-01",
-        "staleness_days": 77,
+        "staleness_days": 78,
         "oni": 1.39,
         "change_3m": 1.2799999999999998,
         "phase": "El Nino",
@@ -26,7 +26,7 @@
       },
       "rainfall": {
         "date": "2026-08-14",
-        "staleness_days": 3,
+        "staleness_days": 4,
         "regions": {
           "india_sugar": {
             "rain_30d_mm": 294.78666666666675,
@@ -49,7 +49,7 @@
     },
     "fundamentals": {
       "status": "INCOMPLETE",
-      "available": 0,
+      "available": 7,
       "required": 8,
       "items": [
         {
@@ -57,87 +57,119 @@
           "label": "MPOB 产量",
           "symbol": "P",
           "frequency": "monthly",
+          "max_stale_days": 60,
           "path": "data/processed/fundamentals/mpob_production.csv",
-          "status": "MISSING",
-          "last_date": null,
-          "staleness_days": null
+          "status": "OK",
+          "last_date": "2026-07-31",
+          "last_published_at": "2026-08-10",
+          "freshness_basis": "published_at",
+          "staleness_days": 8,
+          "rows": 139
         },
         {
           "dataset": "mpob_inventory",
           "label": "MPOB 库存",
           "symbol": "P",
           "frequency": "monthly",
+          "max_stale_days": 60,
           "path": "data/processed/fundamentals/mpob_inventory.csv",
-          "status": "MISSING",
-          "last_date": null,
-          "staleness_days": null
+          "status": "OK",
+          "last_date": "2026-07-31",
+          "last_published_at": "2026-08-10",
+          "freshness_basis": "published_at",
+          "staleness_days": 8,
+          "rows": 139
         },
         {
           "dataset": "mpob_exports",
           "label": "MPOB 出口",
           "symbol": "P",
           "frequency": "monthly",
+          "max_stale_days": 60,
           "path": "data/processed/fundamentals/mpob_exports.csv",
-          "status": "MISSING",
-          "last_date": null,
-          "staleness_days": null
+          "status": "OK",
+          "last_date": "2026-07-31",
+          "last_published_at": "2026-08-10",
+          "freshness_basis": "published_at",
+          "staleness_days": 8,
+          "rows": 139
         },
         {
           "dataset": "ffb_yield",
           "label": "FFB 单产",
           "symbol": "P",
           "frequency": "monthly",
+          "max_stale_days": 60,
           "path": "data/processed/fundamentals/ffb_yield.csv",
-          "status": "MISSING",
-          "last_date": null,
-          "staleness_days": null
+          "status": "OK",
+          "last_date": "2026-07-31",
+          "last_published_at": "2026-08-10",
+          "freshness_basis": "published_at",
+          "staleness_days": 8,
+          "rows": 19
         },
         {
           "dataset": "india_sugar_output",
           "label": "印度糖产量/压榨",
           "symbol": "SR",
           "frequency": "monthly",
+          "max_stale_days": 60,
           "path": "data/processed/fundamentals/india_sugar_output.csv",
-          "status": "MISSING",
-          "last_date": null,
-          "staleness_days": null
+          "status": "OK",
+          "last_date": "2026-07-31",
+          "last_published_at": "2026-07-31",
+          "freshness_basis": "published_at",
+          "staleness_days": 18,
+          "rows": 139
         },
         {
           "dataset": "unica_crush",
           "label": "UNICA 甘蔗压榨",
           "symbol": "SR",
           "frequency": "semimonthly",
+          "max_stale_days": 45,
           "path": "data/processed/fundamentals/unica_crush.csv",
-          "status": "MISSING",
-          "last_date": null,
-          "staleness_days": null
+          "status": "OK",
+          "last_date": "2026-07-01",
+          "last_published_at": "2026-08-07",
+          "freshness_basis": "published_at",
+          "staleness_days": 11,
+          "rows": 277
         },
         {
           "dataset": "unica_sugar_mix",
           "label": "UNICA 制糖比",
           "symbol": "SR",
           "frequency": "semimonthly",
+          "max_stale_days": 45,
           "path": "data/processed/fundamentals/unica_sugar_mix.csv",
-          "status": "MISSING",
-          "last_date": null,
-          "staleness_days": null
+          "status": "STALE",
+          "last_date": "2026-05-31",
+          "last_published_at": "2026-06-25",
+          "freshness_basis": "published_at",
+          "staleness_days": 54,
+          "rows": 50
         },
         {
           "dataset": "global_sugar_stock_use",
           "label": "全球糖库销比",
           "symbol": "SR",
-          "frequency": "quarterly",
+          "frequency": "yearly",
+          "max_stale_days": 180,
           "path": "data/processed/fundamentals/global_sugar_stock_use.csv",
-          "status": "MISSING",
-          "last_date": null,
-          "staleness_days": null
+          "status": "OK",
+          "last_date": "2025-12-31",
+          "last_published_at": "2026-06-02",
+          "freshness_basis": "published_at",
+          "staleness_days": 77,
+          "rows": 11
         }
       ]
     },
     "market": {
       "P": {
         "date": "2026-08-14",
-        "staleness_days": 3,
+        "staleness_days": 4,
         "contract": "P2701.DCE",
         "close": 9838.0,
         "realized_vol_20d": 0.19469028406219685,
@@ -167,7 +199,7 @@
       },
       "SR": {
         "date": "2026-08-14",
-        "staleness_days": 3,
+        "staleness_days": 4,
         "contract": "SR2701.ZCE",
         "close": 5309.0,
         "realized_vol_20d": 0.1326697903865588,
@@ -284,46 +316,11 @@
   "alerts": [
     {
       "severity": "critical",
-      "code": "FUND_MPOB_PRODUCTION",
-      "message": "基本面指标缺失或过期：MPOB 产量"
-    },
-    {
-      "severity": "critical",
-      "code": "FUND_MPOB_INVENTORY",
-      "message": "基本面指标缺失或过期：MPOB 库存"
-    },
-    {
-      "severity": "critical",
-      "code": "FUND_MPOB_EXPORTS",
-      "message": "基本面指标缺失或过期：MPOB 出口"
-    },
-    {
-      "severity": "critical",
-      "code": "FUND_FFB_YIELD",
-      "message": "基本面指标缺失或过期：FFB 单产"
-    },
-    {
-      "severity": "critical",
-      "code": "FUND_INDIA_SUGAR_OUTPUT",
-      "message": "基本面指标缺失或过期：印度糖产量/压榨"
-    },
-    {
-      "severity": "critical",
-      "code": "FUND_UNICA_CRUSH",
-      "message": "基本面指标缺失或过期：UNICA 甘蔗压榨"
-    },
-    {
-      "severity": "critical",
       "code": "FUND_UNICA_SUGAR_MIX",
       "message": "基本面指标缺失或过期：UNICA 制糖比"
-    },
-    {
-      "severity": "critical",
-      "code": "FUND_GLOBAL_SUGAR_STOCK_USE",
-      "message": "基本面指标缺失或过期：全球糖库销比"
     }
   ],
-  "critical_alerts": 8,
+  "critical_alerts": 1,
   "warning_alerts": 0,
   "scope_gaps": [
     "境外 BMD FCPO、ICE Sugar No.11、ICE Coffee 长历史尚未接入，1982/83 与 1997/98 事件无法验证",

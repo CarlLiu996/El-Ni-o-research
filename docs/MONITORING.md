@@ -41,7 +41,7 @@ elnino-cta debrief
 
 ### 基本面层
 
-按 `config/monitoring.json` 检查所需文件是否存在、最后日期和新鲜度。数据契约见 `docs/FUNDAMENTAL_DATA_CONTRACT.md`。
+按 `config/monitoring.json` 检查所需文件是否存在、观测日期、实际发布日期和新鲜度。优先用 `published_at` 计算数据何时可获得，并按月度、双周、年度设置不同阈值；因此年度平衡表不会因观测期末较早而被误判。数据契约见 `docs/FUNDAMENTAL_DATA_CONTRACT.md`。
 
 ### 市场与 CTA 层
 
@@ -58,7 +58,7 @@ elnino-cta debrief
 - Secret：`TUSHARE_TOKEN`
 - Variable：`TUSHARE_HTTP_URL`（仅在使用兼容代理时设置）
 
-工作流会提交更新后的 `data/processed` 和 `reports/monitoring`。第三方基本面数据未接入前会形成明确告警，但不会伪造或用价格替代供给数据。
+工作流会提交更新后的 `data/processed` 和 `reports/monitoring`。Wind 基本面刷新脚本需在已安装并授权 Wind MCP skill 的环境运行；未刷新或超时的数据会形成明确告警，不会用价格替代供给证据。
 
 ## 当前边界
 

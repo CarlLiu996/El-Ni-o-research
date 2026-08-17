@@ -203,7 +203,7 @@ def _rainfall_metrics(frame: pd.DataFrame, as_of: pd.Timestamp, dry_threshold: f
 
 def _fundamental_status(data_dir: Path, config: dict[str, Any], as_of: pd.Timestamp) -> dict[str, Any]:
     items: list[dict[str, Any]] = []
-    max_stale = int(config["freshness_days"]["fundamentals"])
+    default_max_stale = int(config["freshness_days"]["fundamentals"])
     for item in config["required_fundamentals"]:
         path = data_dir / "fundamentals" / f"{item['dataset']}.csv"
         result = dict(item)
@@ -211,13 +211,19 @@ def _fundamental_status(data_dir: Path, config: dict[str, Any], as_of: pd.Timest
         if not path.exists():
             result.update({"status": "MISSING", "last_date": None, "staleness_days": None})
         else:
-            frame = _read_csv(path)
+            frame = _read_csv(path, date_columns=("date", "published_at"))
             last_date = frame["date"].max() if "date" in frame else None
-            stale = _staleness(last_date, as_of)
+            last_published = frame["published_at"].max() if "published_at" in frame else None
+            freshness_date = last_published if last_published is not None and not pd.isna(last_published) else last_date
+            stale = _staleness(freshness_date, as_of)
+            max_stale = int(item.get("max_stale_days", default_max_stale))
             result.update({
                 "status": "STALE" if stale is None or stale > max_stale else "OK",
                 "last_date": _iso(last_date),
+                "last_published_at": _iso(last_published),
+                "freshness_basis": "published_at" if last_published is not None and not pd.isna(last_published) else "date",
                 "staleness_days": stale,
+                "max_stale_days": max_stale,
                 "rows": int(len(frame)),
             })
         items.append(result)

@@ -9,13 +9,13 @@
   "rainfall_warning_pct": -0.10,
   "trend_confirmation_days": 20,
   "required_fundamentals": [
-    {"dataset": "mpob_production", "label": "MPOB 产量", "symbol": "P", "frequency": "monthly"},
-    {"dataset": "mpob_inventory", "label": "MPOB 库存", "symbol": "P", "frequency": "monthly"},
-    {"dataset": "mpob_exports", "label": "MPOB 出口", "symbol": "P", "frequency": "monthly"},
-    {"dataset": "ffb_yield", "label": "FFB 单产", "symbol": "P", "frequency": "monthly"},
-    {"dataset": "india_sugar_output", "label": "印度糖产量/压榨", "symbol": "SR", "frequency": "monthly"},
-    {"dataset": "unica_crush", "label": "UNICA 甘蔗压榨", "symbol": "SR", "frequency": "semimonthly"},
-    {"dataset": "unica_sugar_mix", "label": "UNICA 制糖比", "symbol": "SR", "frequency": "semimonthly"},
-    {"dataset": "global_sugar_stock_use", "label": "全球糖库销比", "symbol": "SR", "frequency": "quarterly"}
+    {"dataset": "mpob_production", "label": "MPOB 产量", "symbol": "P", "frequency": "monthly", "max_stale_days": 60},
+    {"dataset": "mpob_inventory", "label": "MPOB 库存", "symbol": "P", "frequency": "monthly", "max_stale_days": 60},
+    {"dataset": "mpob_exports", "label": "MPOB 出口", "symbol": "P", "frequency": "monthly", "max_stale_days": 60},
+    {"dataset": "ffb_yield", "label": "FFB 单产", "symbol": "P", "frequency": "monthly", "max_stale_days": 60},
+    {"dataset": "india_sugar_output", "label": "印度糖产量/压榨", "symbol": "SR", "frequency": "monthly", "max_stale_days": 60},
+    {"dataset": "unica_crush", "label": "UNICA 甘蔗压榨", "symbol": "SR", "frequency": "semimonthly", "max_stale_days": 45},
+    {"dataset": "unica_sugar_mix", "label": "UNICA 制糖比", "symbol": "SR", "frequency": "semimonthly", "max_stale_days": 45},
+    {"dataset": "global_sugar_stock_use", "label": "全球糖库销比", "symbol": "SR", "frequency": "yearly", "max_stale_days": 180}
   ]
 }

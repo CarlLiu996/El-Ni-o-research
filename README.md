@@ -6,7 +6,7 @@
 
 优先阅读七页精简工作簿：
 
-- `research/厄尔尼诺农产品CTA研究框架_七页精简版_20260817.xlsx`
+- `research/厄尔尼诺农产品CTA研究框架_七页精简版_20260818.xlsx`
 
 工作簿按以下顺序组织：
 
@@ -18,7 +18,7 @@
 6. L4 CTA 环境；
 7. L5 数据审计。
 
-当前结论是 `KEEP_MONITORING`：厄尔尼诺条件已经确认，但 MPOB、FFB、印度糖、UNICA 和全球糖库销比等高频供给数据尚未接入，P/SR 的中慢速 CTA 也未形成跨品种共振。因此，不建议仅因厄尔尼诺主题额外追买 CTA；长期分散配置可维持基准仓位或小额分批进入。
+当前结论是 `KEEP_MONITORING`：厄尔尼诺条件已经确认，8项供给数据均已取得、其中7项通过时效门槛，但供给方向多空相抵——MPOB库存与UNICA累计压榨偏松，印度糖产量与制糖比偏紧，全球糖库销比大体稳定；同时 P/SR 的中慢速 CTA 尚未形成跨品种共振。因此，不建议仅因厄尔尼诺主题额外追买 CTA；长期分散配置可维持基准仓位或小额分批进入。
 
 ## 已实现
 
@@ -31,6 +31,8 @@
 - 气候、供给、市场、CTA 与数据审计五层监控；
 - 每日机器快照、历史序列和 Markdown 复盘；
 - GitHub Actions 工作日自动刷新和复盘。
+- MPOB产量/库存/出口、印度糖、UNICA压榨/制糖比和USDA全球糖库销比的结构化供给数据；
+- 基本面监控按 `published_at` 和各自发布频率做时效门禁，避免把年度观测日期误判为数据过期。
 
 ## 快速开始
 
@@ -40,6 +42,13 @@ elnino-cta refresh --start 2023-01-01 --end 2026-08-14
 elnino-cta monitor --as-of 2026-08-17
 elnino-cta debrief
 python -m pytest -q
+```
+
+已安装 Wind MCP skill 的环境可刷新供给数据（脚本不包含 Token）：
+
+```powershell
+node scripts/fetch_supply_fundamentals.mjs
+elnino-cta monitor --as-of 2026-08-18
 ```
 
 正式研究建议通过环境变量配置 Tushare，不把 Token 或代理地址写入仓库：
