@@ -4,9 +4,19 @@
     {"name": "Sabah", "latitude": 5.98, "longitude": 116.07},
     {"name": "Sarawak", "latitude": 1.55, "longitude": 110.36}
   ],
+  "indonesia_palm": [
+    {"name": "Riau", "latitude": 0.29, "longitude": 101.71},
+    {"name": "North Sumatra", "latitude": 2.12, "longitude": 99.55},
+    {"name": "Central Kalimantan", "latitude": -1.68, "longitude": 113.38}
+  ],
   "india_sugar": [
     {"name": "Maharashtra", "latitude": 19.75, "longitude": 75.71},
     {"name": "Uttar Pradesh", "latitude": 26.85, "longitude": 80.91},
     {"name": "Karnataka", "latitude": 15.32, "longitude": 75.71}
+  ],
+  "brazil_cs_sugar": [
+    {"name": "Sao Paulo", "latitude": -22.19, "longitude": -48.79},
+    {"name": "Goias", "latitude": -16.64, "longitude": -49.31},
+    {"name": "Minas Gerais", "latitude": -18.51, "longitude": -44.56}
   ]
 }

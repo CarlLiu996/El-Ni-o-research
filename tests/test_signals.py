@@ -17,3 +17,10 @@ def test_cost_is_charged_on_turnover():
     result = build_cta_proxy(frame, "medium", cost_bps_per_turnover=5)
     assert (result["cost"] >= 0).all()
     assert result["cost"].sum() > 0
+
+
+def test_default_target_volatility_is_twenty_percent():
+    frame = pd.DataFrame({"date": pd.date_range("2020-01-01", periods=300), "close": range(100, 400)})
+    default = build_cta_proxy(frame, "medium")
+    explicit = build_cta_proxy(frame, "medium", annual_vol_target=0.20)
+    pd.testing.assert_series_equal(default["target_position"], explicit["target_position"])

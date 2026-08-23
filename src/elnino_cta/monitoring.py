@@ -160,9 +160,29 @@ def _oni_metrics(frame: pd.DataFrame, as_of: pd.Timestamp) -> dict[str, Any]:
     }
 
 
+def _monthly_index_metrics(
+    frame: pd.DataFrame, column: str, as_of: pd.Timestamp, positive_label: str, negative_label: str
+) -> dict[str, Any]:
+    ordered = frame.sort_values("date").drop_duplicates("date")
+    latest = ordered.iloc[-1]
+    value = float(latest[column])
+    change_3m = value - float(ordered.iloc[-4][column]) if len(ordered) >= 4 else None
+    state = positive_label if value >= 0.5 else negative_label if value <= -0.5 else "Neutral"
+    return {
+        "date": _iso(latest["date"]),
+        "staleness_days": _staleness(latest["date"], as_of),
+        column: value,
+        "change_3m": _finite(change_3m),
+        "state": state,
+    }
+
+
 def _rainfall_metrics(frame: pd.DataFrame, as_of: pd.Timestamp, dry_threshold: float) -> dict[str, Any]:
     point_counts = frame.groupby(["date", "region"], as_index=False)["precip_mm"].count()
-    daily = frame.groupby(["date", "region"], as_index=False)["precip_mm"].mean()
+    value_columns = ["precip_mm"]
+    if "root_zone_soil_wetness" in frame:
+        value_columns.append("root_zone_soil_wetness")
+    daily = frame.groupby(["date", "region"], as_index=False)[value_columns].mean()
     latest_date = daily["date"].max()
     latest_counts = point_counts[point_counts["date"] == latest_date]
     results: dict[str, Any] = {
@@ -178,14 +198,28 @@ def _rainfall_metrics(frame: pd.DataFrame, as_of: pd.Timestamp, dry_threshold: f
         prior = group[group["date"] <= latest_date - pd.Timedelta(days=365)]
         month_day = latest_date.strftime("%m-%d")
         baselines: list[float] = []
+        soil_baselines: list[float] = []
         for year in sorted(prior["date"].dt.year.unique()):
             end = pd.Timestamp(f"{year}-{month_day}")
             window = prior[(prior["date"] > end - pd.Timedelta(days=30)) & (prior["date"] <= end)]
             if len(window) >= 20:
                 baselines.append(float(window["precip_mm"].sum()))
+                if "root_zone_soil_wetness" in window:
+                    soil_baselines.append(float(window["root_zone_soil_wetness"].mean()))
         recent_total = float(recent["precip_mm"].sum())
         baseline = float(pd.Series(baselines).median()) if baselines else None
         anomaly = recent_total / baseline - 1.0 if baseline and baseline > 0 else None
+        recent_soil = (
+            float(recent["root_zone_soil_wetness"].mean())
+            if "root_zone_soil_wetness" in recent and recent["root_zone_soil_wetness"].notna().any()
+            else None
+        )
+        baseline_soil = float(pd.Series(soil_baselines).median()) if soil_baselines else None
+        soil_anomaly = (
+            recent_soil / baseline_soil - 1.0
+            if recent_soil is not None and baseline_soil and baseline_soil > 0
+            else None
+        )
         dry_run = 0
         for value in reversed(recent["precip_mm"].tolist()):
             if value >= dry_threshold:
@@ -197,6 +231,9 @@ def _rainfall_metrics(frame: pd.DataFrame, as_of: pd.Timestamp, dry_threshold: f
             "anomaly_pct": _finite(anomaly),
             "dry_days_30d": int((recent["precip_mm"] < dry_threshold).sum()),
             "consecutive_dry_days": dry_run,
+            "root_zone_soil_wetness": _finite(recent_soil),
+            "historical_median_root_zone_soil_wetness": _finite(baseline_soil),
+            "root_zone_soil_wetness_anomaly_pct": _finite(soil_anomaly),
         }
     return results
 
@@ -239,9 +276,15 @@ def build_snapshot(
     config = json.loads(config_path.read_text(encoding="utf-8"))
     as_of_ts = pd.Timestamp(as_of or date.today())
     oni = _read_csv(data_dir / "climate" / "noaa_oni.csv")
+    roni = _read_csv(data_dir / "climate" / "noaa_roni.csv")
+    soi = _read_csv(data_dir / "climate" / "noaa_soi.csv")
+    dmi = _read_csv(data_dir / "climate" / "noaa_dmi.csv")
     rain = _read_csv(data_dir / "climate" / "nasa_power_precipitation.csv")
     climate = {
         "oni": _oni_metrics(oni, as_of_ts),
+        "roni": _monthly_index_metrics(roni, "roni", as_of_ts, "El Nino", "La Nina"),
+        "soi": _monthly_index_metrics(soi, "soi", as_of_ts, "La Nina coupling", "El Nino coupling"),
+        "dmi": _monthly_index_metrics(dmi, "dmi", as_of_ts, "Positive IOD", "Negative IOD"),
         "rainfall": _rainfall_metrics(rain, as_of_ts, float(config["dry_day_threshold_mm"])),
     }
 
@@ -293,7 +336,11 @@ def build_snapshot(
         "symbols_required": len(confirmed),
     }
     research_gate = {
-        "climate": "CONFIRMED" if climate["oni"]["phase"] == "El Nino" else "NOT_CONFIRMED",
+        "climate": (
+            "CONFIRMED"
+            if climate["roni"]["state"] == "El Nino" and climate["soi"]["soi"] < 0
+            else "NOT_CONFIRMED"
+        ),
         "fundamentals": fundamentals["status"],
         "market_cta": market_confirmation["status"],
     }
@@ -331,6 +378,9 @@ def flatten_snapshot(snapshot: dict[str, Any]) -> dict[str, Any]:
         "critical_alerts": snapshot["critical_alerts"],
         "warning_alerts": snapshot["warning_alerts"],
         "oni": snapshot["layers"]["climate"]["oni"]["oni"],
+        "roni": snapshot["layers"]["climate"]["roni"]["roni"],
+        "soi": snapshot["layers"]["climate"]["soi"]["soi"],
+        "dmi": snapshot["layers"]["climate"]["dmi"]["dmi"],
     }
     for region, metrics in snapshot["layers"]["climate"]["rainfall"]["regions"].items():
         row[f"{region}_rain_anomaly_30d"] = metrics["anomaly_pct"]

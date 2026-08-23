@@ -8,8 +8,8 @@ import pandas as pd
 from .quality import audit_timeseries
 from .signals import LOOKBACKS, build_cta_proxy
 from .sources.futures import fetch_sina_continuous, fetch_tushare_research_data
-from .sources.nasa_power import Location, fetch_daily_precipitation
-from .sources.noaa import fetch_oni
+from .sources.nasa_power import Location, fetch_daily_agroclimate
+from .sources.noaa import fetch_dmi, fetch_oni, fetch_roni, fetch_soi
 
 
 def refresh(
@@ -27,12 +27,21 @@ def refresh(
     oni = fetch_oni()
     oni = oni[(oni["date"] >= pd.Timestamp(start)) & (oni["date"] <= pd.Timestamp(end))]
     oni.to_csv(output_dir / "climate" / "noaa_oni.csv", index=False)
+    climate_indices = {
+        "roni": fetch_roni(),
+        "soi": fetch_soi(),
+        "dmi": fetch_dmi(),
+    }
+    for name, frame in climate_indices.items():
+        frame = frame[(frame["date"] >= pd.Timestamp(start)) & (frame["date"] <= pd.Timestamp(end))]
+        frame.to_csv(output_dir / "climate" / f"noaa_{name}.csv", index=False)
+        climate_indices[name] = frame
 
     region_config = json.loads(regions_path.read_text(encoding="utf-8"))
     rain_frames: list[pd.DataFrame] = []
     for region, locations in region_config.items():
         for item in locations:
-            frame = fetch_daily_precipitation(Location(**item), start, end)
+            frame = fetch_daily_agroclimate(Location(**item), start, end)
             frame["region"] = region
             rain_frames.append(frame)
     rain = pd.concat(rain_frames, ignore_index=True)
@@ -42,7 +51,15 @@ def refresh(
         "period": {"start": start, "end": end},
         "datasets": {
             "oni": {"rows": len(oni), "provider": "NOAA CPC"},
-            "precipitation": {"rows": len(rain), "provider": "NASA POWER", "points": len(rain_frames)},
+            "roni": {"rows": len(climate_indices["roni"]), "provider": "NOAA CPC"},
+            "soi": {"rows": len(climate_indices["soi"]), "provider": "NOAA CPC"},
+            "dmi": {"rows": len(climate_indices["dmi"]), "provider": "NOAA PSL"},
+            "agroclimate": {
+                "rows": len(rain),
+                "provider": "NASA POWER",
+                "points": len(rain_frames),
+                "parameters": ["PRECTOTCORR", "GWETROOT"],
+            },
         },
         "warnings": [],
     }

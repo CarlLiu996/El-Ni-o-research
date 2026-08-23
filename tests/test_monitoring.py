@@ -1,6 +1,7 @@
 import json
 
 import pandas as pd
+import pytest
 
 from elnino_cta.debrief import write_debrief
 from elnino_cta.monitoring import build_snapshot, write_snapshot
@@ -15,9 +16,23 @@ def test_monitoring_builds_gate_history_and_debrief(tmp_path):
     pd.DataFrame({"date": oni_dates, "oni": [0.2, 0.4, 0.6, 0.9]}).to_csv(
         data / "climate" / "noaa_oni.csv", index=False
     )
+    pd.DataFrame({"date": oni_dates, "roni": [0.1, 0.3, 0.5, 0.8]}).to_csv(
+        data / "climate" / "noaa_roni.csv", index=False
+    )
+    pd.DataFrame({"date": oni_dates, "soi": [0.5, 0.1, -0.8, -1.5]}).to_csv(
+        data / "climate" / "noaa_soi.csv", index=False
+    )
+    pd.DataFrame({"date": oni_dates, "dmi": [0.1, 0.2, 0.3, 0.4]}).to_csv(
+        data / "climate" / "noaa_dmi.csv", index=False
+    )
     rain_dates = pd.date_range("2025-01-01", periods=380, freq="D")
     rain = pd.concat([
-        pd.DataFrame({"date": rain_dates, "region": region, "precip_mm": 2.0})
+        pd.DataFrame({
+            "date": rain_dates,
+            "region": region,
+            "precip_mm": 2.0,
+            "root_zone_soil_wetness": 0.6,
+        })
         for region in ("india_sugar", "malaysia_palm")
     ])
     rain.to_csv(data / "climate" / "nasa_power_precipitation.csv", index=False)
@@ -62,6 +77,10 @@ def test_monitoring_builds_gate_history_and_debrief(tmp_path):
     snapshot = build_snapshot(data, config, as_of)
 
     assert snapshot["research_gate"]["climate"] == "CONFIRMED"
+    assert snapshot["layers"]["climate"]["roni"]["roni"] == 0.8
+    assert snapshot["layers"]["climate"]["soi"]["soi"] == -1.5
+    assert snapshot["layers"]["climate"]["dmi"]["dmi"] == 0.4
+    assert snapshot["layers"]["climate"]["rainfall"]["regions"]["india_sugar"]["root_zone_soil_wetness"] == pytest.approx(0.6)
     assert snapshot["research_gate"]["fundamentals"] == "INCOMPLETE"
     assert snapshot["research_gate"]["market_cta"] == "CONFIRMED"
     assert snapshot["research_gate"]["overall"] == "KEEP_MONITORING"
@@ -73,6 +92,7 @@ def test_monitoring_builds_gate_history_and_debrief(tmp_path):
     debrief = write_debrief(snapshot, report_dir)
     assert latest.exists() and history.exists() and debrief.exists()
     assert "基本面=INCOMPLETE" in debrief.read_text(encoding="utf-8")
+    assert "RONI 0.80" in debrief.read_text(encoding="utf-8")
 
 
 def test_fundamental_freshness_uses_publication_date_and_per_dataset_threshold(tmp_path):

@@ -13,6 +13,7 @@
     {"dataset": "mpob_inventory", "label": "MPOB 库存", "symbol": "P", "frequency": "monthly", "max_stale_days": 60},
     {"dataset": "mpob_exports", "label": "MPOB 出口", "symbol": "P", "frequency": "monthly", "max_stale_days": 60},
     {"dataset": "ffb_yield", "label": "FFB 单产", "symbol": "P", "frequency": "monthly", "max_stale_days": 60},
+    {"dataset": "global_palm_stock_use", "label": "全球棕榈油库销比", "symbol": "P", "frequency": "yearly", "max_stale_days": 180},
     {"dataset": "india_sugar_output", "label": "印度糖产量/压榨", "symbol": "SR", "frequency": "monthly", "max_stale_days": 60},
     {"dataset": "unica_crush", "label": "UNICA 甘蔗压榨", "symbol": "SR", "frequency": "semimonthly", "max_stale_days": 45},
     {"dataset": "unica_sugar_mix", "label": "UNICA 制糖比", "symbol": "SR", "frequency": "semimonthly", "max_stale_days": 45},

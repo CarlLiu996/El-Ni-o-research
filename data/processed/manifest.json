@@ -1,17 +1,31 @@
 {
   "period": {
     "start": "2015-01-01",
-    "end": "2026-08-14"
+    "end": "2026-08-22"
   },
   "datasets": {
     "oni": {
       "rows": 138,
       "provider": "NOAA CPC"
     },
-    "precipitation": {
-      "rows": 25464,
+    "roni": {
+      "rows": 138,
+      "provider": "NOAA CPC"
+    },
+    "soi": {
+      "rows": 138,
+      "provider": "NOAA CPC"
+    },
+    "dmi": {
+      "rows": 137,
+      "provider": "NOAA PSL"
+    },
+    "agroclimate": {
+      "rows": 51024,
       "provider": "NASA POWER",
-      "points": 6
+      "points": 12,
+      "regions": 4,
+      "parameters": ["PRECTOTCORR", "GWETROOT"]
     },
     "P": {
       "rows": 2823,

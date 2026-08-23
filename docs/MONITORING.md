@@ -8,7 +8,7 @@
 
 系统不会因为 ONI 达到厄尔尼诺阈值就直接给出配置确认。只有以下三层同时通过，状态才会变为 `READY_FOR_ALLOCATION_REVIEW`：
 
-1. `climate=CONFIRMED`：ONI 处于厄尔尼诺区间；
+1. `climate=CONFIRMED`：RONI 处于厄尔尼诺区间，且 SOI 为负、确认海气耦合；DMI和产区天气用于解释影响落区；
 2. `fundamentals=OK`：项目定义的 MPOB、FFB、印度糖、UNICA 和全球库存指标已更新；
 3. `market_cta=CONFIRMED`：P/SR 的 Medium 与 Slow CTA Proxy 近期表现与持续性满足门禁。
 
@@ -34,9 +34,10 @@ elnino-cta debrief
 
 ### 气候层
 
-- ONI 最新值、三个月变化、阶段和时滞；
-- 马来西亚棕榈油与印度糖代表点近 30 日降水；
-- 相对历史同期偏差、少雨天数、连续少雨天数；
+- RONI/ONI 最新值、三个月变化、阶段和时滞；
+- SOI 海气耦合确认与 DMI/IOD 方向修正；
+- 马来西亚/印度尼西亚棕榈油、印度糖和巴西中南部糖区近 30 日降水；
+- 相对历史同期偏差、少雨天数、连续少雨天数和根区土壤湿度；
 - 代表点覆盖与缺失观测。
 
 ### 基本面层

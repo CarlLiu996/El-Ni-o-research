@@ -27,11 +27,11 @@ def render_debrief(snapshot: dict[str, Any]) -> str:
         "",
         "## 三层监控",
         "",
-        f"- 气候：ONI {_num(climate['oni']['oni'])}（{climate['oni']['phase']}），三个月变化 {_num(climate['oni']['change_3m'])}。",
+        f"- 气候状态：RONI {_num(climate['roni']['roni'])}（{climate['roni']['state']}），ONI {_num(climate['oni']['oni'])}；SOI {_num(climate['soi']['soi'])}（{climate['soi']['state']}），DMI {_num(climate['dmi']['dmi'])}（{climate['dmi']['state']}）。",
     ]
     for region, metrics in climate["rainfall"]["regions"].items():
         lines.append(
-            f"- 降水 {region}：近 30 日 {_num(metrics['rain_30d_mm'])} mm，历史同期偏差 {_pct(metrics['anomaly_pct'])}，连续少雨 {metrics['consecutive_dry_days']} 天。"
+            f"- 产区 {region}：近30日降水 {_num(metrics['rain_30d_mm'])} mm，历史同期偏差 {_pct(metrics['anomaly_pct'])}，连续少雨 {metrics['consecutive_dry_days']} 天，根区湿度偏差 {_pct(metrics.get('root_zone_soil_wetness_anomaly_pct'))}。"
         )
     lines.extend([
         f"- 基本面：已就绪 {fundamentals['available']}/{fundamentals['required']}；缺失项保持阻断，不以价格替代供给证据。",

@@ -14,7 +14,7 @@ LOOKBACKS = {
 def build_cta_proxy(
     frame: pd.DataFrame,
     speed: str,
-    annual_vol_target: float = 0.10,
+    annual_vol_target: float = 0.20,
     max_leverage: float = 2.0,
     cost_bps_per_turnover: float = 2.0,
 ) -> pd.DataFrame:

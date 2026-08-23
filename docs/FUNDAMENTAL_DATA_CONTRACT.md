@@ -30,6 +30,7 @@ date,value,unit,source,published_at,vintage
 - `mpob_inventory.csv`
 - `mpob_exports.csv`
 - `ffb_yield.csv`
+- `global_palm_stock_use.csv`
 - `india_sugar_output.csv`
 - `unica_crush.csv`
 - `unica_sugar_mix.csv`
