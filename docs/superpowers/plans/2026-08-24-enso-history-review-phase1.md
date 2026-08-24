@@ -1,60 +1,60 @@
-# ENSO Historical Review Phase 1 Implementation Plan
+# ENSO 历史复盘一期实施计划
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **供执行代理使用：** 必须使用子技能 `superpowers:subagent-driven-development`（推荐）或 `superpowers:executing-plans`，按任务逐项实施本计划。各步骤使用复选框（`- [ ]`）跟踪进度。
 
-**Goal:** Build a reproducible, no-look-ahead historical El Niño review for palm oil and sugar, add event-aligned price and CTA-proxy evidence to one independent workbook sheet, and clarify the current L2 supply/demand/inventory display without changing CTA allocation advice.
+**目标：** 为棕榈油和白糖建立可复现、无未来函数的厄尔尼诺历史复盘；在独立工作表中加入按事件对齐的价格与 CTA 代理证据；理顺当前 L2 供给、需求、库存展示，但不改动 CTA 配置建议。
 
-**Architecture:** Source adapters normalize NOAA/NASA/FAOSTAT/World Bank data into CSVs. A standalone `historical_review` module identifies completed ONI events, builds L1—L5 event evidence, aligns price and CTA paths on `T0`, and writes descriptive summaries only. A repository-owned Python workbook builder reads processed files offline and generates the eight visible sheets; the current CTA recommendation and monitoring gate do not import historical outputs.
+**架构：** 数据源适配器把 NOAA、NASA、FAOSTAT 和世界银行数据标准化为 CSV。独立的 `historical_review` 模块识别已结束的 ONI 事件，构建 L1—L5 事件证据，以 `T0` 对齐价格与 CTA 路径，并且只输出描述性总结。仓库内置的 Python 工作簿生成器离线读取处理后文件，生成八个可见工作表；当前 CTA 建议和监控门槛不导入历史复盘输出。
 
-**Tech Stack:** Python 3.10+, pandas, requests, openpyxl, XlsxWriter, pytest, existing Tushare-derived P/SR files.
+**技术栈：** Python 3.10+、pandas、requests、openpyxl、XlsxWriter、pytest，以及现有由 Tushare 生成的 P/SR 文件。
 
-**Spec:** `docs/superpowers/specs/2026-08-24-enso-history-and-india-observations-design.md`
+**设计文档：** `docs/superpowers/specs/2026-08-24-enso-history-and-india-observations-design.md`
 
-## Global Constraints
+## 全局约束
 
-- Phase 1 covers the historical review and L2 display; live MODIS NDVI and IMD event ingestion are a later plan.
-- Completed historical events use at least five consecutive overlapping NOAA ONI seasons at or above `0.5°C`; a trailing open run is `ONGOING` and excluded from completed-event frequencies.
-- Event analysis uses only values available within the defined historical window; annual yield comparisons use year-over-year and the prior five-year median, never future-year fitting.
-- World Bank monthly prices are research benchmarks without futures carry; monthly CTA results are proxies, not deployable futures backtests.
-- Monthly CTA positions execute one month after signal formation, target 20% annual volatility, cap absolute leverage at 2, and charge 2 bps per unit turnover.
-- Existing P/SR daily Fast/Medium/Slow outputs remain unchanged and are shown separately for events with coverage.
-- `T0` is a retrospective NOAA event anchor and is not assumed knowable in real time; price and CTA paths are descriptive overlays. CTA proxy positions use only their own lagged price signals and never trade on the ex-post ENSO label.
-- `00_结论-CTA建议`, `monitoring.py` gate status, and allocation confidence must not read files under `data/processed/history/`.
-- Sugar cane crushed multiplied by sugar mix is labeled `制糖甘蔗量代理`, not sugar production, because ATR/recovery data is absent.
-- Forecast and actual observations remain separate; source URLs, vintages, units, and limitations are retained.
-- No secret, authorization header, credential URL, or user token may appear in code, logs, CSVs, workbook cells, or commits.
+- 一期只覆盖历史复盘和 L2 展示；实时 MODIS NDVI 与 IMD 事件数据接入留到后续计划。
+- 已结束历史事件的定义为：NOAA ONI 至少连续五个重叠季节达到或超过 `0.5°C`；样本末尾尚未结束的连续区间标为 `ONGOING`，不计入已结束事件频率。
+- 事件分析只使用规定历史窗口内可获得的数值；年度单产比较使用同比和此前五年中位数，禁止用未来年份拟合。
+- 世界银行月度价格只作为不含期货期限结构的研究基准；月度 CTA 结果是代理，不是可直接交易的期货回测。
+- 月度 CTA 仓位在信号形成后一个月执行，年化目标波动率统一为 20%，绝对杠杆上限为 2 倍，每单位换手收取 2 个基点成本。
+- 现有 P/SR 日频 Fast、Medium、Slow 输出保持不变，并在有覆盖的事件中单独展示。
+- `T0` 是事后识别的 NOAA 事件锚点，不假设实时可知；价格与 CTA 路径只是描述性叠加。CTA 代理仓位只使用自身滞后价格信号，绝不依据事后 ENSO 标签交易。
+- `00_结论-CTA建议`、`monitoring.py` 的门槛状态及配置置信度不得读取 `data/processed/history/` 下的文件。
+- 甘蔗压榨量乘以制糖比必须标为 `制糖甘蔗量代理`，不能称为食糖产量，因为缺少 ATR/出糖率数据。
+- 预测值与实际观测值必须分开；保留数据源 URL、数据版本、单位和局限性。
+- 代码、日志、CSV、工作簿单元格和提交中均不得出现密钥、授权头、含凭据 URL 或用户令牌。
 
 ---
 
-### Task 1: Add official historical source adapters
+### 任务 1：增加官方历史数据源适配器
 
-**Files:**
-- Modify: `pyproject.toml`
-- Create: `src/elnino_cta/sources/faostat.py`
-- Create: `src/elnino_cta/sources/world_bank.py`
-- Create: `tests/test_faostat.py`
-- Create: `tests/test_world_bank.py`
+**文件：**
+- 修改：`pyproject.toml`
+- 新建：`src/elnino_cta/sources/faostat.py`
+- 新建：`src/elnino_cta/sources/world_bank.py`
+- 新建：`tests/test_faostat.py`
+- 新建：`tests/test_world_bank.py`
 
-**Interfaces:**
-- Consumes: HTTP byte payloads from official FAOSTAT bulk download and World Bank Pink Sheet monthly workbook.
-- Produces: `fetch_faostat_crop_history() -> pd.DataFrame` and `fetch_world_bank_prices() -> pd.DataFrame` with stable normalized schemas.
+**接口：**
+- 输入：FAOSTAT 官方批量下载和世界银行 Pink Sheet 月度工作簿的 HTTP 字节内容。
+- 输出：具有稳定标准化结构的 `fetch_faostat_crop_history() -> pd.DataFrame` 和 `fetch_world_bank_prices() -> pd.DataFrame`。
 
-- [ ] **Step 1: Add workbook parser and writer dependencies**
+- [ ] **步骤 1：增加工作簿解析和写入依赖**
 
-Update `pyproject.toml` dependencies to include:
+在 `pyproject.toml` 的依赖中加入：
 
 ```toml
   "openpyxl>=3.1",
   "XlsxWriter>=3.2",
 ```
 
-Run: `python -m pip install -e ".[dev]"`
+运行：`python -m pip install -e ".[dev]"`
 
-Expected: installation completes and `python -c "import openpyxl, xlsxwriter"` exits 0.
+预期：安装完成，且 `python -c "import openpyxl, xlsxwriter"` 退出码为 0。
 
-- [ ] **Step 2: Write failing FAOSTAT parser tests**
+- [ ] **步骤 2：编写预期失败的 FAOSTAT 解析测试**
 
-Create a ZIP fixture in memory with normalized FAOSTAT columns and assert filtering, units, flags, and unique grain:
+在内存中创建包含标准 FAOSTAT 字段的 ZIP 测试数据，并断言筛选结果、单位、标记和唯一数据粒度：
 
 ```python
 def test_parse_faostat_crop_history_filters_required_series():
@@ -66,13 +66,13 @@ def test_parse_faostat_crop_history_filters_required_series():
     assert {"unit", "value", "flag", "source", "downloaded_at"}.issubset(frame.columns)
 ```
 
-Run: `python -m pytest tests/test_faostat.py -q`
+运行：`python -m pytest tests/test_faostat.py -q`
 
-Expected: FAIL because `parse_faostat_crop_history` does not exist.
+预期：失败，因为 `parse_faostat_crop_history` 尚不存在。
 
-- [ ] **Step 3: Implement the FAOSTAT adapter**
+- [ ] **步骤 3：实现 FAOSTAT 适配器**
 
-In `src/elnino_cta/sources/faostat.py`, define:
+在 `src/elnino_cta/sources/faostat.py` 中定义：
 
 ```python
 FAOSTAT_CROPS_URL = (
@@ -125,15 +125,15 @@ def fetch_faostat_crop_history(
     return parse_faostat_crop_history(response.content)
 ```
 
-The parser must read the normalized CSV inside the ZIP, map FAOSTAT column names to lowercase stable names, filter `Production`, `Area harvested`, and `Yield`, retain source flags, reject duplicate keys, and set `source=FAOSTAT_CROPS_URL`. It must raise `ValueError` when required target series are absent.
+解析器必须读取 ZIP 中的标准化 CSV，把 FAOSTAT 字段名映射为稳定的小写字段，筛选 `Production`、`Area harvested` 和 `Yield`，保留来源标记，拒绝重复键，并设置 `source=FAOSTAT_CROPS_URL`。缺少任何必需目标序列时必须抛出 `ValueError`。
 
-Run: `python -m pytest tests/test_faostat.py -q`
+运行：`python -m pytest tests/test_faostat.py -q`
 
-Expected: PASS.
+预期：通过。
 
-- [ ] **Step 4: Write failing World Bank parser tests**
+- [ ] **步骤 4：编写预期失败的世界银行解析测试**
 
-Build an in-memory XLSX with a `Monthly Prices` sheet and assert explicit alias mapping:
+在内存中构造包含 `Monthly Prices` 工作表的 XLSX，并断言显式别名映射：
 
 ```python
 def test_parse_world_bank_prices_returns_palm_and_sugar_monthly():
@@ -146,13 +146,13 @@ def test_parse_world_bank_prices_returns_palm_and_sugar_monthly():
     assert (frame["price"] > 0).all()
 ```
 
-Run: `python -m pytest tests/test_world_bank.py -q`
+运行：`python -m pytest tests/test_world_bank.py -q`
 
-Expected: FAIL because `parse_world_bank_prices` does not exist.
+预期：失败，因为 `parse_world_bank_prices` 尚不存在。
 
-- [ ] **Step 5: Implement the World Bank adapter**
+- [ ] **步骤 5：实现世界银行适配器**
 
-In `src/elnino_cta/sources/world_bank.py`, define:
+在 `src/elnino_cta/sources/world_bank.py` 中定义：
 
 ```python
 WORLD_BANK_MONTHLY_URL = (
@@ -213,13 +213,13 @@ def fetch_world_bank_prices(
     return parse_world_bank_prices(response.content)
 ```
 
-Read the workbook with `openpyxl`, locate the row containing `1960M01`-style or date values rather than assuming a fixed row, normalize month-end dates, assign the Pink Sheet units explicitly (`USD/mt` for palm oil and `USD/kg` for world sugar), and fail loudly if either commodity is missing.
+使用 `openpyxl` 读取工作簿，通过 `1960M01` 格式或日期值定位数据行，不能假定固定行号；把日期标准化为月末，并明确设置 Pink Sheet 单位（棕榈油为 `USD/mt`，世界糖价为 `USD/kg`）。任一品种缺失时必须明确报错。
 
-Run: `python -m pytest tests/test_world_bank.py -q`
+运行：`python -m pytest tests/test_world_bank.py -q`
 
-Expected: PASS.
+预期：通过。
 
-- [ ] **Step 6: Commit the source adapters**
+- [ ] **步骤 6：提交数据源适配器**
 
 ```powershell
 git add pyproject.toml src/elnino_cta/sources/faostat.py src/elnino_cta/sources/world_bank.py tests/test_faostat.py tests/test_world_bank.py
@@ -228,18 +228,18 @@ git commit -m "feat: add FAOSTAT and World Bank history sources"
 
 ---
 
-### Task 2: Identify ENSO events and build no-look-ahead climate/fundamental evidence
+### 任务 2：识别 ENSO 事件并构建无未来函数的气候与基本面证据
 
-**Files:**
-- Create: `src/elnino_cta/historical_review.py`
-- Create: `tests/test_historical_review.py`
-- Modify: `src/elnino_cta/pipeline.py`
+**文件：**
+- 新建：`src/elnino_cta/historical_review.py`
+- 新建：`tests/test_historical_review.py`
+- 修改：`src/elnino_cta/pipeline.py`
 
-**Interfaces:**
-- Consumes: normalized ONI/SOI/DMI, NASA POWER weather, and FAOSTAT crop history frames.
-- Produces: `identify_enso_events`, `build_weather_evidence`, `build_yield_evidence`, and `build_event_evidence_panel`.
+**接口：**
+- 输入：标准化 ONI、SOI、DMI，NASA POWER 天气数据和 FAOSTAT 作物历史数据框。
+- 输出：`identify_enso_events`、`build_weather_evidence`、`build_yield_evidence` 和 `build_event_evidence_panel`。
 
-- [ ] **Step 1: Write failing ONI event-identification tests**
+- [ ] **步骤 1：编写预期失败的 ONI 事件识别测试**
 
 ```python
 def test_identify_enso_events_requires_five_seasons_and_excludes_open_run():
@@ -250,13 +250,13 @@ def test_identify_enso_events_requires_five_seasons_and_excludes_open_run():
     assert not events["event_id"].duplicated().any()
 ```
 
-Run: `python -m pytest tests/test_historical_review.py::test_identify_enso_events_requires_five_seasons_and_excludes_open_run -q`
+运行：`python -m pytest tests/test_historical_review.py::test_identify_enso_events_requires_five_seasons_and_excludes_open_run -q`
 
-Expected: FAIL because `identify_enso_events` does not exist.
+预期：失败，因为 `identify_enso_events` 尚不存在。
 
-- [ ] **Step 2: Implement event identification**
+- [ ] **步骤 2：实现事件识别**
 
-Define the returned columns exactly:
+精确定义返回字段：
 
 ```python
 EVENT_COLUMNS = [
@@ -284,13 +284,13 @@ def identify_enso_events(oni: pd.DataFrame, threshold: float = 0.5, min_seasons:
     return pd.DataFrame(records, columns=EVENT_COLUMNS)
 ```
 
-Group consecutive qualifying rows after sorting and de-duplicating dates. A qualifying run ending on the last ONI observation is `ONGOING`; all other qualifying runs are `COMPLETED`. The peak is the first date of the maximum ONI value, which makes ties deterministic.
+按日期排序、去重后，把连续满足条件的记录分组。若满足条件的连续区间止于最后一个 ONI 观测，则标为 `ONGOING`；其他区间标为 `COMPLETED`。峰值日期取最大 ONI 首次出现的日期，确保并列峰值的处理结果确定。
 
-Run the single test again.
+重新运行该单项测试。
 
-Expected: PASS.
+预期：通过。
 
-- [ ] **Step 3: Write failing weather and yield evidence tests**
+- [ ] **步骤 3：编写预期失败的天气与单产证据测试**
 
 ```python
 def test_yield_evidence_uses_only_prior_five_years():
@@ -306,13 +306,13 @@ def test_weather_evidence_keeps_region_and_event_window_grain():
     assert {"precip_anomaly_pct", "soil_wetness_anomaly", "coverage_pct"}.issubset(evidence)
 ```
 
-Run: `python -m pytest tests/test_historical_review.py -q`
+运行：`python -m pytest tests/test_historical_review.py -q`
 
-Expected: FAIL because the evidence builders do not exist.
+预期：失败，因为证据构建函数尚不存在。
 
-- [ ] **Step 4: Implement climate and fundamental evidence builders**
+- [ ] **步骤 4：实现气候与基本面证据构建函数**
 
-Add exact interfaces:
+增加以下精确接口：
 
 ```python
 def build_weather_evidence(
@@ -415,15 +415,15 @@ def build_event_evidence_panel(
     return pd.DataFrame(rows, columns=columns)
 ```
 
-Weather evidence uses `T0` through `T+12` months and same-calendar-month 1991—2020 means. Yield evidence stores event start year and following year separately as `year_offset=0` and `year_offset=1`, with YoY and deviation from the prior five-year median. The combined panel is long-form with one unique `event_id × commodity × metric_id` row. Preserve FAOSTAT flags and set `calendar_crop_year_caveat=True` for every annual crop observation.
+天气证据使用 `T0` 至 `T+12` 月窗口，并以 1991—2020 年相同日历月份均值作为基准。单产证据把事件开始年和下一年分别存为 `year_offset=0` 与 `year_offset=1`，同时保存同比和相对此前五年中位数的偏差。合并后的面板采用长表结构，每个 `event_id × commodity × metric_id` 组合只能有一行。保留 FAOSTAT 标记，并为每条年度作物观测设置 `calendar_crop_year_caveat=True`。
 
-Run: `python -m pytest tests/test_historical_review.py -q`
+运行：`python -m pytest tests/test_historical_review.py -q`
 
-Expected: PASS.
+预期：通过。
 
-- [ ] **Step 5: Extend the historical climate refresh boundary**
+- [ ] **步骤 5：扩展历史气候刷新边界**
 
-Add a helper to `pipeline.py` that calls existing NOAA and NASA adapters without invoking futures refresh:
+在 `pipeline.py` 中增加辅助函数，调用现有 NOAA 和 NASA 适配器，但不触发期货数据刷新：
 
 ```python
 def refresh_historical_climate(
@@ -460,13 +460,13 @@ def refresh_historical_climate(
     }
 ```
 
-It must write complete ONI/SOI/DMI history and NASA POWER data from 1981-01-01 for all configured regions, and return row counts and date coverage for the manifest.
+该函数必须写入完整 ONI、SOI、DMI 历史数据，以及所有配置地区自 1981-01-01 起的 NASA POWER 数据，并为清单返回行数和日期覆盖范围。
 
-Run: `python -m pytest tests/test_noaa.py tests/test_nasa_power.py tests/test_historical_review.py -q`
+运行：`python -m pytest tests/test_noaa.py tests/test_nasa_power.py tests/test_historical_review.py -q`
 
-Expected: PASS.
+预期：通过。
 
-- [ ] **Step 6: Commit event and evidence logic**
+- [ ] **步骤 6：提交事件与证据逻辑**
 
 ```powershell
 git add src/elnino_cta/historical_review.py src/elnino_cta/pipeline.py tests/test_historical_review.py
@@ -475,17 +475,17 @@ git commit -m "feat: build no-look-ahead ENSO event evidence"
 
 ---
 
-### Task 3: Build event-aligned price paths and monthly CTA proxies
+### 任务 3：构建按事件对齐的价格路径和月度 CTA 代理
 
-**Files:**
-- Modify: `src/elnino_cta/historical_review.py`
-- Modify: `tests/test_historical_review.py`
+**文件：**
+- 修改：`src/elnino_cta/historical_review.py`
+- 修改：`tests/test_historical_review.py`
 
-**Interfaces:**
-- Consumes: completed/ongoing events and normalized World Bank monthly prices.
-- Produces: `build_event_price_paths`, `build_monthly_cta_proxy`, `build_event_cta_paths`, and `summarize_event_cta`.
+**接口：**
+- 输入：已结束或进行中的事件，以及标准化世界银行月度价格。
+- 输出：`build_event_price_paths`、`build_monthly_cta_proxy`、`build_event_cta_paths` 和 `summarize_event_cta`。
 
-- [ ] **Step 1: Write failing price-path alignment tests**
+- [ ] **步骤 1：编写预期失败的价格路径对齐测试**
 
 ```python
 def test_event_price_paths_are_t0_normalized_and_span_minus6_plus18():
@@ -496,11 +496,11 @@ def test_event_price_paths_are_t0_normalized_and_span_minus6_plus18():
     assert one.loc[one["relative_month"] == 0, "price_index"].iloc[0] == pytest.approx(100.0)
 ```
 
-Run: `python -m pytest tests/test_historical_review.py::test_event_price_paths_are_t0_normalized_and_span_minus6_plus18 -q`
+运行：`python -m pytest tests/test_historical_review.py::test_event_price_paths_are_t0_normalized_and_span_minus6_plus18 -q`
 
-Expected: FAIL because `build_event_price_paths` does not exist.
+预期：失败，因为 `build_event_price_paths` 尚不存在。
 
-- [ ] **Step 2: Implement event-aligned price paths**
+- [ ] **步骤 2：实现按事件对齐的价格路径**
 
 ```python
 def build_event_price_paths(
@@ -531,13 +531,13 @@ def build_event_price_paths(
     return pd.DataFrame(records)
 ```
 
-Return `event_id`, `status`, `commodity`, `date`, `relative_month`, `price`, `price_index`, `source`. Require a valid `T0` price; leave incomplete future months absent for `ONGOING` events.
+返回 `event_id`、`status`、`commodity`、`date`、`relative_month`、`price`、`price_index`、`source`。必须存在有效的 `T0` 价格；对 `ONGOING` 事件，尚未发生的未来月份保持缺失。
 
-Run the price-path test again.
+重新运行价格路径测试。
 
-Expected: PASS.
+预期：通过。
 
-- [ ] **Step 3: Write failing monthly CTA tests**
+- [ ] **步骤 3：编写预期失败的月度 CTA 测试**
 
 ```python
 @pytest.mark.parametrize("speed,windows,vol_window", [
@@ -553,11 +553,11 @@ def test_monthly_cta_is_lagged_scaled_and_costed(speed, windows, vol_window):
     pd.testing.assert_series_equal(result["equity"], expected, check_names=False)
 ```
 
-Run: `python -m pytest tests/test_historical_review.py::test_monthly_cta_is_lagged_scaled_and_costed -q`
+运行：`python -m pytest tests/test_historical_review.py::test_monthly_cta_is_lagged_scaled_and_costed -q`
 
-Expected: FAIL because `build_monthly_cta_proxy` does not exist.
+预期：失败，因为 `build_monthly_cta_proxy` 尚不存在。
 
-- [ ] **Step 4: Implement monthly CTA and event summaries**
+- [ ] **步骤 4：实现月度 CTA 与事件汇总**
 
 ```python
 MONTHLY_LOOKBACKS = {
@@ -627,15 +627,15 @@ def summarize_event_cta(paths: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame(rows)
 ```
 
-Use `sqrt(12)` for annualization, average the two momentum directions, shift target position by one month, and calculate costs on absolute position change. Summary windows are 0—3, 0—6, 0—12, and 0—18 months with compounded net return, maximum drawdown, positive-month share, average absolute position, and total turnover.
+使用 `sqrt(12)` 年化波动率，取两个动量方向的平均值，目标仓位滞后一个月执行，并按仓位绝对变化计算成本。汇总窗口为 0—3、0—6、0—12 和 0—18 个月，输出复合净收益、最大回撤、正收益月份占比、平均绝对仓位和总换手率。
 
-Run: `python -m pytest tests/test_historical_review.py -q`
+运行：`python -m pytest tests/test_historical_review.py -q`
 
-Expected: PASS.
+预期：通过。
 
-- [ ] **Step 5: Add daily P/SR event-window summaries without changing daily signals**
+- [ ] **步骤 5：在不改变日频信号的前提下增加 P/SR 事件窗口汇总**
 
-Add:
+增加：
 
 ```python
 def summarize_existing_daily_cta(
@@ -661,15 +661,15 @@ def summarize_existing_daily_cta(
     return pd.DataFrame(rows)
 ```
 
-Only summarize dates already present in the existing signal CSVs. Do not rebuild or splice dominant contracts. Return missing coverage explicitly for events before 2015.
+只汇总现有信号 CSV 中已有的日期。不得重建或拼接主力合约。对 2015 年以前的事件明确返回覆盖缺失。
 
-Add a test asserting pre-2015 rows have `coverage_status="UNAVAILABLE"` and 2015+ rows compound existing `net_return` exactly.
+增加测试：断言 2015 年以前的记录为 `coverage_status="UNAVAILABLE"`，2015 年及以后的记录必须精确复合现有 `net_return`。
 
-Run: `python -m pytest tests/test_historical_review.py -q`
+运行：`python -m pytest tests/test_historical_review.py -q`
 
-Expected: PASS.
+预期：通过。
 
-- [ ] **Step 6: Commit price and CTA review logic**
+- [ ] **步骤 6：提交价格与 CTA 复盘逻辑**
 
 ```powershell
 git add src/elnino_cta/historical_review.py tests/test_historical_review.py
@@ -678,19 +678,19 @@ git commit -m "feat: add event price and CTA proxy paths"
 
 ---
 
-### Task 4: Produce descriptive historical patterns and L2 six-cell summaries
+### 任务 4：生成描述性历史规律和 L2 六类汇总
 
-**Files:**
-- Create: `src/elnino_cta/fundamental_summary.py`
-- Modify: `src/elnino_cta/historical_review.py`
-- Create: `tests/test_fundamental_summary.py`
-- Modify: `tests/test_historical_review.py`
+**文件：**
+- 新建：`src/elnino_cta/fundamental_summary.py`
+- 修改：`src/elnino_cta/historical_review.py`
+- 新建：`tests/test_fundamental_summary.py`
+- 修改：`tests/test_historical_review.py`
 
-**Interfaces:**
-- Consumes: event evidence, event price/CTA summaries, and existing fundamental CSVs.
-- Produces: descriptive pattern tables and exactly six current L2 category rows.
+**接口：**
+- 输入：事件证据、事件价格/CTA 汇总和现有基本面 CSV。
+- 输出：描述性规律表，以及当前 L2 恰好六个分类行。
 
-- [ ] **Step 1: Write failing historical-pattern isolation tests**
+- [ ] **步骤 1：编写预期失败的历史规律隔离测试**
 
 ```python
 def test_pattern_labels_respect_minimum_sample_and_emit_no_allocation_fields():
@@ -701,11 +701,11 @@ def test_pattern_labels_respect_minimum_sample_and_emit_no_allocation_fields():
     assert not any("allocation" in c or "confidence_adjustment" in c for c in patterns.columns)
 ```
 
-Run: `python -m pytest tests/test_historical_review.py::test_pattern_labels_respect_minimum_sample_and_emit_no_allocation_fields -q`
+运行：`python -m pytest tests/test_historical_review.py::test_pattern_labels_respect_minimum_sample_and_emit_no_allocation_fields -q`
 
-Expected: FAIL because `summarize_patterns` does not exist.
+预期：失败，因为 `summarize_patterns` 尚不存在。
 
-- [ ] **Step 2: Implement descriptive pattern summaries**
+- [ ] **步骤 2：实现描述性规律汇总**
 
 ```python
 def make_pattern_input(
@@ -761,13 +761,13 @@ def summarize_patterns(event_results: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame(rows)
 ```
 
-`make_pattern_input` converts climate/fundamental evidence, 3/6/12/18-month price returns, and Medium/Slow CTA cost-after returns to the same long-form grain and excludes `ONGOING` events. Group palm oil and sugar separately. Emit sample size, positive/negative/flat counts, same-direction share, median, interquartile range, and the label rules from the spec. Do not create action, allocation, recommended-position, or confidence-adjustment columns.
+`make_pattern_input` 把气候/基本面证据、3/6/12/18 个月价格收益，以及 Medium/Slow CTA 成本后收益转换成统一长表粒度，并排除 `ONGOING` 事件。棕榈油和白糖分别分组。输出样本量、正/负/持平次数、同向占比、中位数、四分位区间及设计文档规定的标签。不得创建操作、配置、建议仓位或置信度修正字段。
 
-Run the pattern test again.
+重新运行规律测试。
 
-Expected: PASS.
+预期：通过。
 
-- [ ] **Step 3: Write failing six-row L2 summary tests**
+- [ ] **步骤 3：编写预期失败的 L2 六行汇总测试**
 
 ```python
 def test_build_l2_summary_has_two_commodities_times_three_categories():
@@ -786,13 +786,13 @@ def test_sugar_cane_for_sugar_proxy_is_not_named_sugar_output():
     assert "食糖产量" not in row["label"]
 ```
 
-Run: `python -m pytest tests/test_fundamental_summary.py -q`
+运行：`python -m pytest tests/test_fundamental_summary.py -q`
 
-Expected: FAIL because the summary module does not exist.
+预期：失败，因为汇总模块尚不存在。
 
-- [ ] **Step 4: Implement the L2 summary module**
+- [ ] **步骤 4：实现 L2 汇总模块**
 
-Define:
+定义：
 
 ```python
 METRIC_META = {
@@ -929,13 +929,13 @@ def build_l2_summary(
     return pd.DataFrame(rows)
 ```
 
-Use `pd.merge_asof` to align UNICA sugar mix to cumulative crush without looking forward. Compute `brazil_cane_for_sugar_proxy = crush_tonnes * sugar_mix_pct / 100`. Extract `total_use_1000t` and `ending_stocks_1000t` from the palm stock-use file as distinct detail rows; the sugar source files are already distinct consumption and ending-stock series. Determine forecast status from an explicit field first, then forecast/projection/estimate notes, then whether the observation period ends after its publication date. The category direction must be `TIGHT`, `NEUTRAL`, `LOOSE`, or `INSUFFICIENT`. Palm-oil categories and sugar demand/inventory score only their primary metric; sugar supply jointly scores actual India output and the Brazil cane-for-sugar proxy, returning `NEUTRAL` if they disagree. If any scoring metric is forecast or lacks a percentile, return `INSUFFICIENT`. Non-scoring forecast background drivers remain visible in `driver_value_types` but do not overwrite an actual primary metric's category.
+使用 `pd.merge_asof` 将 UNICA 制糖比按时间向后匹配到累计压榨量，禁止向前取值。计算 `brazil_cane_for_sugar_proxy = crush_tonnes * sugar_mix_pct / 100`。从棕榈油库存消费文件中分别提取 `total_use_1000t` 和 `ending_stocks_1000t` 作为独立明细行；白糖数据源文件已经把消费和期末库存分开。预测属性的判断顺序为：显式字段优先，其次检查 forecast/projection/estimate 备注，最后比较观测期结束日是否晚于发布日期。分类方向只能为 `TIGHT`、`NEUTRAL`、`LOOSE` 或 `INSUFFICIENT`。棕榈油三个分类及白糖需求、库存只评分各自主指标；白糖供给同时评分印度实际产量和巴西制糖甘蔗量代理，二者冲突时返回 `NEUTRAL`。任一评分指标属于预测值或缺少分位数时返回 `INSUFFICIENT`。不参与评分的预测型背景驱动仍须显示在 `driver_value_types` 中，但不能覆盖实际主指标的分类结果。
 
-Run: `python -m pytest tests/test_fundamental_summary.py -q`
+运行：`python -m pytest tests/test_fundamental_summary.py -q`
 
-Expected: PASS.
+预期：通过。
 
-- [ ] **Step 5: Commit pattern and L2 summary logic**
+- [ ] **步骤 5：提交历史规律与 L2 汇总逻辑**
 
 ```powershell
 git add src/elnino_cta/historical_review.py src/elnino_cta/fundamental_summary.py tests/test_historical_review.py tests/test_fundamental_summary.py
@@ -944,19 +944,19 @@ git commit -m "feat: summarize ENSO patterns and L2 fundamentals"
 
 ---
 
-### Task 5: Add a history-refresh command and write processed outputs
+### 任务 5：增加历史刷新命令并写入处理后结果
 
-**Files:**
-- Modify: `src/elnino_cta/cli.py`
-- Modify: `src/elnino_cta/pipeline.py`
-- Create: `tests/test_history_pipeline.py`
-- Modify: `docs/DATA_SOURCES.md`
+**文件：**
+- 修改：`src/elnino_cta/cli.py`
+- 修改：`src/elnino_cta/pipeline.py`
+- 新建：`tests/test_history_pipeline.py`
+- 修改：`docs/DATA_SOURCES.md`
 
-**Interfaces:**
-- Consumes: official source adapters and existing processed P/SR signal files.
-- Produces: eight `data/processed/history/*.csv` files and a source manifest without changing the current monitor snapshot.
+**接口：**
+- 输入：官方数据源适配器和现有处理后 P/SR 信号文件。
+- 输出：八个 `data/processed/history/*.csv` 文件和一份来源清单，不改变当前监控快照。
 
-- [ ] **Step 1: Write a failing end-to-end pipeline test with injected source frames**
+- [ ] **步骤 1：使用注入数据框编写预期失败的端到端管线测试**
 
 ```python
 def test_refresh_history_writes_expected_outputs_without_touching_monitor(tmp_path):
@@ -972,13 +972,13 @@ def test_refresh_history_writes_expected_outputs_without_touching_monitor(tmp_pa
     assert monitor.read_text(encoding="utf-8") == '{"sentinel": true}'
 ```
 
-Run: `python -m pytest tests/test_history_pipeline.py -q`
+运行：`python -m pytest tests/test_history_pipeline.py -q`
 
-Expected: FAIL because `refresh_history` does not exist.
+预期：失败，因为 `refresh_history` 尚不存在。
 
-- [ ] **Step 2: Implement output orchestration**
+- [ ] **步骤 2：实现输出编排**
 
-Add to `pipeline.py`:
+在 `pipeline.py` 中增加：
 
 ```python
 HISTORY_FILES = {
@@ -1076,15 +1076,15 @@ def refresh_history(
     return manifest
 ```
 
-With `source_bundle=None`, fetch official sources and read current signal CSVs from `output_dir/signals`. With injected frames, perform no network calls. Write atomically through a temporary file followed by `Path.replace`. Add source URLs, row counts, min/max dates, download times, and file SHA-256 to `data/processed/history/manifest.json`.
+当 `source_bundle=None` 时，从官方来源取数，并从 `output_dir/signals` 读取当前信号 CSV；注入数据框时不得发起网络请求。先写临时文件，再用 `Path.replace` 原子替换。向 `data/processed/history/manifest.json` 写入来源 URL、行数、最早/最晚日期、下载时间和文件 SHA-256。
 
-Run: `python -m pytest tests/test_history_pipeline.py -q`
+运行：`python -m pytest tests/test_history_pipeline.py -q`
 
-Expected: PASS.
+预期：通过。
 
-- [ ] **Step 3: Add the CLI command**
+- [ ] **步骤 3：增加命令行命令**
 
-Extend `cli.py`:
+扩展 `cli.py`：
 
 ```python
 history_parser = sub.add_parser("history-refresh", help="Build independent ENSO history review data")
@@ -1092,21 +1092,21 @@ history_parser.add_argument("--output", default="data/processed")
 history_parser.add_argument("--as-of", required=True)
 ```
 
-Dispatch with `refresh_history(Path(args.output), args.as_of)` and print the manifest as JSON. Do not call `monitor` or `debrief` from this command.
+调用 `refresh_history(Path(args.output), args.as_of)`，并以 JSON 打印清单。该命令不得调用 `monitor` 或 `debrief`。
 
-Run: `python -m pytest tests/test_history_pipeline.py -q`
+运行：`python -m pytest tests/test_history_pipeline.py -q`
 
-Expected: PASS.
+预期：通过。
 
-- [ ] **Step 4: Document source and interpretation boundaries**
+- [ ] **步骤 4：记录数据来源与解释边界**
 
-In `docs/DATA_SOURCES.md`, add official URLs, product names, coverage, units, revision behavior, FAOSTAT flag retention, World Bank spot-price limitation, and the statement that historical output is not imported by the current CTA gate.
+在 `docs/DATA_SOURCES.md` 中补充官方 URL、产品名称、覆盖范围、单位、修订机制、FAOSTAT 标记保留方式、世界银行现货价格的局限，并明确历史输出不会被当前 CTA 门槛导入。
 
-Run: `python -m compileall -q src`
+运行：`python -m compileall -q src`
 
-Expected: exit 0.
+预期：退出码为 0。
 
-- [ ] **Step 5: Commit the history pipeline**
+- [ ] **步骤 5：提交历史复盘管线**
 
 ```powershell
 git add src/elnino_cta/cli.py src/elnino_cta/pipeline.py tests/test_history_pipeline.py docs/DATA_SOURCES.md
@@ -1115,18 +1115,18 @@ git commit -m "feat: add independent ENSO history refresh"
 
 ---
 
-### Task 6: Generate the eight-sheet workbook with history and six-row L2 summary
+### 任务 6：生成包含历史复盘和 L2 六行汇总的八页工作簿
 
-**Files:**
-- Create: `scripts/build_research_workbook.py`
-- Create: `tests/test_research_workbook.py`
-- Modify: `README.md`
+**文件：**
+- 新建：`scripts/build_research_workbook.py`
+- 新建：`tests/test_research_workbook.py`
+- 修改：`README.md`
 
-**Interfaces:**
-- Consumes: current monitor/fundamental/market/signal CSVs plus `data/processed/history/*.csv`.
-- Produces: `research/厄尔尼诺农产品CTA研究框架_八页复盘版_YYYYMMDD.xlsx`.
+**接口：**
+- 输入：当前监控、基本面、市场、信号 CSV，以及 `data/processed/history/*.csv`。
+- 输出：`research/厄尔尼诺农产品CTA研究框架_八页复盘版_YYYYMMDD.xlsx`。
 
-- [ ] **Step 1: Write failing workbook-structure tests**
+- [ ] **步骤 1：编写预期失败的工作簿结构测试**
 
 ```python
 EXPECTED_SHEETS = [
@@ -1144,13 +1144,13 @@ def test_workbook_has_eight_ordered_sheets_and_l2_six_rows(tmp_path):
     assert categories == ["供给", "需求", "库存", "供给", "需求", "库存"]
 ```
 
-Run: `python -m pytest tests/test_research_workbook.py -q`
+运行：`python -m pytest tests/test_research_workbook.py -q`
 
-Expected: FAIL because the workbook builder does not exist.
+预期：失败，因为工作簿生成器尚不存在。
 
-- [ ] **Step 2: Implement reusable workbook formatting and eight sheets**
+- [ ] **步骤 2：实现可复用的工作簿格式和八个工作表**
 
-In `scripts/build_research_workbook.py`, define:
+在 `scripts/build_research_workbook.py` 中定义：
 
 ```python
 def build_research_workbook(repo_dir: Path, output_dir: Path, as_of: str) -> Path:
@@ -1200,7 +1200,7 @@ def add_l2_sheet(
     sheet.freeze_panes(10, 0)
 ```
 
-Implement the called helpers with these exact interfaces and boundaries:
+按以下精确接口和边界实现被调用的辅助函数：
 
 ```python
 def load_csv_directory(path: Path) -> dict[str, pd.DataFrame]:
@@ -1260,65 +1260,65 @@ def validate_workbook(path: Path) -> None:
                     raise ValueError(f"Invalid workbook content at {sheet.title}!{cell.coordinate}")
 ```
 
-Also implement these writer interfaces; each writer owns only its named sheet or table and never mutates input frames:
+同时实现以下写入接口；每个写入函数只负责其命名工作表或表格，不得修改输入数据框：
 
-- `add_current_conclusion_sheet(workbook, frames, formats)`: read only `frames["monitor"]`; it must not access any history key.
-- `add_logic_sheet(workbook, frames, formats)`: show `L1 → L2 → L3 → L4 → L5`, plus an explicit side branch `H 历史复盘（仅描述，不进入配置）`.
-- `add_climate_sheet`, `add_market_sheet`, `add_cta_sheet`, and `add_audit_sheet`: preserve the existing indicators, sources, dates, meanings, positions, and limitations while consolidating them into the named eight-sheet layout.
-- `write_event_summary_table(sheet, events, evidence, price_paths, cta_summary, daily_cta_summary, formats)`: one visible row per `event_id × commodity`, with event dates, peak ONI, climate/fundamental evidence coverage, 3/6/12/18-month price returns, Medium/Slow monthly CTA returns and drawdowns, plus available P/SR Fast/Medium/Slow daily-proxy results or explicit `UNAVAILABLE` coverage.
-- `write_event_path_data_and_sparklines(sheet, price_paths, cta_paths, formats)`: write ordered `relative_month=-6..18` source ranges starting at column `AA`, hide those columns, and add visible price-index and CTA-equity sparklines.
-- `write_pattern_table(sheet, patterns, formats)`: show sample size, direction counts/share, median, quartiles, strength, and limitation; omit allocation fields.
-- `write_l2_summary_rows(sheet, summary, start_row, formats)`: write exactly six rows in the approved palm-oil/sugar and supply/demand/inventory order.
-- `write_l2_detail_rows(sheet, details, fundamental_history, start_row, formats)`: show metric, meaning, value, unit, observation date, publication date, actual/forecast, percentile/current-position meaning, source, and limitation. Write each metric's chronologically ordered historical values to hidden columns starting at `BA` and add one row sparkline where at least two observations exist; derived palm-balance rows use their source columns, and the Brazil proxy uses an as-of merged crush/mix history.
+- `add_current_conclusion_sheet(workbook, frames, formats)`：只读取 `frames["monitor"]`，不得访问任何历史复盘键。
+- `add_logic_sheet(workbook, frames, formats)`：展示 `L1 → L2 → L3 → L4 → L5`，并增加明确的旁路 `H 历史复盘（仅描述，不进入配置）`。
+- `add_climate_sheet`、`add_market_sheet`、`add_cta_sheet` 和 `add_audit_sheet`：在整合进八页布局时，保留现有指标、来源、日期、含义、位置和局限。
+- `write_event_summary_table(sheet, events, evidence, price_paths, cta_summary, daily_cta_summary, formats)`：每个 `event_id × commodity` 对应一个可见行，包含事件日期、ONI 峰值、气候/基本面证据覆盖、3/6/12/18 个月价格收益、Medium/Slow 月度 CTA 收益和回撤，以及可用的 P/SR Fast/Medium/Slow 日频代理结果；无覆盖时明确显示 `UNAVAILABLE`。
+- `write_event_path_data_and_sparklines(sheet, price_paths, cta_paths, formats)`：从 `AA` 列开始写入按 `relative_month=-6..18` 排序的源数据区，隐藏这些列，并增加可见的价格指数与 CTA 净值迷你折线图。
+- `write_pattern_table(sheet, patterns, formats)`：显示样本量、方向次数/占比、中位数、四分位数、规律强度和局限；不显示配置字段。
+- `write_l2_summary_rows(sheet, summary, start_row, formats)`：严格按照已确认的棕榈油/白糖、供给/需求/库存顺序写入六行。
+- `write_l2_detail_rows(sheet, details, fundamental_history, start_row, formats)`：显示指标、含义、数值、单位、观测日期、发布日期、实际/预测、分位数/当前位置含义、来源和局限。从 `BA` 列开始把每个指标按时间排序的历史值写入隐藏区；历史记录不少于两条时增加行级迷你折线图。棕榈油衍生平衡指标使用各自来源字段，巴西代理使用只向后匹配的压榨量/制糖比历史。
 
-Use `xlsxwriter.Workbook`. Reproduce the current title, section, table, conditional-format, freeze-pane, and width conventions. Keep `00_结论-CTA建议` content sourced only from the current monitor snapshot. Add a note in `01_总逻辑` that history is an independent research branch not connected to allocation logic.
+使用 `xlsxwriter.Workbook`。复用当前标题、分区、表格、条件格式、冻结窗格和列宽规范。`00_结论-CTA建议` 的内容只能来自当前监控快照。在 `01_总逻辑` 中注明历史复盘是独立研究分支，不接入配置逻辑。
 
-Run the workbook structure test again.
+重新运行工作簿结构测试。
 
-Expected: PASS.
+预期：通过。
 
-- [ ] **Step 3: Add history paths, CTA returns, and sparklines**
+- [ ] **步骤 3：增加历史路径、CTA 收益和迷你折线图**
 
-For every event/commodity row in `02_H_历次厄尔尼诺复盘`, write hidden-below-view source ranges containing `relative_month=-6..18`, `price_index`, Medium equity, and Slow equity. Add at least two visible sparklines per row: price path and CTA equity path. The visible summary columns must include 0—3/6/12/18-month commodity returns, CTA net returns, maximum drawdown, sample coverage, and limitation.
+对 `02_H_历次厄尔尼诺复盘` 中每个事件/品种行，写入视图区外的隐藏源数据区，其中包含 `relative_month=-6..18`、`price_index`、Medium 净值和 Slow 净值。每行至少增加两条可见迷你折线图：价格路径和 CTA 净值路径。可见汇总字段必须包含 0—3/6/12/18 个月商品收益、CTA 净收益、最大回撤、样本覆盖和局限。
 
-Add test assertions that the sheet XML contains `<x14:sparklineGroup` and that visible headings include `价格路径`, `CTA代理净值`, `商品收益`, and `CTA成本后收益`.
+增加测试断言：工作表 XML 包含 `<x14:sparklineGroup`，且可见表头包含 `价格路径`、`CTA代理净值`、`商品收益` 和 `CTA成本后收益`。
 
-Run: `python -m pytest tests/test_research_workbook.py -q`
+运行：`python -m pytest tests/test_research_workbook.py -q`
 
-Expected: PASS.
+预期：通过。
 
-- [ ] **Step 4: Add L2 summary and detail presentation**
+- [ ] **步骤 4：增加 L2 汇总与明细展示**
 
-Write six summary rows at the top of `04_L2供给基本面`, followed by the full driver table. Show actual/forecast status in a dedicated column. Display global sugar consumption and ending stocks separately, then stock-use ratio as a detail row. Label the Brazil metric exactly `巴西中南部制糖甘蔗量代理` and show `压榨量 × 制糖比；非食糖产量` in its meaning column.
+在 `04_L2供给基本面` 顶部写入六行汇总，其后展示完整驱动指标表。使用专门一列展示实际/预测状态。全球食糖消费和期末库存必须分开显示，库销比作为独立明细行。巴西指标必须精确标为 `巴西中南部制糖甘蔗量代理`，含义列显示 `压榨量 × 制糖比；非食糖产量`。
 
-Add test assertions for those labels and that a forecast scoring metric never carries a `TIGHT` or `LOOSE` category. Forecast background drivers must remain visible in the detail table and `driver_value_types` without changing an actual primary metric's category.
+增加测试断言：上述标签准确；预测型评分指标不得产生 `TIGHT` 或 `LOOSE` 分类。预测型背景驱动必须保留在明细表和 `driver_value_types` 中，但不能改变实际主指标的分类。
 
-Run: `python -m pytest tests/test_research_workbook.py tests/test_fundamental_summary.py -q`
+运行：`python -m pytest tests/test_research_workbook.py tests/test_fundamental_summary.py -q`
 
-Expected: PASS.
+预期：通过。
 
-- [ ] **Step 5: Scan formulas and workbook content for errors and secrets**
+- [ ] **步骤 5：扫描公式、错误值和敏感信息**
 
-After closing the workbook, reopen with `openpyxl` and inspect all formulas/strings. Fail the build on `#REF!`, `#DIV/0!`, `#VALUE!`, `#NAME?`, `#N/A`, `Authorization`, `Bearer `, or a JWT-like `eyJ` token prefix.
+关闭工作簿后，使用 `openpyxl` 重新打开并检查所有公式和字符串。发现 `#REF!`、`#DIV/0!`、`#VALUE!`、`#NAME?`、`#N/A`、`Authorization`、`Bearer ` 或类似 JWT 的 `eyJ` 令牌前缀时，构建必须失败。
 
-Add a test that injects `Bearer secret` into a fixture cell and asserts the validator rejects it.
+增加一个测试，把 `Bearer secret` 注入测试单元格，并断言校验器拒绝该工作簿。
 
-Run: `python -m pytest tests/test_research_workbook.py -q`
+运行：`python -m pytest tests/test_research_workbook.py -q`
 
-Expected: PASS.
+预期：通过。
 
-- [ ] **Step 6: Document workbook generation**
+- [ ] **步骤 6：记录工作簿生成方式**
 
-Add to `README.md`:
+在 `README.md` 中增加：
 
 ```powershell
 elnino-cta history-refresh --as-of 2026-08-23
 python scripts/build_research_workbook.py --as-of 2026-08-23
 ```
 
-State that the history sheet is descriptive and excluded from the current CTA allocation gate.
+注明历史复盘页只作描述，不进入当前 CTA 配置门槛。
 
-- [ ] **Step 7: Commit the workbook builder**
+- [ ] **步骤 7：提交工作簿生成器**
 
 ```powershell
 git add scripts/build_research_workbook.py tests/test_research_workbook.py README.md
@@ -1327,37 +1327,37 @@ git commit -m "feat: add ENSO history review workbook"
 
 ---
 
-### Task 7: Run live refresh, validate research quality, and publish the latest workbook
+### 任务 7：执行实时刷新、验证研究质量并发布最新工作簿
 
-**Files:**
-- Modify: `data/processed/history/*.csv`
-- Create: `research/厄尔尼诺农产品CTA研究框架_八页复盘版_20260824.xlsx`
-- Modify: `.github/workflows/monitor.yml`
-- Modify: `README.md`
+**文件：**
+- 修改：`data/processed/history/*.csv`
+- 新建：`research/厄尔尼诺农产品CTA研究框架_八页复盘版_20260824.xlsx`
+- 修改：`.github/workflows/monitor.yml`
+- 修改：`README.md`
 
-**Interfaces:**
-- Consumes: all completed implementation tasks and authorized network access.
-- Produces: live historical CSVs, a validated workbook, CI refresh steps, and a concise evidence-backed pattern summary for user review.
+**接口：**
+- 输入：前述全部已完成任务和获授权的网络访问。
+- 输出：实时历史 CSV、通过校验的工作簿、CI 刷新步骤，以及供用户审阅的简洁、证据驱动的规律总结。
 
-- [ ] **Step 1: Run all unit tests before live data**
+- [ ] **步骤 1：实时取数前运行全部单元测试**
 
-Run: `python -m pytest -q`
+运行：`python -m pytest -q`
 
-Expected: all tests pass.
+预期：全部测试通过。
 
-- [ ] **Step 2: Refresh official historical data**
+- [ ] **步骤 2：刷新官方历史数据**
 
-Run:
+运行：
 
 ```powershell
 elnino-cta history-refresh --as-of 2026-08-24
 ```
 
-Expected: `data/processed/history/manifest.json` reports non-zero completed events, both World Bank commodities, four FAOSTAT country/crop pairs, and no duplicate primary keys.
+预期：`data/processed/history/manifest.json` 显示已结束事件数量大于零、包含世界银行两个品种、包含 FAOSTAT 四个国家/作物组合，且不存在重复主键。
 
-- [ ] **Step 3: Run explicit data-quality checks**
+- [ ] **步骤 3：运行明确的数据质量检查**
 
-Run a repository script or pytest integration test that asserts:
+运行仓库脚本或 pytest 集成测试，并断言：
 
 ```python
 assert events.query("status == 'COMPLETED'").shape[0] >= 4
@@ -1368,52 +1368,52 @@ assert not cta_paths.duplicated(["event_id", "commodity", "speed", "date"]).any(
 assert not any(c in current_monitor_json for c in ["historical_patterns", "event_cta_summary"])
 ```
 
-Expected: exit 0; any failure blocks workbook publication.
+预期：退出码为 0；任何失败都必须阻止工作簿发布。
 
-- [ ] **Step 4: Generate and inspect the workbook**
+- [ ] **步骤 4：生成并检查工作簿**
 
-Run:
+运行：
 
 ```powershell
 python scripts/build_research_workbook.py --as-of 2026-08-24
 python -m pytest tests/test_research_workbook.py -q
 ```
 
-Expected: the dated workbook exists, contains exactly eight visible sheets, has sparklines on the history and indicator pages, and passes the formula/secret scan.
+预期：带日期的工作簿已生成，恰好包含八个可见工作表，历史页和指标页具有迷你折线图，并通过公式与敏感信息扫描。
 
-- [ ] **Step 5: Visually inspect the four decision pages**
+- [ ] **步骤 5：目视检查四个关键页面**
 
-Render or open these ranges and check clipping, alignment, conditional colors, and readable chart scales:
+渲染或打开以下区域，检查文字截断、对齐、条件色和图表尺度可读性：
 
-- `00_结论-CTA建议` top conclusion and action block;
-- `02_H_历次厄尔尼诺复盘` event table plus price/CTA sparklines;
-- `04_L2供给基本面` six-row summary plus details;
-- `07_L5数据审计` source/freshness/limitations.
+- `00_结论-CTA建议`：顶部结论与操作区；
+- `02_H_历次厄尔尼诺复盘`：事件表以及价格/CTA 迷你折线图；
+- `04_L2供给基本面`：六行汇总和明细；
+- `07_L5数据审计`：来源、时效性和局限。
 
-Expected: no clipped headers, overlapping charts, unreadable rows, or hidden limitations.
+预期：不存在被截断的表头、重叠图表、不可读行或被隐藏的局限说明。
 
-- [ ] **Step 6: Add CI history refresh without Earthdata dependency**
+- [ ] **步骤 6：增加不依赖 Earthdata 的 CI 历史刷新**
 
-Update `.github/workflows/monitor.yml` to run `elnino-cta history-refresh --as-of "$(date -u +%F)"` and the workbook builder after the existing monitor step. Do not reference `EARTHDATA_TOKEN` in Phase 1. Add `data/processed/history` and the dated workbook pattern to the commit step.
+更新 `.github/workflows/monitor.yml`：在现有监控步骤后运行 `elnino-cta history-refresh --as-of "$(date -u +%F)"` 和工作簿生成器。一期不得引用 `EARTHDATA_TOKEN`。在提交步骤中加入 `data/processed/history` 和带日期工作簿的匹配规则。
 
-Run a YAML parse check and `python -m pytest -q`.
+运行 YAML 解析检查和 `python -m pytest -q`。
 
-Expected: both pass.
+预期：两项均通过。
 
-- [ ] **Step 7: Write the user-facing review summary**
+- [ ] **步骤 7：编写面向用户的复盘总结**
 
-Update `README.md` with the latest workbook filename and record only observed patterns that meet the sample thresholds. Separate palm oil and sugar, state sample sizes, medians, ranges, and missing coverage. Do not add an allocation recommendation or confidence adjustment.
+在 `README.md` 中更新最新工作簿文件名，并且只记录满足样本量门槛的已观察规律。棕榈油和白糖分开描述，列明样本量、中位数、区间和缺失覆盖。不得加入配置建议或置信度修正。
 
-- [ ] **Step 8: Commit final live artifacts**
+- [ ] **步骤 8：提交最终实时产物**
 
 ```powershell
 git add data/processed/history research/厄尔尼诺农产品CTA研究框架_八页复盘版_20260824.xlsx .github/workflows/monitor.yml README.md
 git commit -m "data: publish ENSO historical review"
 ```
 
-- [ ] **Step 9: Final verification**
+- [ ] **步骤 9：最终验证**
 
-Run:
+运行：
 
 ```powershell
 python -m pytest -q
@@ -1421,4 +1421,4 @@ python -m compileall -q src scripts
 git status --short
 ```
 
-Expected: tests and compilation pass; `git status --short` shows only the two pre-existing unrelated untracked user files, which remain untouched.
+预期：测试和编译均通过；`git status --short` 只显示原先存在的两个无关、未跟踪用户文件，且这两个文件未被改动。
