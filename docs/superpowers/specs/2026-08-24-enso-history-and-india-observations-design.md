@@ -7,7 +7,7 @@
 1. 持续更新印度季风累计降雨偏差、官方季风起退事件和印度糖蔗主产区 NDVI 代理；
 2. 用统一、无未来函数的口径独立复盘历次厄尔尼诺，先展示数据、事件差异和可能规律，不改变当前 CTA 配置结论、置信度或 L1—L4 门槛。
 
-最终交付为可重复生成的八页研究工作簿、结构化 CSV、自动刷新任务、质量检查和研究说明。第一个实施阶段只完成历史复盘数据、计算和独立 Sheet；任何“历史规律如何修正 CTA 建议”的规则都推迟到用户审阅复盘结果并单独批准之后。用户已在 GitHub Actions 中配置 `EARTHDATA_TOKEN`；代码不得读取后输出、记录或提交该 Secret。
+最终交付为可重复生成的八页研究工作簿、结构化 CSV、自动刷新任务、质量检查和研究说明。第一个实施阶段同时完成三项印度实时观测、历史复盘数据、计算和独立 Sheet；任何“历史规律如何修正 CTA 建议”的规则都推迟到用户审阅复盘结果并单独批准之后。用户已在 GitHub Actions 中配置 `EARTHDATA_TOKEN`；代码不得读取后输出、记录或提交该 Secret。
 
 ## 设计原则
 
@@ -19,6 +19,8 @@
 - 长历史现货价格只能生成研究代理，不得标记为可部署期货 CTA 回测。
 - 缺失、鉴权失败或半结构化解析失败时保持缺失并降低置信度，不用推算值冒充官方值。
 - 原始长序列存入 CSV；工作簿只保留八张可见 Sheet，并在每张表内提供必要的近期历史和迷你趋势。
+- 三项外部观测通过独立 `external-refresh` 命令更新并先落盘；监控和工作簿只读取已处理文件，不在生成 Excel 时联网。
+- 三项外部观测在一期进入 L1 展示和数据审计，但不单独触发 CTA 加仓，不改变现有 CTA 配置逻辑或历史复盘隔离边界。
 
 ## 数据源与指标口径
 
@@ -65,6 +67,16 @@
 
 若 Token 缺失、过期、产品尚未发布或有效像元比例低于 30%，最新值不参与当前结论。取得可靠糖蔗种植掩膜后，才能升级为种植面积加权的“糖蔗专属 NDVI”；本期不把行政区或缓冲区植被误称为糖蔗。
 
+### 外部观测刷新与状态
+
+三个指标由同一个 `external-refresh` 命令编排，但下载、解析和计算相互隔离：
+
+- 季风累计偏差状态为 `OK`、`NOT_IN_SEASON` 或 `INSUFFICIENT_COVERAGE`；当年季风窗口尚未开始时标为 `NOT_IN_SEASON`，少于两个代表点完整覆盖时保留缺失，不沿用上一期计算值；
+- IMD 起退事件状态为 `OK`、`NOT_ANNOUNCED` 或 `REVIEW_REQUIRED`；只有解析到明确官方动作和日期时才写入事件结论；
+- NDVI 状态为 `OK`、`AUTH_REQUIRED`、`NOT_PUBLISHED`、`LOW_COVERAGE` 或 `FETCH_ERROR`；只有 `OK` 值进入当前 L1 展示值，其余状态显示原因；
+- 命令级状态为 `OK` 或 `PARTIAL`。任一来源失败时仍写入其状态和错误分类，继续刷新其他来源，并允许历史复盘和工作簿生成；
+- 最近一次成功数据可以保留用于趋势展示，但必须显示其真实 `published_at`、`data_as_of` 和 `STALE` 标记，不能冒充本次刷新值。
+
 ## 历次厄尔尼诺复盘方法
 
 ### 事件目录
@@ -96,8 +108,10 @@
 
 ## 分阶段实施边界
 
-### 第一阶段：独立历史复盘
+### 第一阶段：三项外部观测与独立历史复盘
 
+- 新增 `external-refresh`，持续更新印度季风累计偏差、IMD 官方季风起退事件和印度糖蔗主产区 NDVI 代理；
+- 将三项指标加入 `03_L1气候天气` 和 `07_L5数据审计`，但不单独改变 CTA 配置结论；
 - 获取并标准化 NOAA、NASA POWER、FAOSTAT 和 World Bank 历史数据；
 - 生成厄尔尼诺事件目录、事件证据面板、事件对齐价格路径和历史月频 CTA 趋势代理；
 - 在主工作簿增加独立的 `02_H_历次厄尔尼诺复盘` Sheet；
@@ -115,6 +129,7 @@
 - `data/processed/climate/india_monsoon_cumulative.csv`
 - `data/processed/climate/india_monsoon_events.csv`
 - `data/processed/climate/india_sugar_ndvi.csv`
+- `data/processed/climate/external_manifest.json`
 - `data/processed/history/enso_events.csv`
 - `data/processed/history/event_evidence_panel.csv`
 - `data/processed/history/event_price_paths.csv`
@@ -126,12 +141,14 @@
 
 - `src/elnino_cta/sources/imd.py`：下载、解析和审计 IMD 官方事件公告；
 - `src/elnino_cta/sources/earthdata.py`：发现、下载和聚合 MOD13Q1；
+- `src/elnino_cta/external_observations.py`：计算季风累计偏差、编排三项外部刷新、写入状态与清单；
 - `src/elnino_cta/sources/faostat.py`：获取作物年度产量、面积和单产；
 - `src/elnino_cta/sources/world_bank.py`：获取 Pink Sheet 月度价格；
 - `src/elnino_cta/historical_review.py`：识别事件、建立证据面板、计算历史规律和当前事实对照；不得输出 CTA 配置修正字段；
-- `src/elnino_cta/monitoring.py`：后续加入三个新增实时观测指标的时效与覆盖；第一阶段不接入历史复盘结果；
+- `src/elnino_cta/monitoring.py`：读取三项新增观测的当前值、时效与覆盖，供 L1 和审计页展示；不允许这些指标单独改变 CTA 配置动作，第一阶段不接入历史复盘结果；
+- `src/elnino_cta/cli.py`：增加 `external-refresh` 命令；三个来源分别捕获和分类失败，命令在部分失败时返回可生成工作簿的 `PARTIAL` 清单；
 - `scripts/build_research_workbook.py`：用仓库依赖 `XlsxWriter` 重建现有七页逻辑并加入复盘页，按监控日期生成八页工作簿；迷你折线和图表由 `XlsxWriter` 生成，成品由 `openpyxl` 只读校验；
-- `.github/workflows/monitor.yml`：在已有刷新后调用外部指标、历史复盘和工作簿生成步骤。
+- `.github/workflows/monitor.yml`：依次调用 `external-refresh`、历史复盘、现有监控和工作簿生成步骤，确保监控快照读取本次外部刷新状态；外部指标部分失败不得阻断工作簿生成，但测试、敏感信息扫描或工作簿校验失败必须阻断发布。
 
 每个数据源适配器只负责下载和标准化；历史统计不写进下载器；Excel 生成器只读取已处理 CSV 和监控快照，不在构建时联网。
 
@@ -166,7 +183,7 @@
 ## 失败处理与安全
 
 - `EARTHDATA_TOKEN` 只通过环境变量读取；日志、异常、manifest 和工作簿不得包含 Token、请求头或带凭据 URL。
-- Token 失效时 NDVI 状态为 `AUTH_REQUIRED`，其余数据和工作簿仍可生成。
+- Token 缺失或失效时 NDVI 状态为 `AUTH_REQUIRED`，其余数据、历史复盘和工作簿仍可生成；Excel 必须显示鉴权缺失原因。
 - IMD 页面结构变化时保留原始 URL 和解析失败原因，事件值为缺失；不静默沿用上一季日期。
 - 外部服务临时失败时保留最近一次已发布数据及其真实 `published_at`，并按阈值标记 `STALE`；不得把刷新时间当发布日期。
 - FAOSTAT 或 World Bank 历史修订导致结果改变时，manifest 记录下载时间、来源版本或文件哈希。
@@ -187,5 +204,8 @@
 - 所有新增 CSV 的主键唯一性、空值、日期、范围、时效和来源字段；
 - 工作簿八张可见 Sheet、顺序、关键表格、迷你趋势、公式错误扫描和视觉预览；
 - 仓库 secret scan，确认代码、CSV、日志和 Excel 中不存在 Earthdata Token。
+- `external-refresh` 在单一来源失败时仍刷新其他来源并生成 `PARTIAL` 清单；三项来源全部正常时状态为 `OK`；
+- 工作簿的 `03_L1气候天气` 同时包含季风累计偏差、IMD 起退事件和 NDVI 当前值或明确缺失状态，且每项具有迷你趋势或事件时间线；
+- `07_L5数据审计` 能追溯三项指标的来源、数据截至日、发布时间、刷新时间、覆盖率、鉴权/解析状态及是否参与当前结论。
 
-第一阶段验收完成的定义是：历史事件目录、证据面板、事件对齐价格路径、CTA 代理净值与收益、规律摘要均可复现；`02_H_历次厄尔尼诺复盘` 能同时展示气候、基本面、市场定价、CTA 捕捉结果和当前事件事实对照；`00_结论-CTA建议`、监控总门槛和配置置信度不读取任何历史复盘输出。后续印度实时指标和八页完整自动刷新仍遵循本规格的数据、安全与质量约束，但不作为开始历史复盘的前置条件。
+第一阶段验收完成的定义是：三项印度外部观测均可通过 `external-refresh` 持续刷新或明确降级，`03_L1气候天气` 和 `07_L5数据审计` 完整展示其数值、趋势、状态与来源；历史事件目录、证据面板、事件对齐价格路径、CTA 代理净值与收益、规律摘要均可复现；`02_H_历次厄尔尼诺复盘` 能同时展示气候、基本面、市场定价、CTA 捕捉结果和当前事件事实对照；八页工作簿可由自动任务完整生成。`00_结论-CTA建议`、监控总门槛和配置置信度不读取任何历史复盘输出，三项新增外部观测也不单独触发 CTA 配置动作。
