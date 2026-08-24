@@ -45,7 +45,7 @@
 
 ```toml
   "beautifulsoup4>=4.12",
-  "earthaccess>=0.16",
+  "earthaccess>=0.14,<0.15",
   "numpy>=1.26",
   "pypdf>=5.0",
   "pyproj>=3.6",
