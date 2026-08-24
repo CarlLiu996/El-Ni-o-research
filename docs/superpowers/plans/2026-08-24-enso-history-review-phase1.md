@@ -1,18 +1,20 @@
 # ENSO 历史复盘一期实施计划
 
-> **供执行代理使用：** 必须使用子技能 `superpowers:subagent-driven-development`（推荐）或 `superpowers:executing-plans`，按任务逐项实施本计划。各步骤使用复选框（`- [ ]`）跟踪进度。
+> **供执行代理使用：** 必须使用 `superpowers:executing-plans`，按任务逐项实施本计划；只有用户明确要求并行代理时才改用 `superpowers:subagent-driven-development`。各步骤使用复选框（`- [ ]`）跟踪进度。
 
-**目标：** 为棕榈油和白糖建立可复现、无未来函数的厄尔尼诺历史复盘；在独立工作表中加入按事件对齐的价格与 CTA 代理证据；理顺当前 L2 供给、需求、库存展示，但不改动 CTA 配置建议。
+**目标：** 为棕榈油和白糖建立可复现、无未来函数的厄尔尼诺历史复盘，把印度季风累计降雨偏差、IMD 官方起退事件和印度糖蔗主产区 NDVI 代理纳入同一期数据监测与八页 Excel，并理顺当前 L2 供给、需求、库存展示，但不改动 CTA 配置建议。
 
-**架构：** 数据源适配器把 NOAA、NASA、FAOSTAT 和世界银行数据标准化为 CSV。独立的 `historical_review` 模块识别已结束的 ONI 事件，构建 L1—L5 事件证据，以 `T0` 对齐价格与 CTA 路径，并且只输出描述性总结。仓库内置的 Python 工作簿生成器离线读取处理后文件，生成八个可见工作表；当前 CTA 建议和监控门槛不导入历史复盘输出。
+**架构：** 数据源适配器把 NOAA、NASA POWER、NASA Earthdata/LP DAAC、IMD、FAOSTAT 和世界银行数据标准化为 CSV。独立的 `external_observations` 模块分别刷新三项印度观测并以 `OK/PARTIAL` 清单降级；独立的 `historical_review` 模块识别已结束的 ONI 事件，构建 L1—L5 事件证据，以 `T0` 对齐价格与 CTA 路径，并且只输出描述性总结。仓库内置的 Python 工作簿生成器离线读取处理后文件，生成八个可见工作表；当前 CTA 建议和监控门槛不导入历史复盘输出，三项新增观测也不单独触发配置动作。
 
-**技术栈：** Python 3.10+、pandas、requests、openpyxl、XlsxWriter、pytest，以及现有由 Tushare 生成的 P/SR 文件。
+**技术栈：** Python 3.10+、pandas、NumPy、requests、BeautifulSoup、pypdf、earthaccess、rasterio、pyproj、openpyxl、XlsxWriter、pytest，以及现有由 Tushare 生成的 P/SR 文件。
 
 **设计文档：** `docs/superpowers/specs/2026-08-24-enso-history-and-india-observations-design.md`
 
 ## 全局约束
 
-- 一期只覆盖历史复盘和 L2 展示；实时 MODIS NDVI 与 IMD 事件数据接入留到后续计划。
+- 一期同时覆盖三项印度外部观测、历史复盘、L2 展示和八页 Excel 自动刷新。
+- 三项外部观测由独立 `external-refresh` 命令先落盘；单项来源失败时生成 `PARTIAL` 清单并继续处理，工作簿必须显示明确缺失状态。
+- `EARTHDATA_TOKEN` 只能由 `earthaccess.login(strategy="environment")` 读取；禁止把 Token、请求头或含凭据 URL 写入异常、日志、CSV、manifest、Excel 或提交。
 - 已结束历史事件的定义为：NOAA ONI 至少连续五个重叠季节达到或超过 `0.5°C`；样本末尾尚未结束的连续区间标为 `ONGOING`，不计入已结束事件频率。
 - 事件分析只使用规定历史窗口内可获得的数值；年度单产比较使用同比和此前五年中位数，禁止用未来年份拟合。
 - 世界银行月度价格只作为不含期货期限结构的研究基准；月度 CTA 结果是代理，不是可直接交易的期货回测。
@@ -26,7 +28,550 @@
 
 ---
 
-### 任务 1：增加官方历史数据源适配器
+### 任务 1：计算印度季风累计降雨偏差
+
+**文件：**
+- 修改：`pyproject.toml`
+- 新建：`src/elnino_cta/external_observations.py`
+- 新建：`tests/test_external_observations.py`
+
+**接口：**
+- 输入：现有 NASA POWER 日频数据，至少包含 `date`、`region`、`location`、`precip_mm` 和 `source`。
+- 输出：`build_india_monsoon_cumulative(weather, as_of, downloaded_at=None) -> pd.DataFrame`，数据粒度为 `season_year × season_day`。
+
+- [ ] **步骤 1：增加外部观测依赖**
+
+在 `pyproject.toml` 中增加：
+
+```toml
+  "beautifulsoup4>=4.12",
+  "earthaccess>=0.16",
+  "numpy>=1.26",
+  "pypdf>=5.0",
+  "pyproj>=3.6",
+  "rasterio>=1.3",
+```
+
+运行：`python -m pip install -e ".[dev]"`
+
+预期：安装成功，`python -c "import bs4, earthaccess, numpy, pypdf, pyproj, rasterio"` 退出码为 0。
+
+- [ ] **步骤 2：编写预期失败的季风累计测试**
+
+```python
+def test_monsoon_cumulative_equal_weights_complete_locations():
+    result = build_india_monsoon_cumulative(
+        nasa_india_weather(one_incomplete_location=True),
+        as_of="2026-06-10",
+        downloaded_at="2026-06-11T00:00:00Z",
+    )
+    latest = result.query("season_year == 2026").iloc[-1]
+    assert latest["season_day"] == 10
+    assert latest["valid_locations"] == 2
+    assert latest["current_cumulative_mm"] == pytest.approx(100.0)
+    assert latest["climatology_cumulative_mm"] == pytest.approx(80.0)
+    assert latest["cumulative_departure_pct"] == pytest.approx(0.25)
+    assert latest["status"] == "OK"
+
+def test_monsoon_cumulative_requires_two_complete_locations():
+    result = build_india_monsoon_cumulative(
+        nasa_india_weather(complete_locations=1), as_of="2026-06-10"
+    )
+    assert result.iloc[-1]["status"] == "INSUFFICIENT_COVERAGE"
+    assert pd.isna(result.iloc[-1]["cumulative_departure_pct"])
+
+def test_monsoon_before_june_is_not_in_season():
+    result = build_india_monsoon_cumulative(nasa_india_weather(), as_of="2026-05-20")
+    assert result.iloc[-1]["status"] == "NOT_IN_SEASON"
+```
+
+运行：`python -m pytest tests/test_external_observations.py -q`
+
+预期：失败，因为 `build_india_monsoon_cumulative` 尚不存在。
+
+- [ ] **步骤 3：实现季风累计计算**
+
+在 `src/elnino_cta/external_observations.py` 中实现：
+
+```python
+MONSOON_START = (6, 1)
+MONSOON_END = (9, 30)
+INDIA_REGION = "india_sugar"
+
+MONSOON_COLUMNS = [
+    "date", "season_year", "season_day", "current_cumulative_mm",
+    "climatology_cumulative_mm", "cumulative_departure_pct",
+    "historical_percentile", "valid_locations", "required_locations",
+    "status", "data_as_of", "published_at", "downloaded_at", "source",
+]
+
+def build_india_monsoon_cumulative(
+    weather: pd.DataFrame,
+    as_of: str | pd.Timestamp,
+    downloaded_at: str | None = None,
+) -> pd.DataFrame:
+    cutoff = pd.Timestamp(as_of).normalize()
+    downloaded = downloaded_at or pd.Timestamp.now(tz="UTC").isoformat()
+    current_start = pd.Timestamp(cutoff.year, *MONSOON_START)
+    if cutoff < current_start:
+        return pd.DataFrame([{
+            "date": cutoff, "season_year": cutoff.year, "season_day": 0,
+            "current_cumulative_mm": pd.NA, "climatology_cumulative_mm": pd.NA,
+            "cumulative_departure_pct": pd.NA, "historical_percentile": pd.NA,
+            "valid_locations": 0, "required_locations": 2,
+            "status": "NOT_IN_SEASON", "data_as_of": cutoff,
+            "published_at": pd.NA, "downloaded_at": downloaded,
+            "source": "NASA POWER PRECTOTCORR",
+        }], columns=MONSOON_COLUMNS)
+
+    daily = weather.copy()
+    daily["date"] = pd.to_datetime(daily["date"]).dt.normalize()
+    daily = daily[daily["region"].eq(INDIA_REGION)]
+    daily["precip_mm"] = pd.to_numeric(daily["precip_mm"], errors="coerce")
+    raw_rows = []
+    for year in sorted(daily["date"].dt.year.unique()):
+        start = pd.Timestamp(int(year), *MONSOON_START)
+        end = min(pd.Timestamp(int(year), *MONSOON_END), cutoff)
+        if end < start:
+            continue
+        for date in pd.date_range(start, end, freq="D"):
+            elapsed = (date - start).days + 1
+            window = daily[daily["date"].between(start, date)]
+            by_point = window.groupby("location")["precip_mm"].agg(["count", "sum"])
+            complete = by_point[by_point["count"].eq(elapsed)]
+            value = complete["sum"].mean() if len(complete) >= 2 else pd.NA
+            raw_rows.append({
+                "date": date, "season_year": int(year), "season_day": elapsed,
+                "current_cumulative_mm": value, "valid_locations": len(complete),
+            })
+    result = pd.DataFrame(raw_rows)
+    baseline = result[result["season_year"].between(1991, 2020)].copy()
+    normals = baseline.groupby("season_day")["current_cumulative_mm"].agg(
+        climatology_cumulative_mm="mean"
+    )
+    result = result.join(normals, on="season_day")
+    result["cumulative_departure_pct"] = (
+        result["current_cumulative_mm"] / result["climatology_cumulative_mm"] - 1
+    )
+    distributions = baseline.groupby("season_day")["current_cumulative_mm"].apply(list)
+    result["historical_percentile"] = result.apply(
+        lambda row: pd.Series(distributions.get(row["season_day"], []))
+        .le(row["current_cumulative_mm"]).mean()
+        if pd.notna(row["current_cumulative_mm"]) else pd.NA,
+        axis=1,
+    )
+    result["required_locations"] = 2
+    result["status"] = result["current_cumulative_mm"].notna().map(
+        {True: "OK", False: "INSUFFICIENT_COVERAGE"}
+    )
+    result["data_as_of"] = cutoff
+    result["published_at"] = pd.NA
+    result["downloaded_at"] = downloaded
+    result["source"] = "NASA POWER PRECTOTCORR"
+    return result[MONSOON_COLUMNS]
+```
+
+当前季节只能累计至 `as_of`；历史正常值只使用 1991—2020 年同一 `season_day`。代表点必须从 6 月 1 日至对应日期逐日完整，且至少两个点有效。不得用缺失点的部分累计值参与区域平均。
+
+运行：`python -m pytest tests/test_external_observations.py -q`
+
+预期：通过。
+
+- [ ] **步骤 4：提交季风累计计算**
+
+```powershell
+git add pyproject.toml src/elnino_cta/external_observations.py tests/test_external_observations.py
+git commit -m "feat: compute India monsoon cumulative departure"
+```
+
+---
+
+### 任务 2：获取并解析 IMD 官方季风起退事件
+
+**文件：**
+- 新建：`config/india_monsoon_normals.json`
+- 新建：`src/elnino_cta/sources/imd.py`
+- 新建：`tests/test_imd.py`
+
+**接口：**
+- 输入：IMD 官方季风页、新闻稿页及公告 PDF/HTML。
+- 输出：`fetch_imd_monsoon_events(season_year, normals_path, session=None) -> pd.DataFrame`，每个 `season_year × event_type` 最多一条已确认记录。
+
+- [ ] **步骤 1：写入有来源版本的正常日期配置**
+
+创建 `config/india_monsoon_normals.json`：
+
+```json
+{
+  "version": "IMD revised normal dates 2020",
+  "source": "https://mausam.imd.gov.in/backend/assets/press_release_pdf/Onsetwithrawal_CRS_RESEARCH_REPORT_003_20201.pdf",
+  "onset_kerala": "06-01",
+  "withdrawal_northwest_start": "09-17"
+}
+```
+
+- [ ] **步骤 2：编写预期失败的 IMD 解析测试**
+
+```python
+def test_parse_imd_onset_rejects_forecast_and_accepts_declaration():
+    forecast = parse_imd_event(
+        "Southwest monsoon is likely to set in over Kerala during next 24 hours.",
+        source_url="https://mausam.imd.gov.in/forecast.pdf", season_year=2026,
+        normals=normal_dates(),
+    )
+    assert forecast["status"] == "NOT_ANNOUNCED"
+    declared = parse_imd_event(
+        "Southwest monsoon has set in over Kerala today, the 4th June 2026.",
+        source_url="https://mausam.imd.gov.in/onset.pdf", season_year=2026,
+        normals=normal_dates(),
+    )
+    assert declared["event_type"] == "ONSET_KERALA"
+    assert declared["official_date"] == pd.Timestamp("2026-06-04")
+    assert declared["departure_days"] == 3
+    assert declared["status"] == "OK"
+
+def test_parse_imd_withdrawal_start_requires_northwest_action():
+    row = parse_imd_event(
+        "Withdrawal of southwest monsoon commenced from West Rajasthan on 14th September 2025.",
+        source_url="https://mausam.imd.gov.in/withdrawal.pdf", season_year=2025,
+        normals=normal_dates(),
+    )
+    assert row["event_type"] == "WITHDRAWAL_NORTHWEST_START"
+    assert row["departure_days"] == -3
+
+def test_conflicting_official_dates_require_review():
+    result = resolve_imd_candidates(two_conflicting_onset_rows())
+    assert result.iloc[0]["status"] == "REVIEW_REQUIRED"
+    assert pd.isna(result.iloc[0]["departure_days"])
+```
+
+运行：`python -m pytest tests/test_imd.py -q`
+
+预期：失败，因为 IMD 适配器尚不存在。
+
+- [ ] **步骤 3：实现公告发现、文本提取和严格解析**
+
+在 `src/elnino_cta/sources/imd.py` 中定义：
+
+```python
+IMD_DISCOVERY_URLS = (
+    "https://mausam.imd.gov.in/imd_latest/contents/press_release.php",
+    "https://mausam.imd.gov.in/responsive/monsooninformation.php",
+)
+ONSET_PATTERN = re.compile(
+    r"southwest\s+monsoon\s+has\s+set\s+in\s+over\s+kerala(?:\s+today,?)?\s*(?:the\s+)?(\d{1,2})(?:st|nd|rd|th)?\s+([a-z]+)[,\s]+(20\d{2})",
+    re.IGNORECASE,
+)
+WITHDRAWAL_PATTERN = re.compile(
+    r"(?:withdrawal\s+of\s+(?:the\s+)?southwest\s+monsoon\s+(?:commenced|began)\s+from|southwest\s+monsoon\s+has\s+withdrawn\s+from\s+some\s+parts\s+of)\s+(?:west\s+rajasthan|northwest\s+india)(?:\s+and\s+kutch)?(?:\s+on|\s+today,?\s*(?:the)?)?\s*(\d{1,2})(?:st|nd|rd|th)?\s+([a-z]+)[,\s]+(20\d{2})",
+    re.IGNORECASE,
+)
+
+def extract_imd_text(content: bytes, content_type: str) -> str:
+    if "pdf" in content_type.lower() or content.startswith(b"%PDF"):
+        reader = PdfReader(BytesIO(content))
+        return "\n".join(page.extract_text() or "" for page in reader.pages)
+    return BeautifulSoup(content, "html.parser").get_text(" ", strip=True)
+
+def parse_imd_event(
+    text: str,
+    source_url: str,
+    season_year: int,
+    normals: dict[str, object],
+    announcement_date: str | pd.Timestamp | None = None,
+) -> dict[str, object]:
+    normalized = re.sub(r"\s+", " ", text)
+    for event_type, pattern, normal_key in (
+        ("ONSET_KERALA", ONSET_PATTERN, "onset_kerala"),
+        ("WITHDRAWAL_NORTHWEST_START", WITHDRAWAL_PATTERN, "withdrawal_northwest_start"),
+    ):
+        match = pattern.search(normalized)
+        if not match:
+            continue
+        official = pd.to_datetime(" ".join(match.groups()), dayfirst=True)
+        if official.year != season_year:
+            continue
+        normal = pd.Timestamp(f"{season_year}-{normals[normal_key]}")
+        return {
+            "season_year": season_year, "event_type": event_type,
+            "official_date": official, "normal_date": normal,
+            "departure_days": int((official - normal).days),
+            "announcement_date": pd.to_datetime(announcement_date), "source_url": source_url,
+            "normal_source": normals["source"], "normal_version": normals["version"],
+            "status": "OK", "review_status": "AUTO_ACCEPTED",
+        }
+    return {
+        "season_year": season_year, "event_type": pd.NA,
+        "official_date": pd.NaT, "normal_date": pd.NaT,
+        "departure_days": pd.NA, "announcement_date": pd.NaT,
+        "source_url": source_url, "normal_source": normals["source"],
+        "normal_version": normals["version"], "status": "NOT_ANNOUNCED",
+        "review_status": "NO_EXPLICIT_DECLARATION",
+    }
+```
+
+`fetch_imd_monsoon_events` 使用 BeautifulSoup 从两个发现页提取同季节 PDF/HTML 链接，转成绝对 `https://mausam.imd.gov.in/` URL，逐个下载并调用 `extract_imd_text` 与 `parse_imd_event`。`announcement_date` 只取公告页面、PDF 元数据或 HTTP `Last-Modified` 中可审计的发布日期，取不到时保持空值，禁止用 `official_date` 或下载时间替代。`resolve_imd_candidates` 按 `season_year × event_type` 去重；同一事件出现不同官方日期时只输出一行 `REVIEW_REQUIRED`，日期结论和偏差均置空，同时保留冲突 URL 列表。不得把包含 `likely`、`forecast` 或 `conditions are favourable` 的文字当成已发生事件。
+
+运行：`python -m pytest tests/test_imd.py -q`
+
+预期：通过。
+
+- [ ] **步骤 4：提交 IMD 适配器**
+
+```powershell
+git add config/india_monsoon_normals.json src/elnino_cta/sources/imd.py tests/test_imd.py
+git commit -m "feat: add audited IMD monsoon events"
+```
+
+---
+
+### 任务 3：获取并聚合 MOD13Q1 印度主产区 NDVI
+
+**文件：**
+- 修改：`.gitignore`
+- 新建：`src/elnino_cta/sources/earthdata.py`
+- 新建：`tests/test_earthdata.py`
+
+**接口：**
+- 输入：`EARTHDATA_TOKEN`、三个印度糖区代表点、MOD13Q1.061 HDF granules。
+- 输出：`fetch_india_sugar_ndvi(locations, start, end, cache_dir) -> pd.DataFrame`，包含区域和等权综合 NDVI、质量覆盖及同期位置。
+
+- [ ] **步骤 1：排除 Earthdata 原始缓存**
+
+在 `.gitignore` 中加入：
+
+```gitignore
+data/raw/earthdata/
+```
+
+- [ ] **步骤 2：编写预期失败的质量掩膜和异常值测试**
+
+```python
+def test_scale_and_mask_ndvi_uses_modland_good_quality_bits():
+    raw = np.array([[5000, 6000], [-3000, 10001]], dtype="int16")
+    qa = np.array([[0, 1], [0, 0]], dtype="uint16")
+    masked = scale_and_mask_ndvi(raw, qa)
+    assert masked[0, 0] == pytest.approx(0.5)
+    assert np.isnan(masked[0, 1])
+    assert np.isnan(masked[1, 0])
+    assert np.isnan(masked[1, 1])
+
+def test_build_ndvi_anomalies_equal_weights_regions():
+    result = build_ndvi_anomalies(regional_ndvi_history(), downloaded_at="2026-08-24T00:00:00Z")
+    latest = result.iloc[-1]
+    assert latest["region_count"] == 3
+    assert latest["ndvi"] == pytest.approx(0.60)
+    assert latest["same_period_difference"] == pytest.approx(0.05)
+    assert latest["valid_pixel_ratio"] >= 0.30
+    assert latest["status"] == "OK"
+
+def test_low_valid_pixel_ratio_is_not_usable():
+    result = build_ndvi_anomalies(regional_ndvi_history(valid_ratio=0.20))
+    assert result.iloc[-1]["status"] == "LOW_COVERAGE"
+```
+
+运行：`python -m pytest tests/test_earthdata.py -q`
+
+预期：失败，因为 Earthdata 适配器尚不存在。
+
+- [ ] **步骤 3：实现鉴权、granule 搜索与质量掩膜**
+
+在 `src/elnino_cta/sources/earthdata.py` 中定义：
+
+```python
+MOD13Q1_DOI = "https://doi.org/10.5067/MODIS/MOD13Q1.061"
+BUFFER_METRES = 50_000
+
+def earthdata_login():
+    if not os.getenv("EARTHDATA_TOKEN"):
+        raise PermissionError("AUTH_REQUIRED")
+    try:
+        auth = earthaccess.login(strategy="environment")
+    except Exception as exc:
+        raise PermissionError("AUTH_REQUIRED") from exc
+    if not auth.authenticated:
+        raise PermissionError("AUTH_REQUIRED")
+    return auth
+
+def scale_and_mask_ndvi(ndvi_raw: np.ndarray, qa_raw: np.ndarray) -> np.ndarray:
+    good = (qa_raw.astype("uint16") & 0b11) == 0
+    valid = good & (ndvi_raw >= -2000) & (ndvi_raw <= 10000)
+    return np.where(valid, ndvi_raw.astype("float64") * 0.0001, np.nan)
+
+def parse_modis_date(path: Path) -> pd.Timestamp:
+    match = re.search(r"\.A(\d{4})(\d{3})\.", path.name)
+    if not match:
+        raise ValueError(f"Cannot parse MODIS date from {path.name}")
+    return pd.Timestamp(int(match.group(1)), 1, 1) + pd.Timedelta(days=int(match.group(2)) - 1)
+
+def locate_subdatasets(path: Path) -> tuple[str, str]:
+    with rasterio.open(path) as container:
+        names = container.subdatasets
+    ndvi = [name for name in names if name.endswith(":250m 16 days NDVI")]
+    qa = [name for name in names if name.endswith(":250m 16 days VI Quality")]
+    if len(ndvi) != 1 or len(qa) != 1:
+        raise ValueError(f"Unexpected MOD13Q1 subdatasets in {path.name}")
+    return ndvi[0], qa[0]
+```
+
+`fetch_india_sugar_ndvi` 必须按以下固定流程实现：
+
+1. 调用 `earthdata_login()`；从三个代表点计算 `search_bounds=(min_lon-0.75, min_lat-0.75, max_lon+0.75, max_lat+0.75)`，再调用 `earthaccess.search_data(short_name="MOD13Q1", version="061", bounding_box=search_bounds, temporal=(start, end))`；
+2. 使用 `earthaccess.download(results, cache_dir)` 下载 HDF，缓存目录不得进入 Git；
+3. 对每个 HDF 调用 `locate_subdatasets`，用 rasterio 打开 NDVI 和 VI Quality；通过 pyproj 把代表点从 EPSG:4326 转到栅格 CRS，读取中心点外 50,000 米窗口，并用像元中心到代表点的欧氏距离裁成圆形；
+4. 调用 `scale_and_mask_ndvi`，每个 `product_date × region` 输出有效像元中位数、有效/总像元数和比例；同一天跨 tile 时先合并有效像元再取中位数；
+5. `build_ndvi_anomalies` 对三个区域等权平均，以 `composite_slot=((dayofyear-1)//16)+1` 匹配 2001—2020 同期，输出历史均值、标准差、差值、z-score 和分位数；综合有效像元比例低于 30% 时状态为 `LOW_COVERAGE`；
+6. 输出字段固定为 `product_date, composite_slot, ndvi, climatology_mean, climatology_std, same_period_difference, z_score, historical_percentile, valid_pixels, total_pixels, valid_pixel_ratio, region_count, status, published_at, downloaded_at, source, granules`。`published_at` 缺失时保持空值，不得用下载时间替代。
+
+运行：`python -m pytest tests/test_earthdata.py -q`
+
+预期：通过。
+
+- [ ] **步骤 4：增加 Token 脱敏测试并提交**
+
+测试用假 Token 调用失败路径，断言异常文本、日志捕获和序列化 DataFrame 均不包含假 Token，也不包含 `Authorization` 或 `Bearer `。
+
+运行：`python -m pytest tests/test_earthdata.py -q`
+
+预期：通过。
+
+```powershell
+git add .gitignore src/elnino_cta/sources/earthdata.py tests/test_earthdata.py
+git commit -m "feat: add quality-screened India NDVI proxy"
+```
+
+---
+
+### 任务 4：编排外部刷新并接入当前监控
+
+**文件：**
+- 修改：`src/elnino_cta/external_observations.py`
+- 修改：`src/elnino_cta/cli.py`
+- 修改：`src/elnino_cta/monitoring.py`
+- 修改：`config/monitoring.json`
+- 修改：`tests/test_external_observations.py`
+- 修改：`tests/test_monitoring.py`
+
+**接口：**
+- 输入：三项来源函数、`as_of`、地区配置、正常日期配置和可选注入测试数据。
+- 输出：三个结构化 CSV、`external_manifest.json`、CLI `external-refresh` 和监控快照中的 `external_observations`，但不改变现有 CTA 配置动作。
+
+- [ ] **步骤 1：编写预期失败的部分成功测试**
+
+```python
+def test_refresh_external_observations_degrades_one_source_and_writes_manifest(tmp_path):
+    result = refresh_external_observations(
+        output_dir=tmp_path / "data" / "processed",
+        as_of="2026-08-24",
+        regions_path=fixture_regions(),
+        normals_path=fixture_normals(),
+        source_bundle={
+            "weather": nasa_india_weather(),
+            "imd": imd_events_ok(),
+            "ndvi_error": PermissionError("AUTH_REQUIRED"),
+        },
+    )
+    assert result["overall"] == "PARTIAL"
+    assert result["datasets"]["monsoon_cumulative"]["status"] == "OK"
+    assert result["datasets"]["imd_events"]["status"] == "OK"
+    assert result["datasets"]["ndvi"]["status"] == "AUTH_REQUIRED"
+    assert (tmp_path / "data/processed/climate/india_monsoon_cumulative.csv").exists()
+    assert (tmp_path / "data/processed/climate/external_manifest.json").exists()
+```
+
+运行：`python -m pytest tests/test_external_observations.py -q`
+
+预期：失败，因为外部刷新编排尚不存在。
+
+- [ ] **步骤 2：实现独立失败域、原子写入和清单**
+
+在 `external_observations.py` 中增加：
+
+```python
+EXTERNAL_FILES = {
+    "monsoon_cumulative": "india_monsoon_cumulative.csv",
+    "imd_events": "india_monsoon_events.csv",
+    "ndvi": "india_sugar_ndvi.csv",
+}
+
+def atomic_write_csv(frame: pd.DataFrame, target: Path) -> None:
+    temporary = target.with_suffix(".tmp")
+    frame.to_csv(temporary, index=False)
+    temporary.replace(target)
+
+def sanitized_error_status(exc: Exception) -> str:
+    if isinstance(exc, PermissionError):
+        return "AUTH_REQUIRED"
+    if isinstance(exc, requests.RequestException):
+        return "FETCH_ERROR"
+    return "REVIEW_REQUIRED"
+```
+
+`refresh_external_observations(output_dir, as_of, regions_path, normals_path, ndvi_start, source_bundle=None)` 固定按以下顺序执行：读取 `config/regions.json` 的三个 `india_sugar` 代表点；未注入 `source_bundle` 时用现有 NASA POWER 适配器抓取 1991-01-01 至 `as_of` 的日频降雨并调用 `build_india_monsoon_cumulative`，用 IMD 适配器抓取 `as_of` 所在季风年的正式事件，再用 Earthdata 适配器抓取 `ndvi_start` 至 `as_of` 的 NDVI；注入时分别读取 `weather`、`imd`、`ndvi` 或对应的 `*_error`，不得联网。三项调用使用独立 `try/except`。成功时原子替换对应 CSV；失败时不覆盖最近一次成功 CSV，只在 manifest 中记录状态、错误类型、最近成功文件的真实 `data_as_of`、行数和 SHA-256。manifest 不写异常原文、请求头或 URL 查询凭据。三个状态均为 `OK` 时 `overall="OK"`，否则为 `PARTIAL`。
+
+运行：`python -m pytest tests/test_external_observations.py -q`
+
+预期：通过。
+
+- [ ] **步骤 3：增加 `external-refresh` CLI**
+
+在 `cli.py` 中增加：
+
+```python
+external_parser = sub.add_parser("external-refresh", help="Refresh India monsoon and NDVI observations")
+external_parser.add_argument("--output", default="data/processed")
+external_parser.add_argument("--as-of", required=True)
+external_parser.add_argument("--regions", default="config/regions.json")
+external_parser.add_argument("--normals", default="config/india_monsoon_normals.json")
+external_parser.add_argument("--ndvi-start", default="2001-01-01")
+```
+
+分发代码固定为：
+
+```python
+manifest = refresh_external_observations(
+    output_dir=Path(args.output),
+    as_of=args.as_of,
+    regions_path=Path(args.regions),
+    normals_path=Path(args.normals),
+    ndvi_start=args.ndvi_start,
+    source_bundle=None,
+)
+print(json.dumps(manifest, ensure_ascii=False, sort_keys=True))
+```
+
+打印前必须运行敏感字段扫描；`PARTIAL` 返回正常退出码，以便继续生成工作簿；只有参数错误、无法写文件或 manifest 校验失败时非零退出。
+
+- [ ] **步骤 4：把三项指标加入监控快照但隔离配置动作**
+
+在 `monitoring.py` 增加 `build_external_observation_status(data_dir, as_of) -> dict[str, object]`，读取 `external_manifest.json` 和三个 CSV，输出最新值、真实数据截至日、发布时间、刷新时间、覆盖、状态、来源和局限。`build_snapshot` 只把结果写入顶层 `external_observations` 和 L1 展示区；计算 `research_gate`、`recommended_action`、CTA 配置和置信度的函数不得读取该键。
+
+在 `config/monitoring.json` 增加：
+
+```json
+"external_freshness_days": {
+  "monsoon_cumulative": 2,
+  "imd_events": 30,
+  "ndvi": 24
+}
+```
+
+增加回归测试：对同一份原监控输入，分别注入 `OK` 和 `PARTIAL` 外部观测，断言 `research_gate`、`recommended_action` 和全部 CTA 配置字段逐值相等；同时断言快照保留外部状态。
+
+运行：`python -m pytest tests/test_external_observations.py tests/test_monitoring.py -q`
+
+预期：通过。
+
+- [ ] **步骤 5：提交外部刷新和监控接入**
+
+```powershell
+git add src/elnino_cta/external_observations.py src/elnino_cta/cli.py src/elnino_cta/monitoring.py config/monitoring.json tests/test_external_observations.py tests/test_monitoring.py
+git commit -m "feat: integrate India observations into monitoring"
+```
+
+---
+
+### 任务 5：增加官方历史数据源适配器
 
 **文件：**
 - 修改：`pyproject.toml`
@@ -228,7 +773,7 @@ git commit -m "feat: add FAOSTAT and World Bank history sources"
 
 ---
 
-### 任务 2：识别 ENSO 事件并构建无未来函数的气候与基本面证据
+### 任务 6：识别 ENSO 事件并构建无未来函数的气候与基本面证据
 
 **文件：**
 - 新建：`src/elnino_cta/historical_review.py`
@@ -236,8 +781,8 @@ git commit -m "feat: add FAOSTAT and World Bank history sources"
 - 修改：`src/elnino_cta/pipeline.py`
 
 **接口：**
-- 输入：标准化 ONI、SOI、DMI，NASA POWER 天气数据和 FAOSTAT 作物历史数据框。
-- 输出：`identify_enso_events`、`build_weather_evidence`、`build_yield_evidence` 和 `build_event_evidence_panel`。
+- 输入：标准化 ONI、SOI、DMI，NASA POWER 天气、季风累计、MOD13Q1 NDVI 和 FAOSTAT 作物历史数据框。
+- 输出：`identify_enso_events`、`build_index_evidence`、`build_weather_evidence`、`build_external_climate_evidence`、`build_yield_evidence` 和 `build_event_evidence_panel`。
 
 - [ ] **步骤 1：编写预期失败的 ONI 事件识别测试**
 
@@ -304,6 +849,26 @@ def test_weather_evidence_keeps_region_and_event_window_grain():
     evidence = build_weather_evidence(events(), nasa_daily_history())
     assert not evidence.duplicated(["event_id", "region"]).any()
     assert {"precip_anomaly_pct", "soil_wetness_anomaly", "coverage_pct"}.issubset(evidence)
+
+def test_index_evidence_uses_fixed_t0_t12_window_for_soi_and_dmi():
+    evidence = build_index_evidence(
+        events(), monthly_oni(), monthly_soi_with_future_outlier(), monthly_dmi()
+    )
+    one = evidence.query("event_id == '2009-2010'")
+    assert one["observation_date"].max() <= pd.Timestamp("2010-07-01")
+    assert set(one["metric_id"]) == {
+        "oni_peak", "oni_duration_seasons", "soi_mean_t0_t12", "dmi_mean_t0_t12"
+    }
+    assert one.query("metric_id == 'soi_mean_t0_t12'")["value"].iloc[0] == pytest.approx(-8.0)
+
+def test_external_climate_evidence_uses_only_event_window():
+    evidence = build_external_climate_evidence(
+        events(), monsoon_history(), ndvi_history_with_future_outlier()
+    )
+    one = evidence.query("event_id == '2009-2010'")
+    assert one["observation_date"].max() <= pd.Timestamp("2010-07-01")
+    assert one["metric_id"].str.startswith("india_monsoon_departure_y").any()
+    assert one["metric_id"].eq("india_sugar_ndvi_zscore").any()
 ```
 
 运行：`python -m pytest tests/test_historical_review.py -q`
@@ -315,6 +880,52 @@ def test_weather_evidence_keeps_region_and_event_window_grain():
 增加以下精确接口：
 
 ```python
+def build_index_evidence(
+    events: pd.DataFrame,
+    oni: pd.DataFrame,
+    soi: pd.DataFrame,
+    dmi: pd.DataFrame,
+) -> pd.DataFrame:
+    series = {"soi_mean_t0_t12": (soi, "soi"), "dmi_mean_t0_t12": (dmi, "dmi")}
+    rows = []
+    for event in events.itertuples(index=False):
+        start = pd.Timestamp(event.start_date)
+        end = start + pd.DateOffset(months=12)
+        rows.extend([
+            {
+                "event_id": event.event_id, "status": event.status,
+                "commodity": "both", "metric_id": "oni_peak",
+                "value": event.peak_oni, "unit": "degC",
+                "coverage_pct": 1.0, "observation_date": pd.Timestamp(event.peak_date),
+                "source": oni["source"].dropna().iloc[0],
+                "limitation": "事后完整事件峰值；仅描述，不作为T0实时信号",
+            },
+            {
+                "event_id": event.event_id, "status": event.status,
+                "commodity": "both", "metric_id": "oni_duration_seasons",
+                "value": event.duration_seasons, "unit": "overlapping_seasons",
+                "coverage_pct": 1.0, "observation_date": pd.Timestamp(event.end_date),
+                "source": oni["source"].dropna().iloc[0],
+                "limitation": "事后完整事件持续期；ONGOING事件不进入规律统计",
+            },
+        ])
+        for metric_id, (frame, value_column) in series.items():
+            current = frame.copy()
+            current["date"] = pd.to_datetime(current["date"])
+            window = current[current["date"].between(start, end)].sort_values("date")
+            expected_months = len(pd.period_range(start, end, freq="M"))
+            rows.append({
+                "event_id": event.event_id, "status": event.status,
+                "commodity": "both", "metric_id": metric_id,
+                "value": pd.to_numeric(window[value_column], errors="coerce").mean(),
+                "unit": "index",
+                "coverage_pct": min(window[value_column].notna().sum() / expected_months, 1.0),
+                "observation_date": window["date"].max() if not window.empty else pd.NaT,
+                "source": window["source"].dropna().iloc[0] if not window.empty else pd.NA,
+                "limitation": "固定T0至T+12月均值；不读取窗口后数据",
+            })
+    return pd.DataFrame(rows)
+
 def build_weather_evidence(
     events: pd.DataFrame,
     weather: pd.DataFrame,
@@ -347,6 +958,7 @@ def build_weather_evidence(
                 "precip_anomaly_pct": actual_rain / normal_rain - 1 if normal_rain > 0 else pd.NA,
                 "soil_wetness_anomaly": (group["root_zone_soil_wetness"] - group["soil_normal"]).mean(),
                 "coverage_pct": group["precip_mm"].notna().mean(),
+                "observation_date": group["date"].max(),
                 "source": group["source"].iloc[0],
             })
     return pd.DataFrame(rows)
@@ -374,17 +986,73 @@ def build_yield_evidence(events: pd.DataFrame, crops: pd.DataFrame) -> pd.DataFr
                     "yoy": value / previous - 1 if pd.notna(previous) and previous != 0 else pd.NA,
                     "deviation_vs_prior5_median": value / prior.median() - 1 if len(prior) == 5 and prior.median() != 0 else pd.NA,
                     "baseline_years": len(prior), "baseline_end_year": year - 1,
+                    "observation_date": pd.Timestamp(year, 12, 31),
                     "calendar_crop_year_caveat": True,
                     "source": source_row["source"], "source_flag": source_row["flag"],
                 })
     return pd.DataFrame(rows)
 
+def build_external_climate_evidence(
+    events: pd.DataFrame,
+    monsoon: pd.DataFrame,
+    ndvi: pd.DataFrame,
+) -> pd.DataFrame:
+    monsoon_frame = monsoon.copy()
+    monsoon_frame["date"] = pd.to_datetime(monsoon_frame["date"])
+    ndvi_frame = ndvi.copy()
+    ndvi_frame["product_date"] = pd.to_datetime(ndvi_frame["product_date"])
+    rows = []
+    for event in events.itertuples(index=False):
+        start = pd.Timestamp(event.start_date)
+        end = start + pd.DateOffset(months=12)
+        monsoon_window = monsoon_frame[
+            monsoon_frame["date"].between(start, end)
+            & monsoon_frame["status"].eq("OK")
+        ]
+        for season_year, group in monsoon_window.groupby("season_year"):
+            latest = group.sort_values("date").iloc[-1]
+            rows.append({
+                "event_id": event.event_id, "status": event.status,
+                "commodity": "sugar", "metric_id": f"india_monsoon_departure_y{int(season_year)}",
+                "value": latest["cumulative_departure_pct"], "unit": "ratio",
+                "coverage_pct": latest["valid_locations"] / 3,
+                "observation_date": latest["date"], "source": latest["source"],
+                "limitation": f"NASA POWER三点等权代理；季风年{int(season_year)}",
+            })
+        ndvi_window = ndvi_frame[
+            ndvi_frame["product_date"].between(start, end)
+            & ndvi_frame["status"].eq("OK")
+        ]
+        if not ndvi_window.empty:
+            rows.append({
+                "event_id": event.event_id, "status": event.status,
+                "commodity": "sugar", "metric_id": "india_sugar_ndvi_zscore",
+                "value": ndvi_window["z_score"].mean(), "unit": "z-score",
+                "coverage_pct": ndvi_window["valid_pixel_ratio"].mean(),
+                "observation_date": ndvi_window["product_date"].max(),
+                "source": ndvi_window["source"].iloc[0],
+                "limitation": "T0至T+12月平均；50公里缓冲区植被代理，非糖蔗专属",
+            })
+    return pd.DataFrame(rows)
+
 def build_event_evidence_panel(
     events: pd.DataFrame,
+    index_evidence: pd.DataFrame,
     weather_evidence: pd.DataFrame,
     yield_evidence: pd.DataFrame,
+    external_climate_evidence: pd.DataFrame,
 ) -> pd.DataFrame:
     rows = []
+    for item in index_evidence.itertuples(index=False):
+        for commodity in ("palm_oil", "sugar"):
+            rows.append({
+                "event_id": item.event_id, "status": item.status,
+                "commodity": commodity, "layer": "L1",
+                "metric_id": item.metric_id, "value": item.value, "unit": item.unit,
+                "coverage_pct": item.coverage_pct, "observation_date": item.observation_date,
+                "source": item.source,
+                "source_flag": pd.NA, "limitation": item.limitation,
+            })
     for item in weather_evidence.itertuples(index=False):
         for field, unit in (("precip_anomaly_pct", "ratio"), ("soil_wetness_anomaly", "index")):
             rows.append({
@@ -392,7 +1060,8 @@ def build_event_evidence_panel(
                 "commodity": item.commodity, "layer": "L1",
                 "metric_id": f"weather:{item.region}:{field}",
                 "value": getattr(item, field), "unit": unit,
-                "coverage_pct": item.coverage_pct, "source": item.source,
+                "coverage_pct": item.coverage_pct, "observation_date": item.observation_date,
+                "source": item.source,
                 "source_flag": pd.NA,
                 "limitation": "T0至T+12月；按1991-2020同月均值计算",
             })
@@ -404,18 +1073,28 @@ def build_event_evidence_panel(
                 "metric_id": f"crop:{item.area}:{item.item}:{item.element}:y{item.year_offset}:{field}",
                 "value": getattr(item, field), "unit": "ratio",
                 "coverage_pct": 1.0 if item.baseline_years == 5 else item.baseline_years / 5,
-                "source": item.source,
+                "observation_date": item.observation_date, "source": item.source,
                 "source_flag": item.source_flag,
                 "limitation": "FAOSTAT日历年口径；不等同作物年度",
             })
+    for item in external_climate_evidence.itertuples(index=False):
+        rows.append({
+            "event_id": item.event_id, "status": item.status,
+            "commodity": item.commodity, "layer": "L1",
+            "metric_id": item.metric_id, "value": item.value, "unit": item.unit,
+            "coverage_pct": item.coverage_pct, "observation_date": item.observation_date,
+            "source": item.source,
+            "source_flag": pd.NA, "limitation": item.limitation,
+        })
     columns = [
         "event_id", "status", "commodity", "layer", "metric_id",
-        "value", "unit", "coverage_pct", "source", "source_flag", "limitation",
+        "value", "unit", "coverage_pct", "observation_date",
+        "source", "source_flag", "limitation",
     ]
     return pd.DataFrame(rows, columns=columns)
 ```
 
-天气证据使用 `T0` 至 `T+12` 月窗口，并以 1991—2020 年相同日历月份均值作为基准。单产证据把事件开始年和下一年分别存为 `year_offset=0` 与 `year_offset=1`，同时保存同比和相对此前五年中位数的偏差。合并后的面板采用长表结构，每个 `event_id × commodity × metric_id` 组合只能有一行。保留 FAOSTAT 标记，并为每条年度作物观测设置 `calendar_crop_year_caveat=True`。
+SOI/DMI、天气与 NDVI 证据只使用 `T0` 至 `T+12` 月窗口；季风累计取窗口内每个季风年的最后一个已发布进度。ONI 峰值和持续期是完整事件的事后描述，必须在 `limitation` 明示不能视为 T0 可知信号，`ONGOING` 事件不参与历史规律统计。NASA POWER 基准使用 1991—2020 年相同日历月份，NDVI 基准使用 2001—2020 年相同合成期。单产证据把事件开始年和下一年分别存为 `year_offset=0` 与 `year_offset=1`，同时保存同比和相对此前五年中位数的偏差。合并后的面板采用长表结构，每个 `event_id × commodity × metric_id` 组合只能有一行；若一个事件窗口覆盖两个季风年，应把季风年写入 `metric_id` 后缀以维持唯一键。保留 FAOSTAT 标记，并为每条年度作物观测设置 `calendar_crop_year_caveat=True`。
 
 运行：`python -m pytest tests/test_historical_review.py -q`
 
@@ -475,7 +1154,7 @@ git commit -m "feat: build no-look-ahead ENSO event evidence"
 
 ---
 
-### 任务 3：构建按事件对齐的价格路径和月度 CTA 代理
+### 任务 7：构建按事件对齐的价格路径和月度 CTA 代理
 
 **文件：**
 - 修改：`src/elnino_cta/historical_review.py`
@@ -678,7 +1357,7 @@ git commit -m "feat: add event price and CTA proxy paths"
 
 ---
 
-### 任务 4：生成描述性历史规律和 L2 六类汇总
+### 任务 8：生成描述性历史规律和 L2 六类汇总
 
 **文件：**
 - 新建：`src/elnino_cta/fundamental_summary.py`
@@ -944,7 +1623,7 @@ git commit -m "feat: summarize ENSO patterns and L2 fundamentals"
 
 ---
 
-### 任务 5：增加历史刷新命令并写入处理后结果
+### 任务 9：增加历史刷新命令并写入处理后结果
 
 **文件：**
 - 修改：`src/elnino_cta/cli.py`
@@ -992,6 +1671,9 @@ HISTORY_FILES = {
     "current_context": "current_event_context.csv",
 }
 
+def read_optional_csv(path: Path, columns: list[str]) -> pd.DataFrame:
+    return pd.read_csv(path) if path.exists() else pd.DataFrame(columns=columns)
+
 def refresh_history(
     output_dir: Path,
     as_of: str,
@@ -1015,6 +1697,14 @@ def refresh_history(
             "soi": pd.read_csv(output_dir / "climate" / "noaa_soi.csv"),
             "dmi": pd.read_csv(output_dir / "climate" / "noaa_dmi.csv"),
             "weather": pd.read_csv(output_dir / "climate" / "nasa_power_precipitation.csv"),
+            "monsoon": read_optional_csv(
+                output_dir / "climate" / "india_monsoon_cumulative.csv",
+                ["date", "season_year", "cumulative_departure_pct", "valid_locations", "status", "source"],
+            ),
+            "ndvi": read_optional_csv(
+                output_dir / "climate" / "india_sugar_ndvi.csv",
+                ["product_date", "z_score", "valid_pixel_ratio", "status", "source"],
+            ),
             "crops": fetch_faostat_crop_history(),
             "prices": fetch_world_bank_prices(),
             "daily_signals": daily_signals,
@@ -1022,9 +1712,13 @@ def refresh_history(
     else:
         bundle = source_bundle
     events = identify_enso_events(bundle["oni"])
+    indices = build_index_evidence(events, bundle["oni"], bundle["soi"], bundle["dmi"])
     weather = build_weather_evidence(events, bundle["weather"])
     yields = build_yield_evidence(events, bundle["crops"])
-    evidence = build_event_evidence_panel(events, weather, yields)
+    external_climate = build_external_climate_evidence(
+        events, bundle["monsoon"], bundle["ndvi"]
+    )
+    evidence = build_event_evidence_panel(events, indices, weather, yields, external_climate)
     price_paths = build_event_price_paths(events, bundle["prices"])
     cta_frames = []
     for commodity, prices in bundle["prices"].groupby("commodity"):
@@ -1076,7 +1770,7 @@ def refresh_history(
     return manifest
 ```
 
-当 `source_bundle=None` 时，从官方来源取数，并从 `output_dir/signals` 读取当前信号 CSV；注入数据框时不得发起网络请求。先写临时文件，再用 `Path.replace` 原子替换。向 `data/processed/history/manifest.json` 写入来源 URL、行数、最早/最晚日期、下载时间和文件 SHA-256。
+当 `source_bundle=None` 时，从官方来源取数，从 `output_dir/signals` 读取当前信号 CSV，并读取 `external-refresh` 已落盘的季风累计与 NDVI；外部 CSV 缺失时使用具有固定字段的空表并在证据覆盖中显示缺失，不在历史命令中重复调用 Earthdata 或 IMD。注入数据框时不得发起网络请求。先写临时文件，再用 `Path.replace` 原子替换。向 `data/processed/history/manifest.json` 写入来源 URL、行数、最早/最晚日期、下载时间和文件 SHA-256。
 
 运行：`python -m pytest tests/test_history_pipeline.py -q`
 
@@ -1115,7 +1809,7 @@ git commit -m "feat: add independent ENSO history refresh"
 
 ---
 
-### 任务 6：生成包含历史复盘和 L2 六行汇总的八页工作簿
+### 任务 10：生成包含外部观测、历史复盘和 L2 六行汇总的八页工作簿
 
 **文件：**
 - 新建：`scripts/build_research_workbook.py`
@@ -1123,7 +1817,7 @@ git commit -m "feat: add independent ENSO history refresh"
 - 修改：`README.md`
 
 **接口：**
-- 输入：当前监控、基本面、市场、信号 CSV，以及 `data/processed/history/*.csv`。
+- 输入：当前监控、三项印度外部观测、基本面、市场、信号 CSV，以及 `data/processed/history/*.csv`。
 - 输出：`research/厄尔尼诺农产品CTA研究框架_八页复盘版_YYYYMMDD.xlsx`。
 
 - [ ] **步骤 1：编写预期失败的工作簿结构测试**
@@ -1142,6 +1836,16 @@ def test_workbook_has_eight_ordered_sheets_and_l2_six_rows(tmp_path):
     ws = wb["04_L2供给基本面"]
     categories = [ws.cell(row=r, column=2).value for r in range(11, 17)]
     assert categories == ["供给", "需求", "库存", "供给", "需求", "库存"]
+
+def test_workbook_contains_three_external_observations_and_statuses(tmp_path):
+    path = build_research_workbook(fixture_repo(), tmp_path, "2026-08-23")
+    wb = load_workbook(path, data_only=False, read_only=False)
+    climate_text = " ".join(str(cell.value) for row in wb["03_L1气候天气"] for cell in row)
+    audit_text = " ".join(str(cell.value) for row in wb["07_L5数据审计"] for cell in row)
+    for label in ("印度季风累计降雨偏差", "IMD季风开始/退出", "印度糖蔗主产区NDVI代理"):
+        assert label in climate_text
+    assert "AUTH_REQUIRED" in audit_text
+    assert "不单独触发CTA配置动作" in climate_text
 ```
 
 运行：`python -m pytest tests/test_research_workbook.py -q`
@@ -1217,9 +1921,16 @@ def load_workbook_inputs(repo_dir: Path) -> dict[str, object]:
     manifest = json.loads(
         (repo_dir / "data" / "processed" / "history" / "manifest.json").read_text(encoding="utf-8")
     )
+    external_manifest = json.loads(
+        (repo_dir / "data" / "processed" / "climate" / "external_manifest.json").read_text(encoding="utf-8")
+    )
     return {
         "monitor": monitor, "fundamentals": fundamentals, "climate": climate,
         "market": market, "signals": signals, "history_manifest": manifest,
+        "external_manifest": external_manifest,
+        "monsoon_cumulative": climate["india_monsoon_cumulative"],
+        "monsoon_events": climate["india_monsoon_events"],
+        "sugar_ndvi": climate["india_sugar_ndvi"],
         "events": history["enso_events"],
         "evidence": history["event_evidence_panel"],
         "price_paths": history["event_price_paths"],
@@ -1262,9 +1973,11 @@ def validate_workbook(path: Path) -> None:
 
 同时实现以下写入接口；每个写入函数只负责其命名工作表或表格，不得修改输入数据框：
 
-- `add_current_conclusion_sheet(workbook, frames, formats)`：只读取 `frames["monitor"]`，不得访问任何历史复盘键。
+- `add_current_conclusion_sheet(workbook, frames, formats)`：只读取 `frames["monitor"]` 中原有的配置结论字段，不得读取历史复盘键，也不得用 `external_observations` 改写结论或动作。
 - `add_logic_sheet(workbook, frames, formats)`：展示 `L1 → L2 → L3 → L4 → L5`，并增加明确的旁路 `H 历史复盘（仅描述，不进入配置）`。
-- `add_climate_sheet`、`add_market_sheet`、`add_cta_sheet` 和 `add_audit_sheet`：在整合进八页布局时，保留现有指标、来源、日期、含义、位置和局限。
+- `add_climate_sheet`：在原有 L1 指标后增加三项外部观测。季风累计显示累计值、1991—2020 同期正常值、偏差、分位和进度迷你线；IMD 显示开始/退出官方日期、正常日期、偏早偏晚天数和事件时间线；NDVI 显示当前值、同期差值、z-score、分位、有效像元率及 16 日迷你线。非 `OK` 状态显示状态和原因，不显示伪造数值，并注明“不单独触发CTA配置动作”。
+- `add_market_sheet` 和 `add_cta_sheet`：保留现有指标、来源、日期、含义、位置和局限。
+- `add_audit_sheet`：除原有审计外，逐项写入外部 manifest 的当前刷新状态、最近成功数据截至日、发布时间、刷新时间、覆盖率、鉴权/解析状态、来源和是否参与结论。
 - `write_event_summary_table(sheet, events, evidence, price_paths, cta_summary, daily_cta_summary, formats)`：每个 `event_id × commodity` 对应一个可见行，包含事件日期、ONI 峰值、气候/基本面证据覆盖、3/6/12/18 个月价格收益、Medium/Slow 月度 CTA 收益和回撤，以及可用的 P/SR Fast/Medium/Slow 日频代理结果；无覆盖时明确显示 `UNAVAILABLE`。
 - `write_event_path_data_and_sparklines(sheet, price_paths, cta_paths, formats)`：从 `AA` 列开始写入按 `relative_month=-6..18` 排序的源数据区，隐藏这些列，并增加可见的价格指数与 CTA 净值迷你折线图。
 - `write_pattern_table(sheet, patterns, formats)`：显示样本量、方向次数/占比、中位数、四分位数、规律强度和局限；不显示配置字段。
@@ -1277,7 +1990,27 @@ def validate_workbook(path: Path) -> None:
 
 预期：通过。
 
-- [ ] **步骤 3：增加历史路径、CTA 收益和迷你折线图**
+- [ ] **步骤 3：实现三项外部观测的 L1 与审计展示**
+
+实现 `write_external_observation_rows(sheet, frames, start_row, formats)`。源数据只来自 `monsoon_cumulative`、`monsoon_events`、`sugar_ndvi` 和 `external_manifest`；工作簿生成阶段不得联网。季风和 NDVI 的迷你折线源区写入隐藏列 `CA` 以后，IMD 使用可见的两事件时间线。若 manifest 为 `PARTIAL`，仍生成完整八页工作簿，并在 L1 和 L5 同时显示具体失败数据集及状态。
+
+增加测试断言：
+
+```python
+def test_partial_external_manifest_does_not_block_workbook(tmp_path):
+    repo = fixture_repo(external_status="PARTIAL", ndvi_status="AUTH_REQUIRED")
+    path = build_research_workbook(repo, tmp_path, "2026-08-23")
+    wb = load_workbook(path, data_only=False, read_only=False)
+    assert "AUTH_REQUIRED" in sheet_text(wb["03_L1气候天气"])
+    assert "AUTH_REQUIRED" in sheet_text(wb["07_L5数据审计"])
+    assert wb["00_结论-CTA建议"]["A1"].value is not None
+```
+
+运行：`python -m pytest tests/test_research_workbook.py -q`
+
+预期：通过。
+
+- [ ] **步骤 4：增加历史路径、CTA 收益和迷你折线图**
 
 对 `02_H_历次厄尔尼诺复盘` 中每个事件/品种行，写入视图区外的隐藏源数据区，其中包含 `relative_month=-6..18`、`price_index`、Medium 净值和 Slow 净值。每行至少增加两条可见迷你折线图：价格路径和 CTA 净值路径。可见汇总字段必须包含 0—3/6/12/18 个月商品收益、CTA 净收益、最大回撤、样本覆盖和局限。
 
@@ -1287,7 +2020,7 @@ def validate_workbook(path: Path) -> None:
 
 预期：通过。
 
-- [ ] **步骤 4：增加 L2 汇总与明细展示**
+- [ ] **步骤 5：增加 L2 汇总与明细展示**
 
 在 `04_L2供给基本面` 顶部写入六行汇总，其后展示完整驱动指标表。使用专门一列展示实际/预测状态。全球食糖消费和期末库存必须分开显示，库销比作为独立明细行。巴西指标必须精确标为 `巴西中南部制糖甘蔗量代理`，含义列显示 `压榨量 × 制糖比；非食糖产量`。
 
@@ -1297,7 +2030,7 @@ def validate_workbook(path: Path) -> None:
 
 预期：通过。
 
-- [ ] **步骤 5：扫描公式、错误值和敏感信息**
+- [ ] **步骤 6：扫描公式、错误值和敏感信息**
 
 关闭工作簿后，使用 `openpyxl` 重新打开并检查所有公式和字符串。发现 `#REF!`、`#DIV/0!`、`#VALUE!`、`#NAME?`、`#N/A`、`Authorization`、`Bearer ` 或类似 JWT 的 `eyJ` 令牌前缀时，构建必须失败。
 
@@ -1307,18 +2040,20 @@ def validate_workbook(path: Path) -> None:
 
 预期：通过。
 
-- [ ] **步骤 6：记录工作簿生成方式**
+- [ ] **步骤 7：记录工作簿生成方式**
 
 在 `README.md` 中增加：
 
 ```powershell
+elnino-cta external-refresh --as-of 2026-08-23
 elnino-cta history-refresh --as-of 2026-08-23
+elnino-cta monitor --as-of 2026-08-23
 python scripts/build_research_workbook.py --as-of 2026-08-23
 ```
 
-注明历史复盘页只作描述，不进入当前 CTA 配置门槛。
+注明历史复盘页只作描述，不进入当前 CTA 配置门槛；三项外部观测进入 L1 和审计展示，但一期不单独触发配置动作。
 
-- [ ] **步骤 7：提交工作簿生成器**
+- [ ] **步骤 8：提交工作簿生成器**
 
 ```powershell
 git add scripts/build_research_workbook.py tests/test_research_workbook.py README.md
@@ -1327,17 +2062,22 @@ git commit -m "feat: add ENSO history review workbook"
 
 ---
 
-### 任务 7：执行实时刷新、验证研究质量并发布最新工作簿
+### 任务 11：执行实时刷新、验证研究质量并发布最新工作簿
 
 **文件：**
+- 修改：`data/processed/climate/india_monsoon_cumulative.csv`
+- 修改：`data/processed/climate/india_monsoon_events.csv`
+- 修改：`data/processed/climate/india_sugar_ndvi.csv`
+- 修改：`data/processed/climate/external_manifest.json`
 - 修改：`data/processed/history/*.csv`
+- 修改：`reports/monitoring/latest.json`
 - 新建：`research/厄尔尼诺农产品CTA研究框架_八页复盘版_20260824.xlsx`
 - 修改：`.github/workflows/monitor.yml`
 - 修改：`README.md`
 
 **接口：**
 - 输入：前述全部已完成任务和获授权的网络访问。
-- 输出：实时历史 CSV、通过校验的工作簿、CI 刷新步骤，以及供用户审阅的简洁、证据驱动的规律总结。
+- 输出：实时外部观测 CSV、历史复盘 CSV、当前监控快照、通过校验的工作簿、CI 刷新步骤，以及供用户审阅的简洁、证据驱动的规律总结。
 
 - [ ] **步骤 1：实时取数前运行全部单元测试**
 
@@ -1345,15 +2085,17 @@ git commit -m "feat: add ENSO history review workbook"
 
 预期：全部测试通过。
 
-- [ ] **步骤 2：刷新官方历史数据**
+- [ ] **步骤 2：按依赖顺序刷新外部观测、历史复盘和当前监控**
 
 运行：
 
 ```powershell
+elnino-cta external-refresh --as-of 2026-08-24
 elnino-cta history-refresh --as-of 2026-08-24
+elnino-cta monitor --as-of 2026-08-24
 ```
 
-预期：`data/processed/history/manifest.json` 显示已结束事件数量大于零、包含世界银行两个品种、包含 FAOSTAT 四个国家/作物组合，且不存在重复主键。
+预期：`external_manifest.json` 的 `overall` 为 `OK` 或可解释的 `PARTIAL`，且不含密钥；历史清单显示已结束事件数量大于零、包含世界银行两个品种、包含 FAOSTAT 四个国家/作物组合；当前监控快照包含三项外部观测状态，但原有 CTA 结论字段不因它们改变。
 
 - [ ] **步骤 3：运行明确的数据质量检查**
 
@@ -1365,10 +2107,25 @@ assert not evidence.duplicated(["event_id", "commodity", "metric_id"]).any()
 assert set(price_paths["relative_month"]).issubset(set(range(-6, 19)))
 assert (price_paths["price"] > 0).all()
 assert not cta_paths.duplicated(["event_id", "commodity", "speed", "date"]).any()
+assert not monsoon.duplicated(["season_year", "season_day"]).any()
+assert not imd_events.duplicated(["season_year", "event_type"]).any()
+assert not ndvi.duplicated(["product_date"]).any()
+assert external_manifest["overall"] in {"OK", "PARTIAL"}
+assert set(external_manifest["datasets"]) == {"monsoon_cumulative", "imd_events", "ndvi"}
 assert not any(c in current_monitor_json for c in ["historical_patterns", "event_cta_summary"])
+assert all(c in current_monitor_json["external_observations"] for c in [
+    "monsoon_cumulative", "imd_events", "ndvi"
+])
+serialized_outputs = "\n".join(
+    path.read_text(encoding="utf-8", errors="ignore")
+    for path in published_text_outputs
+)
+assert "Authorization" not in serialized_outputs
+assert "Bearer " not in serialized_outputs
+assert not JWT_PATTERN.search(serialized_outputs)
 ```
 
-预期：退出码为 0；任何失败都必须阻止工作簿发布。
+预期：退出码为 0。外部单项为 `PARTIAL` 时允许继续，但必须在 L1/L5 明示具体状态；主键、时间窗、CTA 隔离或敏感信息检查失败时必须阻止工作簿发布。
 
 - [ ] **步骤 4：生成并检查工作簿**
 
@@ -1381,20 +2138,36 @@ python -m pytest tests/test_research_workbook.py -q
 
 预期：带日期的工作簿已生成，恰好包含八个可见工作表，历史页和指标页具有迷你折线图，并通过公式与敏感信息扫描。
 
-- [ ] **步骤 5：目视检查四个关键页面**
+- [ ] **步骤 5：目视检查五个关键页面**
 
 渲染或打开以下区域，检查文字截断、对齐、条件色和图表尺度可读性：
 
 - `00_结论-CTA建议`：顶部结论与操作区；
 - `02_H_历次厄尔尼诺复盘`：事件表以及价格/CTA 迷你折线图；
+- `03_L1气候天气`：三项外部指标的当前值、位置含义、迷你线和降级状态；
 - `04_L2供给基本面`：六行汇总和明细；
 - `07_L5数据审计`：来源、时效性和局限。
 
 预期：不存在被截断的表头、重叠图表、不可读行或被隐藏的局限说明。
 
-- [ ] **步骤 6：增加不依赖 Earthdata 的 CI 历史刷新**
+- [ ] **步骤 6：增加包含 Earthdata 安全降级的 CI 完整刷新**
 
-更新 `.github/workflows/monitor.yml`：在现有监控步骤后运行 `elnino-cta history-refresh --as-of "$(date -u +%F)"` 和工作簿生成器。一期不得引用 `EARTHDATA_TOKEN`。在提交步骤中加入 `data/processed/history` 和带日期工作簿的匹配规则。
+更新 `.github/workflows/monitor.yml`，固定使用以下顺序：
+
+```yaml
+- name: Refresh external observations
+  env:
+    EARTHDATA_TOKEN: ${{ secrets.EARTHDATA_TOKEN }}
+  run: elnino-cta external-refresh --as-of "$(date -u +%F)"
+- name: Refresh ENSO history
+  run: elnino-cta history-refresh --as-of "$(date -u +%F)"
+- name: Refresh current monitor
+  run: elnino-cta monitor --as-of "$(date -u +%F)"
+- name: Build research workbook
+  run: python scripts/build_research_workbook.py --as-of "$(date -u +%F)"
+```
+
+只有外部刷新步骤可以读取仓库 Secret；脚本不得回显环境变量。Secret 缺失、鉴权失败或单项来源失败时，`external-refresh` 写入 `PARTIAL` 并返回 0，后续步骤继续使用最近一次成功文件并在工作簿中标明降级。参数错误、写入失败、清单校验失败或任何测试失败仍必须使 CI 失败。在提交步骤中加入三个 `data/processed/climate/india_*.csv`、`external_manifest.json`、`data/processed/history`、`reports/monitoring/latest.json` 和带日期工作簿的匹配规则；不得加入 `data/raw/earthdata/`。
 
 运行 YAML 解析检查和 `python -m pytest -q`。
 
@@ -1407,7 +2180,7 @@ python -m pytest tests/test_research_workbook.py -q
 - [ ] **步骤 8：提交最终实时产物**
 
 ```powershell
-git add data/processed/history research/厄尔尼诺农产品CTA研究框架_八页复盘版_20260824.xlsx .github/workflows/monitor.yml README.md
+git add data/processed/climate/india_monsoon_cumulative.csv data/processed/climate/india_monsoon_events.csv data/processed/climate/india_sugar_ndvi.csv data/processed/climate/external_manifest.json data/processed/history reports/monitoring/latest.json research/厄尔尼诺农产品CTA研究框架_八页复盘版_20260824.xlsx .github/workflows/monitor.yml README.md
 git commit -m "data: publish ENSO historical review"
 ```
 
