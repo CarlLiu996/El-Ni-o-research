@@ -38,10 +38,20 @@ def parse_world_bank_prices(
 ) -> pd.DataFrame:
     raw = pd.read_excel(BytesIO(content), sheet_name="Monthly Prices", header=None, engine="openpyxl")
     header_matches = raw.index[raw.iloc[:, 0].astype(str).str.strip().eq("Date")].tolist()
-    if len(header_matches) != 1:
-        raise ValueError("Could not identify World Bank monthly header row")
-    header_row = header_matches[0]
-    data = raw.iloc[header_row + 1:].copy()
+    data_offset = 1
+    if len(header_matches) == 1:
+        header_row = header_matches[0]
+    else:
+        alias_names = set().union(*COMMODITY_ALIASES.values())
+        candidates = [
+            index for index, row in raw.iterrows()
+            if alias_names.issubset({str(value).strip() for value in row.dropna()})
+        ]
+        if len(candidates) != 1:
+            raise ValueError("Could not identify World Bank monthly header row")
+        header_row = candidates[0]
+        data_offset = 2
+    data = raw.iloc[header_row + data_offset:].copy()
     data.columns = [str(value).strip() for value in raw.iloc[header_row]]
     data = data.rename(columns={data.columns[0]: "date"})
     records: list[pd.DataFrame] = []
@@ -70,6 +80,8 @@ def fetch_world_bank_prices(
     session: requests.Session | None = None,
 ) -> pd.DataFrame:
     client = session or requests.Session()
+    if session is None:
+        client.trust_env = False
     response = client.get(WORLD_BANK_MONTHLY_URL, timeout=timeout)
     response.raise_for_status()
     return parse_world_bank_prices(response.content)

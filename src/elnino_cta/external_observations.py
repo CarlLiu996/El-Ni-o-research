@@ -8,7 +8,11 @@ from typing import Any
 import pandas as pd
 import requests
 
-from .sources.earthdata import NDVI_COLUMNS, fetch_india_sugar_ndvi
+from .sources.earthdata import (
+    NDVI_COLUMNS,
+    fetch_india_sugar_ndvi,
+    fetch_india_sugar_ndvi_ornl,
+)
 from .sources.imd import IMD_COLUMNS, fetch_imd_monsoon_events
 from .sources.nasa_power import Location, fetch_daily_agroclimate
 
@@ -203,7 +207,7 @@ def _latest_status(dataset: str, frame: pd.DataFrame) -> str:
     return str(frame.iloc[-1]["status"])
 
 
-def _artifact_metadata(target: Path, status: str) -> dict[str, object]:
+def _artifact_metadata(dataset: str, target: Path, status: str) -> dict[str, object]:
     frame = pd.read_csv(target) if target.exists() else pd.DataFrame()
     data_date = None
     for column in ("data_as_of", "date", "official_date", "product_date"):
@@ -219,12 +223,36 @@ def _artifact_metadata(target: Path, status: str) -> dict[str, object]:
             if not dates.empty:
                 published_at = dates.max().isoformat()
                 break
+    default_sources = {
+        "monsoon_cumulative": "https://power.larc.nasa.gov/api/temporal/daily/point",
+        "imd_events": "https://mausam.imd.gov.in/responsive/monsooninformation_onset.php",
+        "ndvi": "https://modis.ornl.gov/data/modis_webservice.html",
+    }
+    source_values: list[str] = []
+    for column in ("source", "source_url"):
+        if column in frame:
+            source_values.extend(
+                str(value) for value in frame[column].dropna().unique() if str(value).strip()
+            )
+    coverage_pct = None
+    if not frame.empty and dataset == "monsoon_cumulative":
+        latest = frame.iloc[-1]
+        required = pd.to_numeric(pd.Series([latest.get("required_locations")]), errors="coerce").iloc[0]
+        valid = pd.to_numeric(pd.Series([latest.get("valid_locations")]), errors="coerce").iloc[0]
+        if pd.notna(required) and required > 0 and pd.notna(valid):
+            coverage_pct = min(float(valid / required), 1.0)
+    elif not frame.empty and dataset == "ndvi" and "valid_pixel_ratio" in frame:
+        coverage = pd.to_numeric(frame["valid_pixel_ratio"], errors="coerce").dropna()
+        coverage_pct = float(coverage.iloc[-1]) if not coverage.empty else None
     return {
         "status": status,
         "path": target.as_posix(),
         "rows": len(frame),
         "data_as_of": data_date,
         "published_at": published_at,
+        "coverage_pct": coverage_pct,
+        "source": "; ".join(sorted(set(source_values))) or default_sources[dataset],
+        "reason": "" if status == "OK" else status,
         "sha256": hashlib.sha256(target.read_bytes()).hexdigest() if target.exists() else None,
     }
 
@@ -278,12 +306,21 @@ def refresh_external_observations(
         if source_bundle is not None and "ndvi" in source_bundle:
             ndvi = source_bundle["ndvi"]
         else:
-            ndvi = fetch_india_sugar_ndvi(
-                locations,
-                start=ndvi_start,
-                end=as_of,
-                cache_dir=output_dir.parent / "raw" / "earthdata",
-            )
+            import os
+
+            if os.getenv("EARTHDATA_HDF_FALLBACK") == "1":
+                ndvi = fetch_india_sugar_ndvi(
+                    locations,
+                    start=ndvi_start,
+                    end=as_of,
+                    cache_dir=output_dir.parent / "raw" / "earthdata",
+                )
+            else:
+                ndvi = fetch_india_sugar_ndvi_ornl(
+                    locations,
+                    start=ndvi_start,
+                    end=as_of,
+                )
         if not isinstance(ndvi, pd.DataFrame):
             raise TypeError("NDVI source must be a DataFrame")
         return ndvi
@@ -309,7 +346,7 @@ def refresh_external_observations(
             status = sanitized_error_status(exc)
             if not target.exists():
                 atomic_write_csv(_placeholder(dataset, status, as_of), target)
-        dataset_meta[dataset] = _artifact_metadata(target, status)
+        dataset_meta[dataset] = _artifact_metadata(dataset, target, status)
 
     manifest: dict[str, object] = {
         "overall": "PARTIAL" if failures else "OK",

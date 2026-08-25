@@ -18,6 +18,15 @@
 - 参数：`PRECTOTCORR`、`GWETROOT`、`community=AG`、经纬度、起止日期、JSON。
 - 当前覆盖马来西亚、印度尼西亚、印度糖区和巴西中南部糖区，共12个代表点；仍不等同于种植面积加权天气。正式研究应增加行政区网格、产量权重并与当地官方站点交叉校验。
 
+## 印度持续外部观测
+
+- 印度季风累计降雨偏差：复用 NASA POWER `PRECTOTCORR`，对 Maharashtra、Uttar Pradesh、Karnataka 三个代表点等权汇总。只纳入当日以前连续完整的点，1991—2020 同季节日为正常值；至少两个点完整才标为 `OK`。
+- 季风开始/退出：读取 India Meteorological Department 明确的官方宣告，并与 2020 修订正常日期比较。预测、展望或媒体转述不当作已经发生的事件；文本冲突标为 `REVIEW_REQUIRED`。
+- 印度糖蔗主产区 NDVI 代理：MOD13Q1.061（250m、16日）经 ORNL DAAC TESViS REST 子集服务取得，接口说明为 `https://modis.ornl.gov/data/modis_webservice.html`。默认使用三个主产区代表点 1km 邻域，以控制长期持续刷新体量；应用 MODLAND VI Quality 低两位质量掩膜、比例因子 0.0001，并用 2001—2020 同复合期计算异常、z-score 与历史分位。该指标不是糖蔗专属作物掩膜，也不是产量预测。
+- ORNL 接口每次最多返回十个 MODIS 日期，程序分批请求。服务失败时写 `FETCH_ERROR/PARTIAL` 并保留最近一次成功文件。只有显式设置 `EARTHDATA_HDF_FALLBACK=1` 时才使用 `EARTHDATA_TOKEN` 下载原始 HDF；Token 从环境变量读取且不会写入日志、清单或工作簿。
+
+上述三项只补充 L1 与 L5 审计证据，一期不单独触发 CTA 配置动作。
+
 ## Tushare Pro（正式期货数据）
 
 - `fut_mapping`：连续/主力代码到实际月合约的逐日映射；

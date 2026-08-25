@@ -121,6 +121,11 @@ def write_title(sheet: Any, title: str, subtitle: str, formats: dict[str, Any]) 
     sheet.set_row(0, 28)
     sheet.set_row(1, 30)
     sheet.hide_gridlines(2)
+    sheet.set_landscape()
+    sheet.set_paper(8)
+    sheet.fit_to_pages(1, 0)
+    sheet.set_margins(left=0.25, right=0.25, top=0.5, bottom=0.5)
+    sheet.center_horizontally()
 
 
 def _write_table(
@@ -178,7 +183,16 @@ def add_current_conclusion_sheet(
         status = gate.get(key, "UNKNOWN")
         rows.append([label, status, question, "已确认" if status == "CONFIRMED" else "尚不能升级配置"])
     _write_table(sheet, 6, headers, rows, formats)
-    alerts = list(monitor.get("critical_alerts", [])) + list(monitor.get("warning_alerts", []))
+    alerts: list[str] = []
+    for label, value in (
+        ("关键告警", monitor.get("critical_alerts", [])),
+        ("一般告警", monitor.get("warning_alerts", [])),
+    ):
+        if isinstance(value, list):
+            alerts.extend(str(item) for item in value)
+        elif isinstance(value, int) and value:
+            alerts.append(f"{label}：{value}项（详见 L5 数据审计与监控复盘）")
+    alerts.extend(str(item) for item in monitor.get("scope_gaps", []))
     sheet.merge_range(12, 0, 12, 11, "当前限制与复核点", formats["section"])
     if alerts:
         for index, alert in enumerate(alerts[:8], start=13):
@@ -266,10 +280,14 @@ def write_event_summary_table(
                 daily_cta_summary.get("event_id", pd.Series(dtype=str)).eq(event.event_id)
                 & daily_cta_summary.get("symbol", pd.Series(dtype=str)).eq(symbol)
             ]
-            daily_text = "; ".join(
-                f"{item.speed}:{item.coverage_status}"
-                for item in daily.itertuples(index=False)
-            ) or "UNAVAILABLE"
+            if daily.empty or daily.get("coverage_status", pd.Series(dtype=str)).eq("UNAVAILABLE").all():
+                daily_text = "UNAVAILABLE"
+            else:
+                daily_text = "; ".join(
+                    f"{item.speed}:{item.coverage_status}"
+                    + (f"/{float(item.net_return):.1%}" if pd.notna(item.net_return) else "")
+                    for item in daily.itertuples(index=False)
+                )
             rows.append([
                 event.event_id, COMMODITY_CN[commodity], event.status,
                 pd.to_datetime(event.start_date), event.peak_oni, len(event_evidence),
@@ -368,18 +386,33 @@ def write_external_observation_rows(
     monsoon = _last_record(frames["monsoon_cumulative"])
     events = frames["monsoon_events"]
     ndvi = _last_record(frames["sugar_ndvi"])
-    monsoon_status = monsoon.get("status", "MISSING") if monsoon is not None else "MISSING"
+    datasets = frames["external_manifest"].get("datasets", {})
+    monsoon_meta = datasets.get("monsoon_cumulative", {})
+    imd_meta = datasets.get("imd_events", {})
+    ndvi_meta = datasets.get("ndvi", {})
+    monsoon_status = monsoon_meta.get(
+        "status", monsoon.get("status", "MISSING") if monsoon is not None else "MISSING"
+    )
     monsoon_value = (
         f"累计{monsoon.get('actual_cumulative_mm', '')}mm；偏差{float(monsoon.get('cumulative_departure_pct')):.1%}"
         if monsoon is not None and monsoon_status == "OK" and pd.notna(monsoon.get("cumulative_departure_pct"))
         else str(monsoon.get("reason", monsoon_status)) if monsoon is not None else "无数据"
     )
-    event_text = "; ".join(
-        f"{getattr(item, 'event', '')}:{getattr(item, 'actual_date', '') or getattr(item, 'status', '')}"
-        for item in events.itertuples(index=False)
-    ) or "无数据"
-    event_status = "OK" if not events.empty and events.get("status", pd.Series()).eq("OK").any() else "PENDING"
-    ndvi_status = ndvi.get("status", "MISSING") if ndvi is not None else "MISSING"
+    event_status = imd_meta.get(
+        "status",
+        "OK" if not events.empty and events.get("status", pd.Series(dtype=str)).eq("OK").any() else "PENDING",
+    )
+    if event_status in {"OK", "NOT_ANNOUNCED"}:
+        event_text = "; ".join(
+            f"{getattr(item, 'event', getattr(item, 'event_type', ''))}:"
+            f"{getattr(item, 'actual_date', getattr(item, 'official_date', '')) or getattr(item, 'status', '')}"
+            for item in events.itertuples(index=False)
+        ) or event_status
+    else:
+        event_text = imd_meta.get("reason", event_status)
+    ndvi_status = ndvi_meta.get(
+        "status", ndvi.get("status", "MISSING") if ndvi is not None else "MISSING"
+    )
     ndvi_value = (
         f"NDVI {ndvi.get('ndvi')}；z={ndvi.get('z_score')}；有效像元{float(ndvi.get('valid_pixel_ratio')):.1%}"
         if ndvi is not None and ndvi_status == "OK" and pd.notna(ndvi.get("ndvi"))
@@ -389,16 +422,19 @@ def write_external_observation_rows(
         ["印度季风累计降雨偏差", monsoon_status, monsoon_value,
          monsoon.get("normal_cumulative_mm", "") if monsoon is not None else "",
          "负偏差代表季风累计偏弱；需结合空间覆盖与进度", monsoon.get("date", "") if monsoon is not None else "",
-         monsoon.get("source", "") if monsoon is not None else "", "不单独触发CTA配置动作"],
+         monsoon_meta.get("source", monsoon.get("source", "") if monsoon is not None else ""), "不单独触发CTA配置动作"],
         ["IMD季风开始/退出", event_status, event_text, "IMD正常开始/退出日期",
          "偏早/偏晚影响有效雨季长度，但宣告具有事后确认属性",
-         events.get("actual_date", pd.Series(dtype=str)).dropna().max() if not events.empty else "",
-         "IMD", "不单独触发CTA配置动作"],
+         (
+             events.get("actual_date", events.get("official_date", pd.Series(dtype=str))).dropna().max()
+             if not events.empty else ""
+         ),
+         imd_meta.get("source", "IMD"), "不单独触发CTA配置动作"],
         ["印度糖蔗主产区NDVI代理", ndvi_status, ndvi_value,
          ndvi.get("same_period_mean", "") if ndvi is not None else "",
-         "低分位/负z值代表长势偏弱；50公里缓冲区不是糖蔗专属掩膜",
+         "低分位/负z值代表长势偏弱；主产区代表点邻域不是糖蔗专属掩膜",
          ndvi.get("product_date", "") if ndvi is not None else "",
-         ndvi.get("source", "") if ndvi is not None else "", "不单独触发CTA配置动作"],
+         ndvi_meta.get("source", ndvi.get("source", "") if ndvi is not None else ""), "不单独触发CTA配置动作"],
     ]
     _write_table(sheet, start_row, headers, rows, formats)
     for offset, row in enumerate(rows, start=1):
@@ -460,10 +496,7 @@ def write_l2_detail_rows(
     _write_table(sheet, start_row, headers, rows, formats)
     source_col = 52
     for index, item in enumerate(details.itertuples(index=False), start=1):
-        frame = fundamental_history.get(item.metric_id)
-        if frame is None or "value" not in frame or len(frame) < 2:
-            continue
-        values = pd.to_numeric(frame.sort_values("date")["value"], errors="coerce").dropna().tolist()
+        values = _l2_history_values(item.metric_id, fundamental_history)
         if len(values) < 2:
             continue
         source_row = index - 1
@@ -473,6 +506,42 @@ def write_l2_detail_rows(
             "type": "line", "series_color": "#70AD47",
         })
     sheet.set_column(source_col, source_col + 300, None, None, {"hidden": True})
+
+
+def _l2_history_values(
+    metric_id: str,
+    fundamental_history: dict[str, pd.DataFrame],
+) -> list[float]:
+    if metric_id in {"global_palm_total_use", "global_palm_ending_stocks"}:
+        frame = fundamental_history.get("global_palm_stock_use", pd.DataFrame()).copy()
+        column = (
+            "total_use_1000t" if metric_id == "global_palm_total_use"
+            else "ending_stocks_1000t"
+        )
+        if column not in frame:
+            return []
+        return pd.to_numeric(frame.sort_values("date")[column], errors="coerce").dropna().tolist()
+    if metric_id == "brazil_cane_for_sugar_proxy":
+        crush = fundamental_history.get("unica_crush", pd.DataFrame()).copy()
+        mix = fundamental_history.get("unica_sugar_mix", pd.DataFrame()).copy()
+        if crush.empty or mix.empty:
+            return []
+        for frame in (crush, mix):
+            frame["date"] = pd.to_datetime(frame["date"], errors="coerce")
+            frame.sort_values("date", inplace=True)
+        mix = mix.rename(columns={"date": "mix_date"})
+        aligned = pd.merge_asof(
+            crush, mix, left_on="date", right_on="mix_date",
+            direction="backward", suffixes=("_crush", "_mix")
+        )
+        proxy = pd.to_numeric(aligned["value_crush"], errors="coerce") * pd.to_numeric(
+            aligned["value_mix"], errors="coerce"
+        ) / 100.0
+        return proxy.dropna().tolist()
+    frame = fundamental_history.get(metric_id)
+    if frame is None or "value" not in frame:
+        return []
+    return pd.to_numeric(frame.sort_values("date")["value"], errors="coerce").dropna().tolist()
 
 
 def add_l2_sheet(workbook: xlsxwriter.Workbook, frames: dict[str, object], formats: dict[str, Any]) -> None:
@@ -545,7 +614,8 @@ def add_audit_sheet(workbook: xlsxwriter.Workbook, frames: dict[str, object], fo
     write_title(sheet, "07｜L5 数据审计", "逐项披露来源、状态、覆盖、刷新时间和是否进入结论；Token 不写入工作簿", formats)
     external = frames["external_manifest"]
     sheet.write(3, 0, "外部观测总状态", formats["header"])
-    sheet.write(3, 1, external.get("status", "MISSING"), _status_format(external.get("status"), formats))
+    overall = external.get("overall", external.get("status", "MISSING"))
+    sheet.write(3, 1, overall, _status_format(overall, formats))
     headers = ["数据集", "状态", "行数", "数据截至/发布时间", "刷新时间", "覆盖", "来源", "原因/限制", "是否参与当前结论"]
     rows = []
     for name, item in external.get("datasets", {}).items():

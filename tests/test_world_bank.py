@@ -45,3 +45,20 @@ def test_parse_world_bank_prices_returns_palm_and_sugar_monthly() -> None:
 def test_parse_world_bank_prices_rejects_missing_required_commodity() -> None:
     with pytest.raises(ValueError, match="sugar"):
         parse_world_bank_prices(make_pink_sheet_xlsx(include_sugar=False))
+
+
+def test_parse_world_bank_prices_accepts_current_sheet_without_date_header() -> None:
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.title = "Monthly Prices"
+    sheet.append(["World Bank Commodity Price Data (The Pink Sheet)"])
+    sheet.append([None, "Palm oil", "Sugar, world"])
+    sheet.append([None, "$/mt", "$/kg"])
+    sheet.append(["2024M01", 900.0, 0.40])
+    buffer = BytesIO()
+    workbook.save(buffer)
+
+    result = parse_world_bank_prices(buffer.getvalue())
+
+    assert set(result["commodity"]) == {"palm_oil", "sugar"}
+    assert result["date"].eq(pd.Timestamp("2024-01-31")).all()

@@ -16,6 +16,10 @@ from rasterio.windows import Window, from_bounds
 
 
 MOD13Q1_DOI = "https://doi.org/10.5067/MODIS/MOD13Q1.061"
+ORNL_MODIS_API = "https://modis.ornl.gov/rst/api/v1"
+ORNL_MODIS_DOCS = "https://modis.ornl.gov/data/modis_webservice.html"
+ORNL_NDVI_BAND = "250m_16_days_NDVI"
+ORNL_QA_BAND = "250m_16_days_VI_Quality"
 BUFFER_METRES = 50_000
 NDVI_COLUMNS = [
     "product_date",
@@ -234,6 +238,169 @@ def _not_published(downloaded_at: str | None = None) -> pd.DataFrame:
         "source": MOD13Q1_DOI,
     })
     return pd.DataFrame([row], columns=NDVI_COLUMNS)
+
+
+def _ornl_calendar_date(record: dict[str, object]) -> pd.Timestamp:
+    calendar = pd.to_datetime(record.get("calendar_date"), errors="coerce")
+    if pd.notna(calendar):
+        return pd.Timestamp(calendar)
+    match = re.fullmatch(r"A(\d{4})(\d{3})", str(record.get("modis_date", "")))
+    if not match:
+        return pd.NaT
+    return pd.Timestamp(year=int(match.group(1)), month=1, day=1) + pd.Timedelta(
+        days=int(match.group(2)) - 1
+    )
+
+
+def _ornl_circle_values(
+    ndvi_record: dict[str, object],
+    qa_record: dict[str, object],
+    *,
+    nrows: int,
+    ncols: int,
+    cellsize: float,
+    buffer_km: int,
+) -> tuple[np.ndarray, int]:
+    ndvi_raw = pd.to_numeric(pd.Series(ndvi_record.get("data", [])), errors="coerce").to_numpy()
+    qa_raw = pd.to_numeric(pd.Series(qa_record.get("data", [])), errors="coerce").to_numpy()
+    expected = nrows * ncols
+    if len(ndvi_raw) != expected or len(qa_raw) != expected:
+        raise ValueError("Unexpected ORNL subset dimensions")
+    ndvi_array = np.where(np.isfinite(ndvi_raw), ndvi_raw, -3001).astype("int32").reshape(nrows, ncols)
+    qa_array = np.where(np.isfinite(qa_raw), qa_raw, 3).astype("uint16").reshape(nrows, ncols)
+    scaled = scale_and_mask_ndvi(ndvi_array, qa_array)
+    rows, columns = np.indices((nrows, ncols))
+    y = (rows - (nrows - 1) / 2.0) * cellsize
+    x = (columns - (ncols - 1) / 2.0) * cellsize
+    circle = x**2 + y**2 <= (buffer_km * 1000) ** 2
+    return scaled[circle & np.isfinite(scaled)], int(circle.sum())
+
+
+def _ornl_subset(
+    session: requests.Session,
+    *,
+    latitude: float,
+    longitude: float,
+    band: str,
+    start_date: str,
+    end_date: str,
+    buffer_km: int,
+    timeout: int,
+) -> dict[str, object]:
+    response = session.get(
+        f"{ORNL_MODIS_API}/MOD13Q1/subset",
+        params={
+            "latitude": latitude,
+            "longitude": longitude,
+            "band": band,
+            "startDate": start_date,
+            "endDate": end_date,
+            "kmAboveBelow": buffer_km,
+            "kmLeftRight": buffer_km,
+        },
+        headers={"Accept": "application/json"},
+        timeout=timeout,
+    )
+    response.raise_for_status()
+    return response.json()
+
+
+def fetch_india_sugar_ndvi_ornl(
+    locations: list[dict[str, object]],
+    start: str,
+    end: str,
+    *,
+    session: requests.Session | None = None,
+    buffer_km: int = 1,
+    timeout: int = 60,
+    downloaded_at: str | None = None,
+) -> pd.DataFrame:
+    """Fetch a lightweight MOD13Q1 point-neighbourhood proxy from ORNL TESViS.
+
+    The public service limits each request to ten composite dates. A 1-km radius
+    is the default so a 25-year refresh remains operationally small; the output
+    is therefore a representative-point vegetation proxy, not a crop mask.
+    """
+    if not locations:
+        raise ValueError("At least one India sugar region is required")
+    if not 1 <= buffer_km <= 100:
+        raise ValueError("buffer_km must be between 1 and 100")
+    client = session or requests.Session()
+    start_timestamp = pd.Timestamp(start)
+    end_timestamp = pd.Timestamp(end)
+    regional_rows: list[dict[str, object]] = []
+    for location in locations:
+        latitude = float(location["latitude"])
+        longitude = float(location["longitude"])
+        response = client.get(
+            f"{ORNL_MODIS_API}/MOD13Q1/dates",
+            params={"latitude": latitude, "longitude": longitude},
+            headers={"Accept": "application/json"},
+            timeout=timeout,
+        )
+        response.raise_for_status()
+        available = []
+        for record in response.json().get("dates", []):
+            date = _ornl_calendar_date(record)
+            if pd.notna(date) and start_timestamp <= date <= end_timestamp:
+                available.append((str(record["modis_date"]), pd.Timestamp(date)))
+        available.sort(key=lambda item: item[1])
+        for offset in range(0, len(available), 10):
+            batch = available[offset:offset + 10]
+            if not batch:
+                continue
+            payloads = {
+                band: _ornl_subset(
+                    client,
+                    latitude=latitude,
+                    longitude=longitude,
+                    band=band,
+                    start_date=batch[0][0],
+                    end_date=batch[-1][0],
+                    buffer_km=buffer_km,
+                    timeout=timeout,
+                )
+                for band in (ORNL_NDVI_BAND, ORNL_QA_BAND)
+            }
+            ndvi_payload = payloads[ORNL_NDVI_BAND]
+            qa_payload = payloads[ORNL_QA_BAND]
+            nrows = int(ndvi_payload["nrows"])
+            ncols = int(ndvi_payload["ncols"])
+            cellsize = float(ndvi_payload["cellsize"])
+            ndvi_by_date = {
+                str(record.get("modis_date")): record
+                for record in ndvi_payload.get("subset", [])
+                if record.get("band") == ORNL_NDVI_BAND
+            }
+            qa_by_date = {
+                str(record.get("modis_date")): record
+                for record in qa_payload.get("subset", [])
+                if record.get("band") == ORNL_QA_BAND
+            }
+            for modis_date, date in batch:
+                if modis_date not in ndvi_by_date or modis_date not in qa_by_date:
+                    continue
+                values, total_pixels = _ornl_circle_values(
+                    ndvi_by_date[modis_date],
+                    qa_by_date[modis_date],
+                    nrows=nrows,
+                    ncols=ncols,
+                    cellsize=cellsize,
+                    buffer_km=buffer_km,
+                )
+                regional_rows.append({
+                    "product_date": date,
+                    "region": str(location["name"]),
+                    "ndvi": float(np.median(values)) if len(values) else np.nan,
+                    "valid_pixels": len(values),
+                    "total_pixels": total_pixels,
+                    "published_at": pd.NaT,
+                    "source": f"{MOD13Q1_DOI} via {ORNL_MODIS_DOCS}",
+                    "granules": f"ORNL:{modis_date}:{location['name']}:r{buffer_km}km",
+                })
+    if not regional_rows:
+        return _not_published(downloaded_at)
+    return build_ndvi_anomalies(pd.DataFrame(regional_rows), downloaded_at=downloaded_at)
 
 
 def _download_granule(granule: Any, cache_dir: Path, session: requests.Session) -> Path:

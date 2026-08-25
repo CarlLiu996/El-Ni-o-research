@@ -110,3 +110,12 @@ def test_forecast_scoring_is_insufficient_and_background_does_not_override_actua
     assert summary.loc[("sugar", "demand"), "direction"] == "INSUFFICIENT"
     assert summary.loc[("palm_oil", "demand"), "direction"] != "INSUFFICIENT"
     assert "forecast" in summary.loc[("palm_oil", "demand"), "driver_value_types"]
+
+
+def test_proxy_value_type_uses_matched_mix_observation_date_not_later_crush_date() -> None:
+    frames = fundamental_frames()
+    frames["unica_sugar_mix"].loc[:, "published_at"] = pd.Timestamp("2026-06-25")
+
+    details = build_l2_details(frames).set_index("metric_id")
+
+    assert details.loc["brazil_cane_for_sugar_proxy", "value_type"] == "actual"

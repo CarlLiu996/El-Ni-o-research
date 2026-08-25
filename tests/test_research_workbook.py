@@ -151,7 +151,7 @@ def fixture_repo(tmp_path: Path, external_status: str = "PARTIAL") -> Path:
         },
         "market_confirmation": {"status": "NOT_CONFIRMED"},
         "layers": {"climate": {}, "fundamentals": {}, "market_cta": {}},
-        "critical_alerts": [], "warning_alerts": ["sample warning"],
+        "critical_alerts": 1, "warning_alerts": 1, "scope_gaps": ["sample scope gap"],
         "external_observations": external_manifest,
     }, ensure_ascii=False), encoding="utf-8")
     return repo

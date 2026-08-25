@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 
 import pandas as pd
+import requests
 
 from .quality import audit_timeseries
 from .signals import LOOKBACKS, build_cta_proxy
@@ -50,26 +51,43 @@ def refresh_historical_climate(
 ) -> dict[str, object]:
     climate_dir = output_dir / "climate"
     climate_dir.mkdir(parents=True, exist_ok=True)
-    frames = {"oni": fetch_oni(), "soi": fetch_soi(), "dmi": fetch_dmi()}
-    for name, frame in frames.items():
+    frames: dict[str, pd.DataFrame] = {}
+    source_status: dict[str, str] = {}
+    for name, fetcher in (("oni", fetch_oni), ("soi", fetch_soi), ("dmi", fetch_dmi)):
         target = climate_dir / f"noaa_{name}.csv"
-        temporary = target.with_suffix(".tmp")
-        frame.to_csv(temporary, index=False)
-        temporary.replace(target)
+        try:
+            frame = fetcher()
+            temporary = target.with_suffix(".tmp")
+            frame.to_csv(temporary, index=False)
+            temporary.replace(target)
+            source_status[name] = "LIVE"
+        except requests.RequestException:
+            if not target.exists():
+                raise
+            frame = pd.read_csv(target)
+            source_status[name] = "CACHED_FALLBACK"
+        frames[name] = frame
     regions = json.loads(regions_path.read_text(encoding="utf-8"))
     weather_frames: list[pd.DataFrame] = []
-    for region, items in regions.items():
-        for item in items:
-            frame = fetch_daily_agroclimate(Location(**item), start, end)
-            frame["region"] = region
-            weather_frames.append(frame)
-    if not weather_frames:
-        raise ValueError("No historical weather locations configured")
-    combined = pd.concat(weather_frames, ignore_index=True)
     weather_target = climate_dir / "nasa_power_precipitation.csv"
-    weather_temporary = weather_target.with_suffix(".tmp")
-    combined.to_csv(weather_temporary, index=False)
-    weather_temporary.replace(weather_target)
+    try:
+        for region, items in regions.items():
+            for item in items:
+                frame = fetch_daily_agroclimate(Location(**item), start, end)
+                frame["region"] = region
+                weather_frames.append(frame)
+        if not weather_frames:
+            raise ValueError("No historical weather locations configured")
+        combined = pd.concat(weather_frames, ignore_index=True)
+        weather_temporary = weather_target.with_suffix(".tmp")
+        combined.to_csv(weather_temporary, index=False)
+        weather_temporary.replace(weather_target)
+        source_status["weather"] = "LIVE"
+    except requests.RequestException:
+        if not weather_target.exists():
+            raise
+        combined = pd.read_csv(weather_target)
+        source_status["weather"] = "CACHED_FALLBACK"
 
     def coverage(frame: pd.DataFrame) -> dict[str, str | None]:
         dates = pd.to_datetime(frame["date"], errors="coerce").dropna()
@@ -81,6 +99,7 @@ def refresh_historical_climate(
     return {
         "start": start,
         "end": end,
+        "source_status": source_status,
         "rows": {**{name: len(frame) for name, frame in frames.items()}, "weather": len(combined)},
         "coverage": {
             **{name: coverage(frame) for name, frame in frames.items()},

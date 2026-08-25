@@ -235,6 +235,43 @@ def test_refresh_historical_climate_writes_index_and_weather_files(tmp_path, mon
     assert manifest["coverage"]["weather"]["max_date"] == "2000-01-01"
 
 
+def test_refresh_historical_climate_uses_cached_index_on_network_failure(tmp_path, monkeypatch) -> None:
+    import requests
+
+    climate = tmp_path / "processed" / "climate"
+    climate.mkdir(parents=True)
+    pd.DataFrame({
+        "date": ["2000-01-01"], "dmi": [0.2], "source": ["NOAA PSL cached"]
+    }).to_csv(climate / "noaa_dmi.csv", index=False)
+    monthly = pd.DataFrame({
+        "date": pd.to_datetime(["2000-01-01"]), "source": ["official"]
+    })
+    monkeypatch.setattr("elnino_cta.pipeline.fetch_oni", lambda: monthly.assign(oni=[0.5]))
+    monkeypatch.setattr("elnino_cta.pipeline.fetch_soi", lambda: monthly.assign(soi=[-1.0]))
+    monkeypatch.setattr(
+        "elnino_cta.pipeline.fetch_dmi",
+        lambda: (_ for _ in ()).throw(requests.ReadTimeout("temporary timeout")),
+    )
+    monkeypatch.setattr(
+        "elnino_cta.pipeline.fetch_daily_agroclimate",
+        lambda location, start, end: pd.DataFrame({
+            "date": [pd.Timestamp("2000-01-01")], "location": [location.name],
+            "precip_mm": [1.0], "root_zone_soil_wetness": [0.5], "source": ["NASA POWER"],
+        }),
+    )
+    regions = tmp_path / "regions.json"
+    regions.write_text(json.dumps({
+        "india_sugar": [{"name": "Maharashtra", "latitude": 19.75, "longitude": 75.71}]
+    }), encoding="utf-8")
+
+    manifest = refresh_historical_climate(
+        tmp_path / "processed", "1981-01-01", "2026-08-25", regions
+    )
+
+    assert manifest["source_status"]["dmi"] == "CACHED_FALLBACK"
+    assert pd.read_csv(climate / "noaa_dmi.csv").iloc[0]["dmi"] == pytest.approx(0.2)
+
+
 def monthly_prices() -> pd.DataFrame:
     dates = pd.date_range("2009-01-31", "2012-01-31", freq="ME")
     return pd.concat([

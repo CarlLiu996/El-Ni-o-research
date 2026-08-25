@@ -34,12 +34,30 @@ jobs:
       - name: Refresh data
         if: ${{ github.event_name == 'schedule' || inputs.refresh_data }}
         run: elnino-cta refresh --start 2015-01-01 --end "$(date -u +%F)" --futures-provider tushare
+      - name: Refresh external observations
+        if: ${{ github.event_name == 'schedule' || inputs.refresh_data }}
+        env:
+          EARTHDATA_TOKEN: ${{ secrets.EARTHDATA_TOKEN }}
+        run: elnino-cta external-refresh --as-of "$(date -u +%F)"
+      - name: Refresh ENSO history
+        if: ${{ github.event_name == 'schedule' || inputs.refresh_data }}
+        run: elnino-cta history-refresh --as-of "$(date -u +%F)"
       - name: Build monitoring snapshot and debrief
-        run: elnino-cta monitor
+        run: elnino-cta monitor --as-of "$(date -u +%F)"
+      - name: Build research workbook
+        run: python scripts/build_research_workbook.py --as-of "$(date -u +%F)"
+      - name: Run research tests
+        run: python -m pytest -q
       - name: Commit refreshed research state
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/processed reports/monitoring
+          git add data/processed/climate/india_monsoon_cumulative.csv
+          git add data/processed/climate/india_monsoon_events.csv
+          git add data/processed/climate/india_sugar_ndvi.csv
+          git add data/processed/climate/external_manifest.json
+          git add data/processed/history
+          git add reports/monitoring/latest.json
+          git add research/厄尔尼诺农产品CTA研究框架_八页复盘版_*.xlsx
           git diff --cached --quiet || git commit -m "Update research monitoring $(date -u +%F)"
           git push

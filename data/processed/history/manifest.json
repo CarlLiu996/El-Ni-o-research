@@ -1,0 +1,101 @@
+{
+  "as_of": "2026-08-25",
+  "downloaded_at": "2026-08-25T05:24:49.973783+00:00",
+  "files": {
+    "events": "data\\processed\\history\\enso_events.csv",
+    "evidence": "data\\processed\\history\\event_evidence_panel.csv",
+    "price_paths": "data\\processed\\history\\event_price_paths.csv",
+    "cta_paths": "data\\processed\\history\\event_cta_paths.csv",
+    "cta_summary": "data\\processed\\history\\event_cta_summary.csv",
+    "daily_cta_summary": "data\\processed\\history\\existing_daily_cta_summary.csv",
+    "patterns": "data\\processed\\history\\historical_patterns.csv",
+    "current_context": "data\\processed\\history\\current_event_context.csv"
+  },
+  "rows": {
+    "events": 22,
+    "evidence": 1210,
+    "price_paths": 950,
+    "cta_paths": 1900,
+    "cta_summary": 304,
+    "daily_cta_summary": 132,
+    "patterns": 106,
+    "current_context": 0
+  },
+  "artifacts": {
+    "events": {
+      "path": "data\\processed\\history\\enso_events.csv",
+      "rows": 22,
+      "sources": [
+        "https://www.cpc.ncep.noaa.gov/data/indices/oni.ascii.txt"
+      ],
+      "min_date": "1951-06-01",
+      "max_date": "2023-12-01",
+      "sha256": "27ff1d8e547255b43a0747c5867e19720f3f5dd7372b3a4d27bd82fc9c87fa64"
+    },
+    "evidence": {
+      "path": "data\\processed\\history\\event_evidence_panel.csv",
+      "rows": 1210,
+      "sources": [
+        "https://data.fao.org/catalog/iso/d24a448b-3b62-4c09-8c1d-4a39bb599876",
+        "https://power.larc.nasa.gov/api/temporal/daily/point",
+        "https://psl.noaa.gov/gcos_wgsp/Timeseries/Data/dmi.had.long.data",
+        "https://www.cpc.ncep.noaa.gov/data/indices/oni.ascii.txt",
+        "https://www.cpc.ncep.noaa.gov/data/indices/soi"
+      ],
+      "min_date": "1951-10-01",
+      "max_date": "2024-12-31",
+      "sha256": "ad8fc6db91738b6fdb5cdb51225e7de4efd3604dd34ae6518cb7e89cc7b805d7"
+    },
+    "price_paths": {
+      "path": "data\\processed\\history\\event_price_paths.csv",
+      "rows": 950,
+      "sources": [
+        "https://thedocs.worldbank.org/en/doc/18675f1d1639c7a34d463f59263ba0a2-0050012025/related/CMO-Historical-Data-Monthly.xlsx"
+      ],
+      "min_date": "1963-01-31",
+      "max_date": "2024-12-31",
+      "sha256": "238a75420bd869e40f4dc7ba33af9748115c72b7ab023621450a99d7f6425391"
+    },
+    "cta_paths": {
+      "path": "data\\processed\\history\\event_cta_paths.csv",
+      "rows": 1900,
+      "sources": [],
+      "min_date": "1963-01-31",
+      "max_date": "2024-12-31",
+      "sha256": "0f3b66793b3fb37579a72ee50700e7da99e0aac1669a4b2f140d381360fd2577"
+    },
+    "cta_summary": {
+      "path": "data\\processed\\history\\event_cta_summary.csv",
+      "rows": 304,
+      "sources": [],
+      "min_date": null,
+      "max_date": null,
+      "sha256": "60de90f122b1fc21c922caed4489be6e2e224f9525929b52491b504eb3548c5f"
+    },
+    "daily_cta_summary": {
+      "path": "data\\processed\\history\\existing_daily_cta_summary.csv",
+      "rows": 132,
+      "sources": [],
+      "min_date": "2015-01-05",
+      "max_date": "2023-06-01",
+      "sha256": "7258e098cefaeb09a5e2bb87862cd0912520ca845cc2aafb6dd1383ed64a5841"
+    },
+    "patterns": {
+      "path": "data\\processed\\history\\historical_patterns.csv",
+      "rows": 106,
+      "sources": [],
+      "min_date": null,
+      "max_date": null,
+      "sha256": "3bf72e4a8b703dc199fda5004667be7d4c63f77fc1a1a431fb8a20f3c2488a12"
+    },
+    "current_context": {
+      "path": "data\\processed\\history\\current_event_context.csv",
+      "rows": 0,
+      "sources": [],
+      "min_date": null,
+      "max_date": null,
+      "sha256": "9ee167f60c30d1f49da61288c5867b41a50602de1e9f76a90b9ecd6605437d81"
+    }
+  },
+  "boundary": "历史复盘为描述性旁路，不导入当前CTA门槛、仓位或置信度修正"
+}

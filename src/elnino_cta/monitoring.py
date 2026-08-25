@@ -384,7 +384,7 @@ def build_external_observation_status(
             "valid_pixel_ratio": _finite(latest.get("valid_pixel_ratio")),
             "region_count": int(latest.get("region_count", 0)) if pd.notna(latest.get("region_count")) else 0,
             "source": latest.get("source"),
-            "limitation": "50公里缓冲区植被代理，非糖蔗专属；不单独触发CTA配置动作",
+            "limitation": "主产区代表点邻域植被代理，非糖蔗专属；不单独触发CTA配置动作",
         }
     return {
         "monsoon_cumulative": monsoon_status,
@@ -493,7 +493,7 @@ def build_snapshot(
         "critical_alerts": sum(alert["severity"] == "critical" for alert in alerts),
         "warning_alerts": sum(alert["severity"] == "warning" for alert in alerts),
         "scope_gaps": [
-            "境外 BMD FCPO、ICE Sugar No.11、ICE Coffee 长历史尚未接入，1982/83 与 1997/98 事件无法验证",
+            "境外 BMD FCPO、ICE Sugar No.11、ICE Coffee 长历史尚未接入；早期事件仅能用世界银行现货基准复盘，不能验证可交易期货与跨市场CTA",
             "管理人映射按项目目标延后至尽调数据可用后",
         ],
     }

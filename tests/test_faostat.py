@@ -6,7 +6,10 @@ from zipfile import ZIP_DEFLATED, ZipFile
 import pandas as pd
 import pytest
 
-from elnino_cta.sources.faostat import parse_faostat_crop_history
+from elnino_cta.sources.faostat import (
+    parse_faostat_catalog_csv,
+    parse_faostat_crop_history,
+)
 
 
 def make_faostat_zip(*, duplicate: bool = False) -> bytes:
@@ -60,3 +63,25 @@ def test_parse_faostat_crop_history_filters_required_series() -> None:
 def test_parse_faostat_crop_history_rejects_duplicate_keys() -> None:
     with pytest.raises(ValueError, match="Duplicate FAOSTAT"):
         parse_faostat_crop_history(make_faostat_zip(duplicate=True))
+
+
+def test_parse_faostat_catalog_csv_converts_wide_measures_and_flags() -> None:
+    content = pd.DataFrame({
+        "country_name_en": ["India", "France"],
+        "item_code": [156, 156],
+        "item": ["Sugar cane", "Sugar cane"],
+        "year": [2024, 2024],
+        "yield_kg_ha": [80000.0, 70000.0],
+        "yield_kg_ha_flag": ["A", "E"],
+        "production_tonnes": [400000000.0, 100.0],
+        "production_tonnes_flag": ["A", "E"],
+        "area_harvested_ha": [5000000.0, 2.0],
+        "area_harvested_ha_flag": ["A", "E"],
+    }).to_csv(index=False).encode()
+
+    result = parse_faostat_catalog_csv(content, downloaded_at="2026-08-25T00:00:00Z")
+
+    assert set(result["element"]) == {"Production", "Area harvested", "Yield"}
+    assert set(result["area"]) == {"India"}
+    assert set(result["flag"]) == {"A"}
+    assert set(result["source"]).pop().startswith("https://data.fao.org/")

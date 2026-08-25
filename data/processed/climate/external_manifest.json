@@ -1,0 +1,40 @@
+{
+  "overall": "PARTIAL",
+  "as_of": "2026-08-25",
+  "refreshed_at": "2026-08-25T05:32:29.431657+00:00",
+  "datasets": {
+    "monsoon_cumulative": {
+      "status": "INSUFFICIENT_COVERAGE",
+      "path": "data/processed/climate/india_monsoon_cumulative.csv",
+      "rows": 4356,
+      "data_as_of": "2026-08-25",
+      "published_at": null,
+      "coverage_pct": 0.0,
+      "source": "https://power.larc.nasa.gov/api/temporal/daily/point",
+      "reason": "INSUFFICIENT_COVERAGE",
+      "sha256": "6c68d46adfa67ec508acbcbea12524f69fba44b5f3a034569a21e09c4aec569d"
+    },
+    "imd_events": {
+      "status": "FETCH_ERROR",
+      "path": "data/processed/climate/india_monsoon_events.csv",
+      "rows": 1,
+      "data_as_of": null,
+      "published_at": null,
+      "coverage_pct": null,
+      "source": "https://mausam.imd.gov.in/responsive/monsooninformation_onset.php",
+      "reason": "FETCH_ERROR",
+      "sha256": "01f494426c58cf3c438de7ad01d97ed6ff68249a2df1c6f5519a9258ca1507f0"
+    },
+    "ndvi": {
+      "status": "FETCH_ERROR",
+      "path": "data/processed/climate/india_sugar_ndvi.csv",
+      "rows": 1,
+      "data_as_of": null,
+      "published_at": null,
+      "coverage_pct": null,
+      "source": "https://modis.ornl.gov/data/modis_webservice.html",
+      "reason": "FETCH_ERROR",
+      "sha256": "920be01e357cb9d5b4047219c71c053692eb83f42cffd9174e6eb72fe073d90d"
+    }
+  }
+}

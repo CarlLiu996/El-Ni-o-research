@@ -105,7 +105,15 @@ def build_l2_details(frames: dict[str, pd.DataFrame]) -> pd.DataFrame:
         frame["date"] = pd.to_datetime(frame["date"], errors="coerce")
         frame["value"] = pd.to_numeric(frame["value"], errors="coerce")
         frame.sort_values("date", inplace=True)
-    aligned = pd.merge_asof(crush, mix, on="date", direction="backward", suffixes=("_crush", "_mix"))
+    mix = mix.rename(columns={"date": "mix_date"})
+    aligned = pd.merge_asof(
+        crush,
+        mix,
+        left_on="date",
+        right_on="mix_date",
+        direction="backward",
+        suffixes=("_crush", "_mix"),
+    )
     aligned["proxy_value"] = aligned["value_crush"] * aligned["value_mix"] / 100.0
     proxy_history = aligned.dropna(subset=["proxy_value"])
     if not proxy_history.empty:
@@ -125,12 +133,15 @@ def build_l2_details(frames: dict[str, pd.DataFrame]) -> pd.DataFrame:
                 pd.Timestamp(latest["published_at_crush"]),
                 pd.Timestamp(latest["published_at_mix"]),
             ),
-            "value_type": (
-                "forecast"
-                if _classify_value_type(latest.rename(lambda x: x.removesuffix("_crush"))) == "forecast"
-                or _classify_value_type(latest.rename(lambda x: x.removesuffix("_mix"))) == "forecast"
-                else "actual"
-            ),
+            "value_type": "forecast" if any(
+                _classify_value_type(pd.Series({
+                    "date": latest[date_column],
+                    "published_at": latest.get(f"published_at_{suffix}"),
+                    "note": latest.get(f"note_{suffix}", ""),
+                    "value_type": latest.get(f"value_type_{suffix}", ""),
+                })) == "forecast"
+                for suffix, date_column in (("crush", "date"), ("mix", "mix_date"))
+            ) else "actual",
             "seasonal_percentile": proxy_season.le(proxy_value).mean(),
         })
 

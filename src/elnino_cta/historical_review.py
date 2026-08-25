@@ -293,7 +293,7 @@ def build_external_climate_evidence(
                 "coverage_pct": pd.to_numeric(ndvi_window["valid_pixel_ratio"], errors="coerce").mean(),
                 "observation_date": ndvi_window["product_date"].max(),
                 "source": ndvi_window.get("source", pd.Series([pd.NA])).iloc[0],
-                "limitation": "T0至T+12月平均；50公里缓冲区植被代理，非糖蔗专属",
+                "limitation": "T0至T+12月平均；主产区代表点邻域植被代理，非糖蔗专属",
             })
     return pd.DataFrame(rows, columns=[
         "event_id", "status", "commodity", "metric_id", "value", "unit",

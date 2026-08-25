@@ -1,0 +1,2 @@
+product_date,composite_slot,ndvi,climatology_mean,climatology_std,same_period_difference,z_score,historical_percentile,valid_pixels,total_pixels,valid_pixel_ratio,region_count,status,published_at,downloaded_at,source,granules
+,,,,,,,,,,,,FETCH_ERROR,,2026-08-25T02:12:18.944702+00:00,,

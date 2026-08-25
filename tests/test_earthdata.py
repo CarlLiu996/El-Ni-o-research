@@ -11,6 +11,7 @@ from elnino_cta.sources.earthdata import (
     build_ndvi_anomalies,
     earthdata_session,
     fetch_india_sugar_ndvi,
+    fetch_india_sugar_ndvi_ornl,
     locate_subdatasets,
     parse_modis_date,
     read_mod13q1_granule,
@@ -304,3 +305,57 @@ def test_read_mod13q1_granule_returns_auditable_region_rows(tmp_path, monkeypatc
     assert result.iloc[0]["valid_pixels"] == 21
     assert result.iloc[0]["total_pixels"] == 21
     assert result.iloc[0]["granules"].endswith("h25v06.061.hdf")
+
+
+class OrnlResponse:
+    def __init__(self, payload):
+        self.payload = payload
+
+    def raise_for_status(self) -> None:
+        return None
+
+    def json(self):
+        return self.payload
+
+
+class OrnlSession:
+    def __init__(self):
+        self.urls: list[str] = []
+
+    def get(self, url: str, **kwargs: object) -> OrnlResponse:
+        self.urls.append(url)
+        if "/dates" in url:
+            return OrnlResponse({"dates": [
+                {"modis_date": "A2001161", "calendar_date": "2001-06-10"},
+                {"modis_date": "A2026161", "calendar_date": "2026-06-10"},
+            ]})
+        dates = ["2001-06-10", "2026-06-10"]
+        band = kwargs["params"]["band"]
+        data = [0] * 4 if band.endswith("VI_Quality") else [5000] * 4
+        return OrnlResponse({
+            "nrows": 2, "ncols": 2, "cellsize": 250,
+            "subset": [
+                {"calendar_date": date, "modis_date": "A" + date[:4] + "161", "band": band, "data": data}
+                for date in dates
+            ],
+        })
+
+
+def test_ornl_subset_fetch_builds_ndvi_without_earthdata_token() -> None:
+    session = OrnlSession()
+    locations = [
+        {"name": "Maharashtra", "latitude": 19.75, "longitude": 75.71},
+        {"name": "Uttar Pradesh", "latitude": 26.85, "longitude": 80.91},
+    ]
+
+    result = fetch_india_sugar_ndvi_ornl(
+        locations, start="2001-01-01", end="2026-08-25", session=session,
+        buffer_km=1,
+    )
+
+    assert result.iloc[-1]["ndvi"] == pytest.approx(0.5)
+    assert result.iloc[-1]["region_count"] == 2
+    assert result.iloc[-1]["status"] == "OK"
+    assert any("/MOD13Q1/dates" in url for url in session.urls)
+    assert any("/MOD13Q1/subset" in url for url in session.urls)
+    assert not any("Authorization" in url for url in session.urls)
