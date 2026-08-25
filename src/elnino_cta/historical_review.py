@@ -498,6 +498,72 @@ def summarize_event_cta(paths: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
+def make_pattern_input(
+    evidence: pd.DataFrame,
+    price_paths: pd.DataFrame,
+    cta_summary: pd.DataFrame,
+) -> pd.DataFrame:
+    """Combine completed-event evidence, pricing, and CTA returns without advice fields."""
+    required = ["event_id", "status", "commodity", "metric_id", "value"]
+    rows = [evidence.loc[evidence["status"].eq("COMPLETED"), required].copy()]
+    completed_prices = price_paths[price_paths["status"].eq("COMPLETED")]
+    for (event_id, commodity), group in completed_prices.groupby(["event_id", "commodity"]):
+        indexed = group.drop_duplicates("relative_month").set_index("relative_month")["price_index"]
+        for horizon in (3, 6, 12, 18):
+            if 0 in indexed.index and horizon in indexed.index:
+                rows.append(pd.DataFrame([{
+                    "event_id": event_id,
+                    "status": "COMPLETED",
+                    "commodity": commodity,
+                    "metric_id": f"price_return_{horizon}m",
+                    "value": float(indexed.loc[horizon] / indexed.loc[0] - 1.0),
+                }]))
+    completed_cta = cta_summary[cta_summary["status"].eq("COMPLETED")].copy()
+    if not completed_cta.empty:
+        completed_cta["metric_id"] = (
+            "cta_" + completed_cta["speed"].astype(str) + "_"
+            + completed_cta["horizon_months"].astype(str) + "m_net_return"
+        )
+        completed_cta = completed_cta.rename(columns={"net_return": "value"})
+        rows.append(completed_cta[required])
+    result = pd.concat(rows, ignore_index=True)
+    result["value"] = pd.to_numeric(result["value"], errors="coerce")
+    return result.dropna(subset=["value"]).drop_duplicates(
+        ["event_id", "commodity", "metric_id"], keep="last"
+    )
+
+
+def summarize_patterns(event_results: pd.DataFrame) -> pd.DataFrame:
+    """Describe completed-event regularities; deliberately emits no allocation advice."""
+    rows: list[dict[str, object]] = []
+    for keys, group in event_results.groupby(["commodity", "metric_id"]):
+        values = pd.to_numeric(group["value"], errors="coerce").dropna()
+        count = len(values)
+        positive_share = values.gt(0).mean() if count else pd.NA
+        same_direction_share = max(positive_share, 1 - positive_share) if count else pd.NA
+        strength = (
+            "STABLE_HISTORY"
+            if count >= 4 and same_direction_share >= 0.70
+            else "LIMITED_SAMPLE"
+            if count == 3
+            else "INSUFFICIENT_EVIDENCE"
+        )
+        rows.append({
+            "commodity": keys[0],
+            "metric_id": keys[1],
+            "sample_size": count,
+            "positive_count": int(values.gt(0).sum()),
+            "negative_count": int(values.lt(0).sum()),
+            "flat_count": int(values.eq(0).sum()),
+            "same_direction_share": same_direction_share,
+            "median": values.median() if count else pd.NA,
+            "q25": values.quantile(0.25) if count else pd.NA,
+            "q75": values.quantile(0.75) if count else pd.NA,
+            "pattern_strength": strength,
+        })
+    return pd.DataFrame(rows)
+
+
 def summarize_existing_daily_cta(
     events: pd.DataFrame,
     signal_frames: dict[tuple[str, str], pd.DataFrame],

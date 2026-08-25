@@ -15,8 +15,10 @@ from elnino_cta.historical_review import (
     build_weather_evidence,
     build_yield_evidence,
     identify_enso_events,
+    make_pattern_input,
     summarize_event_cta,
     summarize_existing_daily_cta,
+    summarize_patterns,
 )
 from elnino_cta.pipeline import refresh_historical_climate
 
@@ -321,3 +323,55 @@ def test_existing_daily_cta_marks_old_gap_and_compounds_available_returns() -> N
     assert recent["coverage_status"] == "AVAILABLE"
     assert recent["net_return"] == pytest.approx((0.90 * 1.0 * 1.20) - 1)
     assert recent["max_drawdown"] == pytest.approx(-0.10)
+
+
+def test_pattern_labels_respect_minimum_sample_and_emit_no_allocation_fields() -> None:
+    event_results = pd.DataFrame({
+        "event_id": [f"event-{index}" for index in range(9)],
+        "status": ["COMPLETED"] * 9,
+        "commodity": ["sugar"] * 9,
+        "metric_id": ["stable"] * 4 + ["limited"] * 3 + ["insufficient"] * 2,
+        "value": [0.1, 0.2, 0.3, -0.1, 0.1, -0.2, 0.3, 0.1, -0.1],
+    })
+
+    patterns = summarize_patterns(event_results).set_index("metric_id")
+
+    assert patterns.loc["stable", "pattern_strength"] == "STABLE_HISTORY"
+    assert patterns.loc["limited", "pattern_strength"] == "LIMITED_SAMPLE"
+    assert patterns.loc["insufficient", "pattern_strength"] == "INSUFFICIENT_EVIDENCE"
+    assert not any(
+        "allocation" in column or "confidence_adjustment" in column
+        for column in patterns.columns
+    )
+
+
+def test_make_pattern_input_excludes_ongoing_and_combines_price_and_cta() -> None:
+    evidence = pd.DataFrame({
+        "event_id": ["old", "current"],
+        "status": ["COMPLETED", "ONGOING"],
+        "commodity": ["sugar", "sugar"],
+        "metric_id": ["yield", "yield"],
+        "value": [-0.1, 9.9],
+    })
+    price_paths = pd.DataFrame({
+        "event_id": ["old", "old", "current", "current"],
+        "status": ["COMPLETED", "COMPLETED", "ONGOING", "ONGOING"],
+        "commodity": ["sugar"] * 4,
+        "relative_month": [0, 3, 0, 3],
+        "price_index": [100.0, 110.0, 100.0, 999.0],
+    })
+    cta_summary = pd.DataFrame({
+        "event_id": ["old", "current"],
+        "status": ["COMPLETED", "ONGOING"],
+        "commodity": ["sugar", "sugar"],
+        "speed": ["medium", "medium"],
+        "horizon_months": [3, 3],
+        "net_return": [0.05, 9.9],
+    })
+
+    result = make_pattern_input(evidence, price_paths, cta_summary)
+
+    assert set(result["event_id"]) == {"old"}
+    assert set(result["metric_id"]) == {
+        "yield", "price_return_3m", "cta_medium_3m_net_return"
+    }
