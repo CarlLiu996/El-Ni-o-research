@@ -7,11 +7,16 @@ import pytest
 
 from elnino_cta.historical_review import (
     build_event_evidence_panel,
+    build_event_cta_paths,
+    build_event_price_paths,
     build_external_climate_evidence,
     build_index_evidence,
+    build_monthly_cta_proxy,
     build_weather_evidence,
     build_yield_evidence,
     identify_enso_events,
+    summarize_event_cta,
+    summarize_existing_daily_cta,
 )
 from elnino_cta.pipeline import refresh_historical_climate
 
@@ -226,3 +231,93 @@ def test_refresh_historical_climate_writes_index_and_weather_files(tmp_path, mon
     assert (climate / "nasa_power_precipitation.csv").exists()
     assert manifest["rows"]["weather"] == 1
     assert manifest["coverage"]["weather"]["max_date"] == "2000-01-01"
+
+
+def monthly_prices() -> pd.DataFrame:
+    dates = pd.date_range("2009-01-31", "2012-01-31", freq="ME")
+    return pd.concat([
+        pd.DataFrame({
+            "date": dates,
+            "commodity": commodity,
+            "price": [base + index * step for index in range(len(dates))],
+            "source": "World Bank Pink Sheet",
+        })
+        for commodity, base, step in (("palm_oil", 500.0, 5.0), ("sugar", 0.20, 0.002))
+    ], ignore_index=True)
+
+
+def test_event_price_paths_are_t0_normalized_and_span_minus6_plus18() -> None:
+    paths = build_event_price_paths(events(), monthly_prices())
+    one = paths.query("event_id == '2009-2010' and commodity == 'palm_oil'")
+
+    assert one["relative_month"].min() == -6
+    assert one["relative_month"].max() == 18
+    assert one.loc[one["relative_month"] == 0, "price_index"].iloc[0] == pytest.approx(100.0)
+    assert (one["price"] > 0).all()
+
+
+@pytest.mark.parametrize("speed", ["medium", "slow"])
+def test_monthly_cta_is_lagged_scaled_and_costed(speed) -> None:
+    dates = pd.date_range("2018-01-31", periods=36, freq="ME")
+    prices = pd.DataFrame({
+        "date": dates,
+        "price": [100 + index * 2 + (index % 3) for index in range(len(dates))],
+    })
+
+    result = build_monthly_cta_proxy(prices, speed)
+
+    assert result.loc[0, "position"] == 0
+    assert (result["position"].abs() <= 2.0).all()
+    assert result.loc[result["turnover"] > 0, "cost"].gt(0).all()
+    pd.testing.assert_series_equal(
+        result["position"], result["target_position"].shift(1).fillna(0.0), check_names=False
+    )
+    expected = (1 + result["net_return"]).cumprod()
+    pd.testing.assert_series_equal(result["equity"], expected, check_names=False)
+
+
+def test_event_cta_paths_and_summary_keep_price_and_strategy_returns_separate() -> None:
+    cta_frames = []
+    for commodity, group in monthly_prices().groupby("commodity"):
+        frame = build_monthly_cta_proxy(group, "medium")
+        frame["commodity"] = commodity
+        cta_frames.append(frame)
+    paths = build_event_cta_paths(events(), pd.concat(cta_frames, ignore_index=True))
+    summary = summarize_event_cta(paths)
+
+    assert not paths.duplicated(["event_id", "commodity", "speed", "date"]).any()
+    assert paths["relative_month"].min() == -6
+    assert paths["relative_month"].max() == 18
+    assert set(summary["horizon_months"]) == {3, 6, 12, 18}
+    assert {"net_return", "max_drawdown", "turnover"}.issubset(summary)
+
+
+def test_existing_daily_cta_marks_old_gap_and_compounds_available_returns() -> None:
+    event_frame = pd.concat([
+        events(),
+        pd.DataFrame({
+            "event_id": ["2015-2016"],
+            "start_date": pd.to_datetime(["2015-06-01"]),
+            "peak_date": pd.to_datetime(["2015-12-01"]),
+            "end_date": pd.to_datetime(["2016-04-01"]),
+            "peak_oni": [2.6],
+            "duration_seasons": [11],
+            "status": ["COMPLETED"],
+            "source": ["NOAA CPC"],
+        }),
+    ], ignore_index=True)
+    daily = pd.DataFrame({
+        "date": pd.to_datetime(["2015-06-01", "2015-06-02", "2015-06-03"]),
+        "net_return": [-0.10, 0.0, 0.20],
+    })
+
+    result = summarize_existing_daily_cta(
+        event_frame, {("P", "fast"): daily}
+    )
+
+    old = result.query("event_id == '2009-2010'").iloc[0]
+    recent = result.query("event_id == '2015-2016'").iloc[0]
+    assert old["coverage_status"] == "UNAVAILABLE"
+    assert recent["coverage_status"] == "AVAILABLE"
+    assert recent["net_return"] == pytest.approx((0.90 * 1.0 * 1.20) - 1)
+    assert recent["max_drawdown"] == pytest.approx(-0.10)

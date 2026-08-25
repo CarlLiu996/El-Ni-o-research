@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 from typing import Any
 
 import pandas as pd
@@ -351,3 +352,188 @@ def build_event_evidence_panel(
     if result.duplicated(keys).any():
         raise ValueError("Duplicate historical evidence keys")
     return result
+
+
+def build_event_price_paths(
+    events: pd.DataFrame,
+    prices: pd.DataFrame,
+    before_months: int = 6,
+    after_months: int = 18,
+) -> pd.DataFrame:
+    ordered = prices.copy()
+    ordered["date"] = pd.to_datetime(ordered["date"], errors="coerce") + pd.offsets.MonthEnd(0)
+    ordered["price"] = pd.to_numeric(ordered["price"], errors="coerce")
+    ordered = ordered.dropna(subset=["date", "price"])
+    records: list[dict[str, object]] = []
+    for event in events.itertuples(index=False):
+        t0 = pd.Timestamp(event.start_date) + pd.offsets.MonthEnd(0)
+        for commodity, group in ordered.groupby("commodity"):
+            indexed = group.sort_values("date").drop_duplicates("date").set_index("date")
+            if t0 not in indexed.index:
+                continue
+            base = float(indexed.loc[t0, "price"])
+            if base <= 0:
+                continue
+            for relative_month in range(-before_months, after_months + 1):
+                date = t0 + pd.DateOffset(months=relative_month) + pd.offsets.MonthEnd(0)
+                if date not in indexed.index:
+                    continue
+                price = float(indexed.loc[date, "price"])
+                records.append({
+                    "event_id": event.event_id,
+                    "status": event.status,
+                    "commodity": commodity,
+                    "date": date,
+                    "relative_month": relative_month,
+                    "price": price,
+                    "price_index": price / base * 100.0,
+                    "source": indexed.loc[date].get("source", pd.NA),
+                })
+    return pd.DataFrame(records, columns=[
+        "event_id", "status", "commodity", "date", "relative_month",
+        "price", "price_index", "source",
+    ])
+
+
+MONTHLY_LOOKBACKS = {
+    "medium": ((3, 6), 3),
+    "slow": ((6, 12), 6),
+}
+
+
+def _max_drawdown_from_equity(equity: pd.Series) -> float:
+    curve = pd.concat([pd.Series([1.0]), equity.reset_index(drop=True)], ignore_index=True)
+    return float((curve / curve.cummax() - 1.0).min())
+
+
+def build_monthly_cta_proxy(
+    prices: pd.DataFrame,
+    speed: str,
+    annual_vol_target: float = 0.20,
+    max_leverage: float = 2.0,
+    cost_bps_per_turnover: float = 2.0,
+) -> pd.DataFrame:
+    if speed not in MONTHLY_LOOKBACKS:
+        raise ValueError(f"speed must be one of {sorted(MONTHLY_LOOKBACKS)}")
+    windows, vol_window = MONTHLY_LOOKBACKS[speed]
+    result = prices[["date", "price"]].sort_values("date").drop_duplicates("date").copy()
+    result["date"] = pd.to_datetime(result["date"], errors="coerce") + pd.offsets.MonthEnd(0)
+    result["price"] = pd.to_numeric(result["price"], errors="coerce")
+    if result["price"].dropna().le(0).any():
+        raise ValueError("Monthly CTA prices must be positive")
+    result["return"] = result["price"].pct_change(fill_method=None)
+    directions = [
+        result["price"].pct_change(window, fill_method=None).apply(
+            lambda value: 1.0 if value > 0 else -1.0 if value < 0 else 0.0
+        )
+        for window in windows
+    ]
+    result["signal"] = sum(directions) / len(directions)
+    result["realized_vol"] = result["return"].rolling(vol_window).std() * math.sqrt(12)
+    scaled = result["signal"] * annual_vol_target / result["realized_vol"]
+    result["target_position"] = scaled.clip(-max_leverage, max_leverage).fillna(0.0)
+    result["position"] = result["target_position"].shift(1).fillna(0.0)
+    result["turnover"] = result["position"].diff().abs().fillna(result["position"].abs())
+    result["gross_return"] = result["position"] * result["return"].fillna(0.0)
+    result["cost"] = result["turnover"] * cost_bps_per_turnover / 10_000
+    result["net_return"] = result["gross_return"] - result["cost"]
+    result["equity"] = (1.0 + result["net_return"]).cumprod()
+    result["speed"] = speed
+    return result.reset_index(drop=True)
+
+
+def build_event_cta_paths(
+    events: pd.DataFrame,
+    cta: pd.DataFrame,
+    before_months: int = 6,
+    after_months: int = 18,
+) -> pd.DataFrame:
+    ordered = cta.copy()
+    ordered["date"] = pd.to_datetime(ordered["date"], errors="coerce") + pd.offsets.MonthEnd(0)
+    records: list[pd.DataFrame] = []
+    for event in events.itertuples(index=False):
+        t0 = pd.Timestamp(event.start_date) + pd.offsets.MonthEnd(0)
+        for _, series in ordered.groupby(["commodity", "speed"]):
+            start = t0 - pd.DateOffset(months=before_months) + pd.offsets.MonthEnd(0)
+            end = t0 + pd.DateOffset(months=after_months) + pd.offsets.MonthEnd(0)
+            window = series[series["date"].between(start, end)].sort_values("date").copy()
+            if window.empty:
+                continue
+            window["event_id"] = event.event_id
+            window["status"] = event.status
+            window["relative_month"] = (
+                (window["date"].dt.year - t0.year) * 12 + window["date"].dt.month - t0.month
+            )
+            window["event_equity"] = (1.0 + window["net_return"]).cumprod()
+            records.append(window)
+    result = pd.concat(records, ignore_index=True) if records else pd.DataFrame()
+    keys = ["event_id", "commodity", "speed", "date"]
+    if not result.empty and result.duplicated(keys).any():
+        raise ValueError("Duplicate event CTA path keys")
+    return result
+
+
+def summarize_event_cta(paths: pd.DataFrame) -> pd.DataFrame:
+    rows: list[dict[str, object]] = []
+    if paths.empty:
+        return pd.DataFrame()
+    for keys, group in paths.groupby(["event_id", "commodity", "speed"]):
+        for horizon in (3, 6, 12, 18):
+            window = group[group["relative_month"].between(0, horizon)].sort_values("date")
+            if window.empty:
+                continue
+            equity = (1.0 + window["net_return"]).cumprod()
+            rows.append({
+                "event_id": keys[0],
+                "status": window["status"].iloc[0],
+                "commodity": keys[1],
+                "speed": keys[2],
+                "horizon_months": horizon,
+                "net_return": equity.iloc[-1] - 1.0,
+                "max_drawdown": _max_drawdown_from_equity(equity),
+                "positive_month_share": window["net_return"].gt(0).mean(),
+                "average_abs_position": window["position"].abs().mean(),
+                "turnover": window["turnover"].sum(),
+            })
+    return pd.DataFrame(rows)
+
+
+def summarize_existing_daily_cta(
+    events: pd.DataFrame,
+    signal_frames: dict[tuple[str, str], pd.DataFrame],
+) -> pd.DataFrame:
+    rows: list[dict[str, object]] = []
+    for event in events.itertuples(index=False):
+        start = pd.Timestamp(event.start_date)
+        end = start + pd.DateOffset(months=18)
+        for (symbol, speed), frame in signal_frames.items():
+            current = frame.copy()
+            current["date"] = pd.to_datetime(current["date"], errors="coerce")
+            window = current[current["date"].between(start, end)].sort_values("date").copy()
+            if window.empty:
+                rows.append({
+                    "event_id": event.event_id,
+                    "status": event.status,
+                    "symbol": symbol,
+                    "speed": speed,
+                    "coverage_status": "UNAVAILABLE",
+                    "net_return": pd.NA,
+                    "max_drawdown": pd.NA,
+                    "start_date": pd.NaT,
+                    "end_date": pd.NaT,
+                })
+                continue
+            net_returns = pd.to_numeric(window["net_return"], errors="coerce").fillna(0.0)
+            equity = (1.0 + net_returns).cumprod()
+            rows.append({
+                "event_id": event.event_id,
+                "status": event.status,
+                "symbol": symbol,
+                "speed": speed,
+                "coverage_status": "AVAILABLE",
+                "net_return": equity.iloc[-1] - 1.0,
+                "max_drawdown": _max_drawdown_from_equity(equity),
+                "start_date": window["date"].iloc[0],
+                "end_date": window["date"].iloc[-1],
+            })
+    return pd.DataFrame(rows)
