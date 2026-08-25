@@ -4,6 +4,7 @@ import json
 
 import pandas as pd
 import pytest
+import requests
 
 from elnino_cta.cli import build_parser
 from elnino_cta.external_observations import (
@@ -94,6 +95,21 @@ def test_monsoon_before_june_is_not_in_season() -> None:
     assert len(result) == 1
     assert result.iloc[0]["status"] == "NOT_IN_SEASON"
     assert result.iloc[0]["season_day"] == 0
+
+
+def test_monsoon_uses_last_complete_source_date_when_api_lags() -> None:
+    result = build_india_monsoon_cumulative(
+        monsoon_weather(),
+        as_of="2026-06-12",
+        downloaded_at="2026-06-12T12:00:00Z",
+    )
+
+    latest = result.query("season_year == 2026").iloc[-1]
+    assert latest["date"] == pd.Timestamp("2026-06-10")
+    assert latest["data_as_of"] == pd.Timestamp("2026-06-10")
+    assert latest["valid_locations"] == 2
+    assert latest["status"] == "OK"
+    assert latest["current_cumulative_mm"] == pytest.approx(100.0)
 
 
 def test_monsoon_rejects_duplicate_point_dates() -> None:
@@ -193,6 +209,78 @@ def test_refresh_external_observations_keeps_last_success_file_on_failure(tmp_pa
     assert target.read_bytes() == before
     assert result["datasets"]["ndvi"]["status"] == "AUTH_REQUIRED"
     assert "secret-value-must-not-leak" not in json.dumps(result)
+
+
+def test_refresh_manifest_explains_http_error_without_leaking_url_query(tmp_path) -> None:
+    regions_path, normals_path = _write_external_config(tmp_path)
+    response = requests.Response()
+    response.status_code = 500
+    response.url = "https://modis.ornl.gov/rst/api/v1/MOD13Q1/dates?token=secret"
+    error = requests.HTTPError("500 Server Error: secret-detail", response=response)
+
+    result = refresh_external_observations(
+        output_dir=tmp_path / "data" / "processed",
+        as_of="2026-06-10",
+        regions_path=regions_path,
+        normals_path=normals_path,
+        source_bundle={
+            "weather": monsoon_weather(),
+            "imd": _imd_events_ok(),
+            "ndvi_error": error,
+        },
+    )
+
+    meta = result["datasets"]["ndvi"]
+    assert meta["status"] == "FETCH_ERROR"
+    assert meta["reason_code"] == "HTTP_500"
+    assert meta["reason_cn"] == "官方数据服务返回 HTTP 500（服务器内部错误）"
+    assert meta["source_host"] == "modis.ornl.gov"
+    assert "改走 Earthdata 官方备用接口" in meta["next_action"]
+    assert "secret" not in json.dumps(meta, ensure_ascii=False)
+
+
+def test_ndvi_automatically_falls_back_to_earthdata_when_token_exists(tmp_path, monkeypatch) -> None:
+    regions_path, normals_path = _write_external_config(tmp_path)
+    monkeypatch.setenv("EARTHDATA_TOKEN", "test-token")
+    monkeypatch.delenv("EARTHDATA_HDF_FALLBACK", raising=False)
+    calls = {"earthdata": 0}
+
+    def fail_ornl(*args, **kwargs):
+        response = requests.Response()
+        response.status_code = 500
+        response.url = "https://modis.ornl.gov/rst/api/v1/MOD13Q1/dates"
+        raise requests.HTTPError("server error", response=response)
+
+    def succeed_earthdata(*args, **kwargs):
+        calls["earthdata"] += 1
+        return pd.DataFrame([{
+            "product_date": "2026-05-25", "composite_slot": 10, "ndvi": 0.55,
+            "climatology_mean": 0.52, "climatology_std": 0.02,
+            "same_period_difference": 0.03, "z_score": 1.5,
+            "historical_percentile": 0.8, "valid_pixels": 100,
+            "total_pixels": 120, "valid_pixel_ratio": 100 / 120,
+            "region_count": 3, "status": "OK", "published_at": "2026-06-01",
+            "downloaded_at": "2026-06-10T00:00:00Z", "source": "MOD13Q1.061",
+            "granules": "fixture.hdf",
+        }])
+
+    monkeypatch.setattr(
+        "elnino_cta.external_observations.fetch_india_sugar_ndvi_ornl", fail_ornl
+    )
+    monkeypatch.setattr(
+        "elnino_cta.external_observations.fetch_india_sugar_ndvi", succeed_earthdata
+    )
+
+    result = refresh_external_observations(
+        output_dir=tmp_path / "data" / "processed",
+        as_of="2026-06-10",
+        regions_path=regions_path,
+        normals_path=normals_path,
+        source_bundle={"weather": monsoon_weather(), "imd": _imd_events_ok()},
+    )
+
+    assert calls["earthdata"] == 1
+    assert result["datasets"]["ndvi"]["status"] == "OK"
 
 
 def test_cli_exposes_external_refresh_arguments() -> None:

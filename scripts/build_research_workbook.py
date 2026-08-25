@@ -25,6 +25,78 @@ EXPECTED_SHEETS = [
 ]
 CATEGORY_CN = {"supply": "供给", "demand": "需求", "inventory": "库存"}
 COMMODITY_CN = {"palm_oil": "棕榈油", "sugar": "白糖"}
+SYMBOL_CN = {"P": "棕榈油 P", "SR": "白糖 SR"}
+STATUS_CN = {
+    "OK": "可用（OK）",
+    "FRESH": "最新（FRESH）",
+    "CONFIRMED": "已确认（CONFIRMED）",
+    "KEEP_MONITORING": "继续观察（KEEP_MONITORING）",
+    "NOT_CONFIRMED": "尚未确认（NOT_CONFIRMED）",
+    "INCOMPLETE": "数据不完整（INCOMPLETE）",
+    "PARTIAL": "部分可用（PARTIAL）",
+    "STALE": "数据过期（STALE）",
+    "FETCH_ERROR": "获取失败（FETCH_ERROR）",
+    "AUTH_REQUIRED": "缺少授权（AUTH_REQUIRED）",
+    "NOT_PUBLISHED": "官方尚未发布（NOT_PUBLISHED）",
+    "NOT_ANNOUNCED": "官方尚未宣布（NOT_ANNOUNCED）",
+    "INSUFFICIENT_COVERAGE": "覆盖不足（INSUFFICIENT_COVERAGE）",
+    "REVIEW_REQUIRED": "需要人工复核（REVIEW_REQUIRED）",
+    "MISSING": "数据缺失（MISSING）",
+    "UNKNOWN": "状态未知（UNKNOWN）",
+}
+METRIC_CN = {
+    "mpob_production": "马来西亚棕榈油产量",
+    "ffb_yield": "马来西亚鲜果串（FFB）单产",
+    "mpob_exports": "马来西亚棕榈油出口",
+    "mpob_inventory": "马来西亚棕榈油库存",
+    "global_palm_total_use": "全球棕榈油消费量",
+    "global_palm_ending_stocks": "全球棕榈油期末库存",
+    "global_palm_stock_use": "全球棕榈油库销比",
+    "india_sugar_output": "印度食糖产量",
+    "unica_crush": "巴西中南部甘蔗压榨量",
+    "unica_sugar_mix": "巴西中南部制糖比",
+    "brazil_cane_for_sugar_proxy": "巴西用于制糖的甘蔗量代理",
+    "global_sugar_total_use_source": "全球食糖消费量",
+    "global_sugar_ending_stocks_source": "全球食糖期末库存",
+    "global_sugar_stock_use": "全球食糖库销比",
+}
+EXTERNAL_DATASET_CN = {
+    "monsoon_cumulative": "印度季风累计降雨偏差",
+    "imd_events": "IMD季风开始/退出",
+    "ndvi": "印度糖蔗主产区NDVI代理",
+}
+ALERT_ACTION_CN = {
+    "P_PRICE_STALE": "刷新 Tushare fut_daily/fut_mapping；接口权限缺失时配置后重跑",
+    "SR_PRICE_STALE": "刷新 Tushare fut_daily/fut_mapping；接口权限缺失时配置后重跑",
+    "FUND_UNICA_SUGAR_MIX": "刷新 Wind EDB W5495204；若官方尚未更新则保留过期标记",
+    "BRAZIL_CS_SUGAR_DRY": "继续刷新 NASA POWER，并等待 UNICA 压榨与制糖比验证",
+}
+CLIMATE_GUIDE = {
+    "oni": {
+        "label": "ONI｜海洋尼诺指数\nOceanic Niño Index",
+        "question": "太平洋海水是否异常变暖",
+        "threshold": "≥+0.5℃偏厄尔尼诺；≤-0.5℃偏拉尼娜",
+        "meaning": "Niño 3.4区三个月平均海温距平；正式事件还需持续性确认",
+    },
+    "roni": {
+        "label": "RONI｜相对海洋尼诺指数\nRelative Oceanic Niño Index",
+        "question": "扣除整体海洋变暖后，异常是否仍存在",
+        "threshold": "≥+0.5偏厄尔尼诺；≤-0.5偏拉尼娜",
+        "meaning": "在ONI基础上扣除热带海洋整体变暖，更强调真正的东西向温差",
+    },
+    "soi": {
+        "label": "SOI｜南方涛动指数\nSouthern Oscillation Index",
+        "question": "大气是否配合海温异常",
+        "threshold": "持续为负支持厄尔尼诺；持续为正支持拉尼娜",
+        "meaning": "塔希提与达尔文气压差的标准化指标；负值表示厄尔尼诺式大气响应",
+    },
+    "dmi": {
+        "label": "DMI｜印度洋偶极子指数\nDipole Mode Index",
+        "question": "印度洋区域修正是否放大或抵消影响",
+        "threshold": "≥+0.5为正IOD；≤-0.5为负IOD",
+        "meaning": "西印度洋减东印度洋海温差；不是ENSO本身，用于修正印度和印尼影响落区",
+    },
+}
 
 
 def load_csv_directory(path: Path) -> dict[str, pd.DataFrame]:
@@ -49,6 +121,7 @@ def load_workbook_inputs(repo_dir: Path) -> dict[str, object]:
     fundamentals = load_csv_directory(processed / "fundamentals")
     climate = load_csv_directory(processed / "climate")
     market = load_csv_directory(processed / "market")
+    futures = load_csv_directory(processed / "futures")
     signals = load_csv_directory(processed / "signals")
     monitor = _read_json(repo_dir / "reports" / "monitoring" / "latest.json")
     manifest = _read_json(processed / "history" / "manifest.json", {"as_of": monitor.get("as_of")})
@@ -62,6 +135,7 @@ def load_workbook_inputs(repo_dir: Path) -> dict[str, object]:
         "fundamentals": fundamentals,
         "climate": climate,
         "market": market,
+        "futures": futures,
         "signals": signals,
         "history_manifest": manifest,
         "external_manifest": external_manifest,
@@ -134,16 +208,32 @@ def _write_table(
     headers: list[str],
     rows: list[list[object]],
     formats: dict[str, Any],
+    column_formats: dict[int, Any] | None = None,
 ) -> None:
     for column, value in enumerate(headers):
         sheet.write(start_row, column, value, formats["header"])
     for offset, values in enumerate(rows, start=1):
         for column, value in enumerate(values):
-            fmt = formats["body"]
-            if isinstance(value, (pd.Timestamp,)):
+            fmt = (column_formats or {}).get(column, formats["body"])
+            if isinstance(value, (pd.Timestamp,)) and column not in (column_formats or {}):
                 fmt = formats["date"]
                 value = value.to_pydatetime()
             sheet.write(start_row + offset, column, "" if pd.isna(value) else value, fmt)
+
+
+def _status_text(status: object) -> str:
+    raw = str(status or "UNKNOWN")
+    return STATUS_CN.get(raw, raw)
+
+
+def _direction_text(value: object) -> str:
+    mapping = {
+        "TIGHT": "偏紧：通常对价格偏多",
+        "LOOSE": "偏松：通常对价格偏空",
+        "NEUTRAL": "中性：没有明显方向",
+        "INSUFFICIENT": "证据不足：暂不判断",
+    }
+    return mapping.get(str(value), str(value))
 
 
 def _status_format(status: object, formats: dict[str, Any]) -> Any:
@@ -163,26 +253,52 @@ def add_current_conclusion_sheet(
     monitor = frames["monitor"]
     sheet = workbook.add_worksheet(EXPECTED_SHEETS[0])
     sheet.set_tab_color("#C00000")
-    write_title(sheet, "00｜当前结论与 CTA 建议", "仅来自当前监控快照；历史复盘和外部观察不改写本页配置", formats)
+    as_of = monitor.get("as_of", "未知")
+    write_title(
+        sheet,
+        "00｜领导摘要：现在能否据此增配 CTA？",
+        f"数据评估日：{as_of}｜CTA是按规则跟随趋势的期货策略，不等于直接押注农产品上涨",
+        formats,
+    )
     gate = monitor.get("research_gate", {})
     overall = gate.get("overall", "UNKNOWN")
-    sheet.merge_range(3, 0, 4, 3, overall, _status_format(overall, formats))
+    critical_count = int(monitor.get("critical_alerts", 0) or 0)
+    evidence_complete = (
+        gate.get("climate") == "CONFIRMED"
+        and gate.get("fundamentals") == "CONFIRMED"
+        and gate.get("market_cta") == "CONFIRMED"
+        and critical_count == 0
+    )
+    headline = (
+        "证据完整：可以进入配置复核"
+        if evidence_complete
+        else "证据不完整：暂不形成CTA增配结论"
+    )
+    sheet.merge_range(3, 0, 4, 3, _status_text(overall), _status_format(overall, formats))
     sheet.merge_range(
         3, 4, 4, 11,
-        "当前建议：维持基准或小额分批观察；只有 L2 基本面收紧与 L3/L4 中慢速跨品种确认后，才复核主题加仓。",
+        headline + "。只有L2供需库存收紧、L3价格定价和L4中慢速趋势共同确认，才讨论增配。",
         formats["note"],
     )
-    headers = ["层级", "状态", "回答的问题", "当前含义"]
+    headers = ["层级", "状态", "用大白话回答的问题", "领导现在怎么读"]
     questions = {
-        "climate": ("L1 气候天气", "厄尔尼诺是否耦合并落到主产区"),
-        "fundamentals": ("L2 供给基本面", "天气是否转化为供需库存收紧"),
-        "market_cta": ("L3/L4 定价与CTA", "价格与中慢速趋势是否共同确认"),
+        "climate": ("L1 气候天气", "这次厄尔尼诺是否真实，并已影响主产区天气"),
+        "fundamentals": ("L2 供给基本面", "天气影响是否已经变成减产、需求变化或库存收紧"),
+        "market_cta": ("L3/L4 定价与CTA", "市场价格和趋势策略是否已经共同确认这个故事"),
     }
     rows = []
     for key, (label, question) in questions.items():
         status = gate.get(key, "UNKNOWN")
-        rows.append([label, status, question, "已确认" if status == "CONFIRMED" else "尚不能升级配置"])
+        rows.append([
+            label,
+            _status_text(status),
+            question,
+            "本层已通过" if status == "CONFIRMED" else "本层未通过，不能升级配置",
+        ])
     _write_table(sheet, 6, headers, rows, formats)
+    for offset, key in enumerate(questions, start=1):
+        raw = gate.get(key, "UNKNOWN")
+        sheet.write(6 + offset, 1, _status_text(raw), _status_format(raw, formats))
     alerts: list[str] = []
     for label, value in (
         ("关键告警", monitor.get("critical_alerts", [])),
@@ -193,7 +309,7 @@ def add_current_conclusion_sheet(
         elif isinstance(value, int) and value:
             alerts.append(f"{label}：{value}项（详见 L5 数据审计与监控复盘）")
     alerts.extend(str(item) for item in monitor.get("scope_gaps", []))
-    sheet.merge_range(12, 0, 12, 11, "当前限制与复核点", formats["section"])
+    sheet.merge_range(12, 0, 12, 11, "为什么现在还不能得出完整结论", formats["section"])
     if alerts:
         for index, alert in enumerate(alerts[:8], start=13):
             sheet.merge_range(index, 0, index, 11, f"• {alert}", formats["note"])
@@ -209,13 +325,13 @@ def add_current_conclusion_sheet(
 def add_logic_sheet(workbook: xlsxwriter.Workbook, frames: dict[str, object], formats: dict[str, Any]) -> None:
     sheet = workbook.add_worksheet(EXPECTED_SHEETS[1])
     sheet.set_tab_color("#4472C4")
-    write_title(sheet, "01｜总逻辑", "主链逐层验证；H 历史复盘是独立旁路，只用于认识规律", formats)
+    write_title(sheet, "01｜总逻辑：从天气故事到可配置策略", "先看气候，再看供需库存，再看价格和趋势；任一关键层缺证据，就不升级配置", formats)
     headers = ["序号", "层级", "核心问题", "关键指标", "通过后才看", "否决边界"]
     rows = [
-        [1, "L1 气候天气", "ENSO是否海气耦合并落到产区", "RONI/ONI、SOI、DMI、产区雨量/土壤、三项印度外部观察", "L2", "气候异常不能替代供给兑现"],
-        [2, "L2 供给基本面", "天气是否转化为供给、需求、库存变化", "棕榈油/白糖各三格，共六类结论", "L3", "预测值只作背景，不能冒充实际值评分"],
-        [3, "L3 市场定价", "价格、基差、期限结构是否已经定价", "P/SR行情、基差、曲线结构", "L4", "数据过期或换月不透明则不确认"],
-        [4, "L4 CTA环境", "趋势能否被系统策略捕捉", "Fast/Medium/Slow；统一20%目标波动", "L5", "必须次日执行、成本后、多品种确认"],
+        [1, "L1 气候天气", "厄尔尼诺是否真实且影响主产区", "海温、大气、印度洋修正、产区降雨/土壤/长势", "L2", "气候异常不等于一定减产"],
+        [2, "L2 供给基本面", "天气是否已经转化成减产、需求或库存变化", "棕榈油/白糖各看供给、需求、库存", "L3", "预测值只作背景，实际数据不足就不下结论"],
+        [3, "L3 市场定价", "市场是否已经开始为紧缺或宽松定价", "P/SR价格趋势、前后月结构；现货基差缺失会披露", "L4", "行情过期或换月不透明则不确认"],
+        [4, "L4 CTA环境", "规则化趋势策略是否能抓住这段行情", "Fast/Medium/Slow；统一20%目标波动", "L5", "次日执行、成本后，并要求中慢速与跨品种确认"],
         [5, "L5 数据审计", "来源、时效、覆盖与方法是否可信", "发布日期、缺失、哈希、限制", "配置结论", "关键数据不完整则保持观察"],
         ["H", "历史复盘旁路", "历次事件中气候、基本面、价格、CTA如何共同演化", "统一T0窗口、价格收益、Medium/Slow CTA代理", "研究理解", "仅描述，不进入配置或置信度修正"],
     ]
@@ -244,17 +360,18 @@ def write_event_summary_table(
     events: pd.DataFrame,
     evidence: pd.DataFrame,
     price_paths: pd.DataFrame,
+    cta_paths: pd.DataFrame,
     cta_summary: pd.DataFrame,
     daily_cta_summary: pd.DataFrame,
     formats: dict[str, Any],
-) -> int:
+) -> tuple[int, dict[tuple[str, str], int]]:
     headers = [
-        "事件", "品种", "状态", "起始", "峰值ONI", "证据数", "证据覆盖",
-        "商品收益3M", "商品收益6M", "商品收益12M", "商品收益18M",
+        "事件", "品种", "价格路径", "CTA代理净值", "状态", "起始", "峰值ONI",
+        "证据覆盖", "商品收益3M", "商品收益6M", "商品收益12M", "商品收益18M",
         "CTA成本后收益 Medium12M", "CTA成本后收益 Slow12M", "现有日频代理",
-        "价格路径", "CTA代理净值",
     ]
     rows: list[list[object]] = []
+    row_map: dict[tuple[str, str], int] = {}
     for event in events.itertuples(index=False):
         for commodity in ("palm_oil", "sugar"):
             event_evidence = evidence[
@@ -281,62 +398,86 @@ def write_event_summary_table(
                 & daily_cta_summary.get("symbol", pd.Series(dtype=str)).eq(symbol)
             ]
             if daily.empty or daily.get("coverage_status", pd.Series(dtype=str)).eq("UNAVAILABLE").all():
-                daily_text = "UNAVAILABLE"
+                daily_text = "未覆盖"
             else:
                 daily_text = "; ".join(
                     f"{item.speed}:{item.coverage_status}"
                     + (f"/{float(item.net_return):.1%}" if pd.notna(item.net_return) else "")
                     for item in daily.itertuples(index=False)
                 )
+            cta_group = cta_paths[
+                cta_paths.get("event_id", pd.Series(dtype=str)).eq(event.event_id)
+                & cta_paths.get("commodity", pd.Series(dtype=str)).eq(commodity)
+            ]
+            medium = cta_group[cta_group.get("speed", pd.Series(dtype=str)).eq("medium")]
+            slow = cta_group[cta_group.get("speed", pd.Series(dtype=str)).eq("slow")]
+            chosen_cta = medium if not medium.empty else slow
+            price_available = pd.to_numeric(price_group.get("price_index"), errors="coerce").notna().sum() >= 2
+            cta_available = pd.to_numeric(chosen_cta.get("event_equity"), errors="coerce").notna().sum() >= 2
+            row_map[(str(event.event_id), commodity)] = 5 + len(rows)
             rows.append([
-                event.event_id, COMMODITY_CN[commodity], event.status,
-                pd.to_datetime(event.start_date), event.peak_oni, len(event_evidence),
+                event.event_id, COMMODITY_CN[commodity], "" if price_available else "未覆盖",
+                "" if cta_available else "未覆盖", _status_text(event.status),
+                pd.to_datetime(event.start_date), event.peak_oni,
                 pd.to_numeric(event_evidence.get("coverage_pct"), errors="coerce").mean() if not event_evidence.empty else pd.NA,
                 *(price_return(horizon) for horizon in (3, 6, 12, 18)),
                 *cta_values, daily_text,
             ])
-    _write_table(sheet, 4, headers, rows, formats)
-    return 5 + len(rows)
+    _write_table(
+        sheet,
+        4,
+        headers,
+        rows,
+        formats,
+        column_formats={7: formats["percent"], 8: formats["percent"], 9: formats["percent"],
+                        10: formats["percent"], 11: formats["percent"], 12: formats["percent"],
+                        13: formats["percent"]},
+    )
+    return 5 + len(rows), row_map
 
 
 def write_event_path_data_and_sparklines(
     sheet: Any,
     price_paths: pd.DataFrame,
     cta_paths: pd.DataFrame,
+    row_map: dict[tuple[str, str], int],
     formats: dict[str, Any],
 ) -> None:
-    source_col = 26
+    source_col = 40
     source_row = 0
-    visible_row = 5
     for keys, group in price_paths.groupby(["event_id", "commodity"], sort=False):
+        normalized_keys = (str(keys[0]), str(keys[1]))
+        visible_row = row_map.get(normalized_keys)
+        if visible_row is None:
+            continue
         ordered = group.sort_values("relative_month")
-        values = pd.to_numeric(ordered["price_index"], errors="coerce").tolist()
+        values = pd.to_numeric(ordered["price_index"], errors="coerce").dropna().tolist()
         if len(values) >= 2:
             sheet.write_row(source_row, source_col, values)
-            sheet.add_sparkline(visible_row, 14, {
+            sheet.add_sparkline(visible_row, 2, {
                 "range": xlsxwriter.utility.xl_range(source_row, source_col, source_row, source_col + len(values) - 1),
-                "type": "line", "series_color": "#4472C4",
+                "type": "line", "series_color": "#4472C4", "show_hidden": True,
             })
         cta_group = cta_paths[
             cta_paths.get("event_id", pd.Series(dtype=str)).eq(keys[0])
             & cta_paths.get("commodity", pd.Series(dtype=str)).eq(keys[1])
         ]
         medium = cta_group[cta_group.get("speed", pd.Series(dtype=str)).eq("medium")]
-        chosen = medium if not medium.empty else cta_group
+        slow = cta_group[cta_group.get("speed", pd.Series(dtype=str)).eq("slow")]
+        chosen = medium if not medium.empty else slow
         cta_values = pd.to_numeric(
             chosen.sort_values("relative_month").get("event_equity"), errors="coerce"
         ).dropna().tolist()
         if len(cta_values) >= 2:
             cta_source_row = source_row + 200
             sheet.write_row(cta_source_row, source_col, cta_values)
-            sheet.add_sparkline(visible_row, 15, {
+            sheet.add_sparkline(visible_row, 3, {
                 "range": xlsxwriter.utility.xl_range(
                     cta_source_row, source_col, cta_source_row, source_col + len(cta_values) - 1
                 ),
-                "type": "line", "series_color": "#C55A11",
+                "type": "line", "series_color": "#C55A11", "show_hidden": True,
             })
         source_row += 1
-        visible_row += 1
     sheet.set_column(source_col, source_col + 80, None, None, {"hidden": True})
 
 
@@ -345,7 +486,7 @@ def write_pattern_table(sheet: Any, patterns: pd.DataFrame, start_row: int, form
     rows = []
     for item in patterns.itertuples(index=False):
         rows.append([
-            COMMODITY_CN.get(item.commodity, item.commodity), item.metric_id, item.sample_size,
+            COMMODITY_CN.get(item.commodity, item.commodity), METRIC_CN.get(item.metric_id, item.metric_id), item.sample_size,
             f"{item.positive_count}/{item.negative_count}/{item.flat_count}",
             item.same_direction_share, item.median, item.q25, item.q75,
             item.pattern_strength, "仅描述已完成事件；不生成配置或置信度修正",
@@ -356,24 +497,78 @@ def write_pattern_table(sheet: Any, patterns: pd.DataFrame, start_row: int, form
 def add_history_sheet(workbook: xlsxwriter.Workbook, frames: dict[str, object], formats: dict[str, Any]) -> None:
     sheet = workbook.add_worksheet(EXPECTED_SHEETS[2])
     sheet.set_tab_color("#8064A2")
-    write_title(sheet, "02｜历次厄尔尼诺复盘", "独立研究旁路；同时复盘气候/基本面、品种价格和 CTA 代理，不进入当前配置结论", formats)
-    end_row = write_event_summary_table(
-        sheet, frames["events"], frames["evidence"], frames["price_paths"],
+    write_title(sheet, "02｜历次厄尔尼诺复盘", "每行同时看气候证据、品种价格和CTA代理；迷你图左端为T-6月、中间为T0、右端为T+18月", formats)
+    end_row, row_map = write_event_summary_table(
+        sheet, frames["events"], frames["evidence"], frames["price_paths"], frames["cta_paths"],
         frames["cta_summary"], frames["daily_cta_summary"], formats,
     )
-    write_event_path_data_and_sparklines(sheet, frames["price_paths"], frames["cta_paths"], formats)
+    write_event_path_data_and_sparklines(
+        sheet, frames["price_paths"], frames["cta_paths"], row_map, formats
+    )
     pattern_row = max(end_row + 3, 11)
     sheet.merge_range(pattern_row, 0, pattern_row, 11, "历史规律统计", formats["section"])
     write_pattern_table(sheet, frames["patterns"], pattern_row + 1, formats)
-    sheet.set_column("A:A", 16)
-    sheet.set_column("B:B", 12)
-    sheet.set_column("C:N", 15)
-    sheet.set_column("O:O", 18)
+    sheet.set_column("A:B", 13)
+    sheet.set_column("C:D", 18)
+    sheet.set_column("E:G", 13)
+    sheet.set_column("H:N", 15)
+    sheet.set_column("O:O", 24)
     sheet.freeze_panes(5, 0)
 
 
 def _last_record(frame: pd.DataFrame) -> pd.Series | None:
     return frame.iloc[-1] if not frame.empty else None
+
+
+def _safe_float(value: object) -> float | None:
+    numeric = pd.to_numeric(pd.Series([value]), errors="coerce").iloc[0]
+    return float(numeric) if pd.notna(numeric) else None
+
+
+def _dataset_meta(frames: dict[str, object], name: str) -> dict[str, object]:
+    return dict(frames["external_manifest"].get("datasets", {}).get(name, {}))
+
+
+def _external_display_status(
+    raw_status: object,
+    monitor_item: dict[str, object],
+) -> str:
+    freshness = str(monitor_item.get("freshness_status", ""))
+    lag = monitor_item.get("staleness_days")
+    if str(raw_status) == "OK" and freshness == "STALE":
+        return f"数据延迟{lag}天（STALE）" if lag is not None else _status_text("STALE")
+    return _status_text(raw_status)
+
+
+def _external_reason(meta: dict[str, object], raw_status: object) -> str:
+    if str(raw_status) in {"OK", "NOT_ANNOUNCED"}:
+        return "数据已取得；事件尚未发生时会显示为“官方尚未宣布”"
+    return str(meta.get("reason_cn") or meta.get("reason") or "旧版采集仅记录状态码，需重新刷新定位")
+
+
+def _add_row_sparkline(
+    sheet: Any,
+    visible_row: int,
+    visible_col: int,
+    values: list[float],
+    source_row: int,
+    source_col: int,
+    color: str,
+) -> bool:
+    cleaned = pd.to_numeric(pd.Series(values), errors="coerce").dropna().tolist()
+    if len(cleaned) < 2:
+        return False
+    sheet.write_row(source_row, source_col, cleaned)
+    sheet.add_sparkline(visible_row, visible_col, {
+        "range": xlsxwriter.utility.xl_range(
+            source_row, source_col, source_row, source_col + len(cleaned) - 1
+        ),
+        "type": "line",
+        "series_color": color,
+        "markers": False,
+        "show_hidden": True,
+    })
+    return True
 
 
 def write_external_observation_rows(
@@ -382,21 +577,28 @@ def write_external_observation_rows(
     start_row: int,
     formats: dict[str, Any],
 ) -> None:
-    headers = ["外部观测", "当前状态", "当前值/事件", "同期正常/基准", "位置含义", "数据截至", "来源", "配置边界"]
+    headers = [
+        "外部观测", "状态", "当前值/事件", "同期基准", "领导怎么读", "数据截至", "来源",
+        "迷你趋势", "为什么没有数据", "怎么补齐", "对结论影响",
+    ]
     monsoon = _last_record(frames["monsoon_cumulative"])
     events = frames["monsoon_events"]
     ndvi = _last_record(frames["sugar_ndvi"])
-    datasets = frames["external_manifest"].get("datasets", {})
-    monsoon_meta = datasets.get("monsoon_cumulative", {})
-    imd_meta = datasets.get("imd_events", {})
-    ndvi_meta = datasets.get("ndvi", {})
+    monsoon_meta = _dataset_meta(frames, "monsoon_cumulative")
+    imd_meta = _dataset_meta(frames, "imd_events")
+    ndvi_meta = _dataset_meta(frames, "ndvi")
+    monitor_external = frames["monitor"].get("external_observations", {})
     monsoon_status = monsoon_meta.get(
         "status", monsoon.get("status", "MISSING") if monsoon is not None else "MISSING"
     )
+    monsoon_current = (
+        monsoon.get("current_cumulative_mm", monsoon.get("actual_cumulative_mm"))
+        if monsoon is not None else None
+    )
     monsoon_value = (
-        f"累计{monsoon.get('actual_cumulative_mm', '')}mm；偏差{float(monsoon.get('cumulative_departure_pct')):.1%}"
+        f"累计{float(monsoon_current):.1f}mm；较常年{float(monsoon.get('cumulative_departure_pct')):+.1%}"
         if monsoon is not None and monsoon_status == "OK" and pd.notna(monsoon.get("cumulative_departure_pct"))
-        else str(monsoon.get("reason", monsoon_status)) if monsoon is not None else "无数据"
+        else "尚无可用数值"
     )
     event_status = imd_meta.get(
         "status",
@@ -409,73 +611,120 @@ def write_external_observation_rows(
             for item in events.itertuples(index=False)
         ) or event_status
     else:
-        event_text = imd_meta.get("reason", event_status)
+        event_text = "尚无可用事件日期"
     ndvi_status = ndvi_meta.get(
         "status", ndvi.get("status", "MISSING") if ndvi is not None else "MISSING"
     )
     ndvi_value = (
         f"NDVI {ndvi.get('ndvi')}；z={ndvi.get('z_score')}；有效像元{float(ndvi.get('valid_pixel_ratio')):.1%}"
         if ndvi is not None and ndvi_status == "OK" and pd.notna(ndvi.get("ndvi"))
-        else str(ndvi.get("reason", ndvi_status)) if ndvi is not None else "无数据"
+        else "尚无可用数值"
     )
+    monsoon_display = _external_display_status(
+        monsoon_status, monitor_external.get("monsoon_cumulative", {})
+    )
+    event_display = _external_display_status(event_status, monitor_external.get("imd_events", {}))
+    ndvi_display = _external_display_status(ndvi_status, monitor_external.get("ndvi", {}))
     rows = [
-        ["印度季风累计降雨偏差", monsoon_status, monsoon_value,
-         monsoon.get("normal_cumulative_mm", "") if monsoon is not None else "",
-         "负偏差代表季风累计偏弱；需结合空间覆盖与进度", monsoon.get("date", "") if monsoon is not None else "",
-         monsoon_meta.get("source", monsoon.get("source", "") if monsoon is not None else ""), "不单独触发CTA配置动作"],
-        ["IMD季风开始/退出", event_status, event_text, "IMD正常开始/退出日期",
+        ["印度季风累计降雨偏差", monsoon_display, monsoon_value,
+         monsoon.get("climatology_cumulative_mm", monsoon.get("normal_cumulative_mm", "")) if monsoon is not None else "",
+         "负偏差=雨季累计偏少；正偏差=偏多。必须同时看更新延迟和地点覆盖。", monsoon.get("date", "") if monsoon is not None else "",
+         monsoon_meta.get("source", monsoon.get("source", "") if monsoon is not None else ""), "",
+         _external_reason(monsoon_meta, monsoon_status),
+         monsoon_meta.get("next_action", "等待NASA POWER更新或重试；沿用最后完整数据日"),
+         monsoon_meta.get("conclusion_impact", "仅作产区补充证据，不单独触发CTA配置动作")],
+        ["IMD季风开始/退出", event_display, event_text, "开始常年约6月1日；西北部退出常年约9月17日",
          "偏早/偏晚影响有效雨季长度，但宣告具有事后确认属性",
          (
              events.get("actual_date", events.get("official_date", pd.Series(dtype=str))).dropna().max()
              if not events.empty else ""
          ),
-         imd_meta.get("source", "IMD"), "不单独触发CTA配置动作"],
-        ["印度糖蔗主产区NDVI代理", ndvi_status, ndvi_value,
-         ndvi.get("same_period_mean", "") if ndvi is not None else "",
+         imd_meta.get("source", "IMD"), "事件型指标",
+         _external_reason(imd_meta, event_status),
+         imd_meta.get("next_action", "继续读取IMD官方公告；退出尚未发生时保持未宣布"),
+         imd_meta.get("conclusion_impact", "仅作有效雨季长度补充证据")],
+        ["印度糖蔗主产区NDVI代理", ndvi_display, ndvi_value,
+         ndvi.get("climatology_mean", ndvi.get("same_period_mean", "")) if ndvi is not None else "",
          "低分位/负z值代表长势偏弱；主产区代表点邻域不是糖蔗专属掩膜",
          ndvi.get("product_date", "") if ndvi is not None else "",
-         ndvi_meta.get("source", ndvi.get("source", "") if ndvi is not None else ""), "不单独触发CTA配置动作"],
+         ndvi_meta.get("source", ndvi.get("source", "") if ndvi is not None else ""), "",
+         _external_reason(ndvi_meta, ndvi_status),
+         ndvi_meta.get("next_action", "公共接口恢复后重试；或配置Earthdata令牌走官方备用接口"),
+         ndvi_meta.get("conclusion_impact", "缺少甘蔗长势验证，不能认为印度供给证据完整")],
     ]
     _write_table(sheet, start_row, headers, rows, formats)
     for offset, row in enumerate(rows, start=1):
-        sheet.write(start_row + offset, 1, row[1], _status_format(row[1], formats))
+        raw = (monsoon_status, event_status, ndvi_status)[offset - 1]
+        sheet.write(start_row + offset, 1, row[1], _status_format(raw, formats))
+    source_col = 70
+    monsoon_values = pd.to_numeric(
+        frames["monsoon_cumulative"].get("cumulative_departure_pct"), errors="coerce"
+    ).dropna().tail(24).tolist()
+    ndvi_values = pd.to_numeric(frames["sugar_ndvi"].get("ndvi"), errors="coerce").dropna().tail(24).tolist()
+    if not _add_row_sparkline(sheet, start_row + 1, 7, monsoon_values, 20, source_col, "#4472C4"):
+        sheet.write(start_row + 1, 7, "少于2期", formats["center"])
+    if not _add_row_sparkline(sheet, start_row + 3, 7, ndvi_values, 21, source_col, "#70AD47"):
+        sheet.write(start_row + 3, 7, "少于2期", formats["center"])
+    sheet.set_column(source_col, source_col + 40, None, None, {"hidden": True})
 
 
 def add_climate_sheet(workbook: xlsxwriter.Workbook, frames: dict[str, object], formats: dict[str, Any]) -> None:
     sheet = workbook.add_worksheet(EXPECTED_SHEETS[3])
     sheet.set_tab_color("#00A6A6")
-    write_title(sheet, "03｜L1 气候天气", "先确认海温与大气耦合，再确认异常是否落到产区；外部观测只补证据", formats)
+    write_title(sheet, "03｜L1 气候天气", "本页回答：这次厄尔尼诺是否真实、是否有大气配合、是否已经影响主产区", formats)
     climate = frames["monitor"].get("layers", {}).get("climate", {})
-    headers = ["指标", "日期", "当前值", "状态/方向", "三个月变化", "含义", "限制"]
+    sheet.merge_range(3, 0, 3, 11, "领导先看：RONI/ONI确认海温，SOI确认大气配合，DMI修正印度洋影响；四者都不能直接替代作物供给数据。", formats["note"])
+    headers = ["指标（中文全称）", "它回答什么", "当前值", "状态/方向", "阈值/正常区间", "当前位置意味着什么", "数据截至", "迷你趋势"]
     rows = []
-    for key, label in (("oni", "ONI"), ("roni", "RONI"), ("soi", "SOI"), ("dmi", "DMI")):
+    for key in ("oni", "roni", "soi", "dmi"):
         item = climate.get(key, {})
+        history = frames["climate"].get(f"noaa_{key}", pd.DataFrame())
+        latest_history = history.iloc[-1] if not history.empty else pd.Series()
+        value = item.get(key, latest_history.get(key, ""))
+        date_value = item.get("date", latest_history.get("date", ""))
+        guide = CLIMATE_GUIDE[key]
         rows.append([
-            label, item.get("date"), item.get(key), item.get("state", item.get("phase", "UNKNOWN")),
-            item.get("change_3m"), "海温/大气耦合与IOD修正", "单一指数不能直接推导作物供给",
+            guide["label"], guide["question"], value,
+            item.get("state", item.get("phase", "需结合阈值判断")),
+            guide["threshold"], guide["meaning"], date_value, "",
         ])
     _write_table(sheet, 4, headers, rows, formats)
+    source_col = 30
+    for offset, key in enumerate(("oni", "roni", "soi", "dmi"), start=1):
+        history = frames["climate"].get(f"noaa_{key}", pd.DataFrame())
+        values = pd.to_numeric(history.get(key), errors="coerce").dropna().tail(24).tolist()
+        if not _add_row_sparkline(sheet, 4 + offset, 7, values, offset - 1, source_col, "#4472C4"):
+            sheet.write(4 + offset, 7, "少于2期", formats["center"])
+    sheet.set_column(source_col, source_col + 40, None, None, {"hidden": True})
     sheet.merge_range(10, 0, 10, 11, "三项持续外部观测", formats["section"])
     write_external_observation_rows(sheet, frames, 11, formats)
-    sheet.set_column("A:A", 28)
-    sheet.set_column("B:B", 18)
-    sheet.set_column("C:H", 28)
+    sheet.set_column("A:A", 30)
+    sheet.set_column("B:B", 28)
+    sheet.set_column("C:D", 16)
+    sheet.set_column("E:G", 27)
+    sheet.set_column("H:H", 16)
+    sheet.set_column("I:K", 32)
     sheet.freeze_panes(5, 0)
 
 
 def write_l2_summary_rows(sheet: Any, summary: pd.DataFrame, start_row: int, formats: dict[str, Any]) -> None:
-    headers = ["品种", "类别", "主指标", "当前值", "单位", "实际/预测", "季节分位", "方向", "数据截至", "背景驱动", "含义"]
+    headers = ["品种", "类别", "主指标（中文）", "当前值", "单位", "实际/预测", "季节分位", "方向", "数据截至", "辅助验证", "领导怎么读"]
     rows = []
     for item in summary.itertuples(index=False):
+        drivers = "、".join(
+            METRIC_CN.get(part.strip(), part.strip())
+            for part in str(item.drivers or "").split(",") if part.strip()
+        )
         rows.append([
-            COMMODITY_CN[item.commodity], CATEGORY_CN[item.category], item.primary_metric,
+            COMMODITY_CN[item.commodity], CATEGORY_CN[item.category], METRIC_CN.get(item.primary_metric, item.primary_metric),
             item.primary_value, item.unit, item.value_type, item.seasonal_percentile,
-            item.direction, item.date, item.drivers,
-            "TIGHT=偏紧；LOOSE=偏松；预测评分或数据缺失则INSUFFICIENT",
+            _direction_text(item.direction), item.date, drivers or "无",
+            "先看实际主指标，再看同季节位置；预测值只能作背景",
         ])
-    _write_table(sheet, start_row, headers, rows, formats)
+    _write_table(sheet, start_row, headers, rows, formats, column_formats={6: formats["percent"]})
     for offset, row in enumerate(rows, start=1):
-        sheet.write(start_row + offset, 7, row[7], _status_format(row[7], formats))
+        raw = summary.iloc[offset - 1]["direction"]
+        sheet.write(start_row + offset, 7, row[7], _status_format(raw, formats))
 
 
 def write_l2_detail_rows(
@@ -485,15 +734,15 @@ def write_l2_detail_rows(
     start_row: int,
     formats: dict[str, Any],
 ) -> None:
-    headers = ["指标", "名称", "含义", "当前值", "单位", "观测日", "发布日期", "实际/预测", "季节分位", "当前位置含义", "来源", "局限", "迷你趋势"]
+    headers = ["指标", "名称", "当前值", "单位", "迷你趋势", "它衡量什么", "观测日", "发布日期", "实际/预测", "季节分位", "当前位置含义", "来源", "缺失/局限"]
     rows = []
     for item in details.itertuples(index=False):
         rows.append([
-            item.metric_id, item.label, item.meaning, item.value, item.unit, item.date,
-            item.published_at, item.value_type, item.seasonal_percentile,
-            item.position_meaning, item.source, item.limitation, "",
+            item.metric_id, METRIC_CN.get(item.metric_id, item.label), item.value, item.unit, "",
+            item.meaning, item.date, item.published_at, item.value_type, item.seasonal_percentile,
+            item.position_meaning, item.source, item.limitation,
         ])
-    _write_table(sheet, start_row, headers, rows, formats)
+    _write_table(sheet, start_row, headers, rows, formats, column_formats={9: formats["percent"]})
     source_col = 52
     for index, item in enumerate(details.itertuples(index=False), start=1):
         values = _l2_history_values(item.metric_id, fundamental_history)
@@ -501,9 +750,9 @@ def write_l2_detail_rows(
             continue
         source_row = index - 1
         sheet.write_row(source_row, source_col, values)
-        sheet.add_sparkline(start_row + index, 12, {
+        sheet.add_sparkline(start_row + index, 4, {
             "range": xlsxwriter.utility.xl_range(source_row, source_col, source_row, source_col + len(values) - 1),
-            "type": "line", "series_color": "#70AD47",
+            "type": "line", "series_color": "#70AD47", "show_hidden": True,
         })
     sheet.set_column(source_col, source_col + 300, None, None, {"hidden": True})
 
@@ -547,17 +796,19 @@ def _l2_history_values(
 def add_l2_sheet(workbook: xlsxwriter.Workbook, frames: dict[str, object], formats: dict[str, Any]) -> None:
     sheet = workbook.add_worksheet(EXPECTED_SHEETS[4])
     sheet.set_tab_color("#70AD47")
-    write_title(sheet, "04｜L2 供给基本面", "顶部严格六格：棕榈油/白糖 × 供给/需求/库存；下方为全部驱动和审计信息", formats)
+    write_title(sheet, "04｜L2 供给基本面", "本页回答：天气是否已经转化成产量、需求和库存变化；迷你图紧邻当前值", formats)
     sheet.merge_range(3, 0, 3, 11, "判断顺序：实际主指标 → 同季节分位 → 方向；预测只作背景，白糖供给需印度产量与巴西制糖甘蔗代理共同验证。", formats["note"])
     sheet.merge_range(8, 0, 8, 11, "六格结论", formats["section"])
     write_l2_summary_rows(sheet, frames["l2_summary"], 9, formats)
     sheet.merge_range(17, 0, 17, 11, "指标明细", formats["section"])
     write_l2_detail_rows(sheet, frames["l2_details"], frames["fundamentals"], 18, formats)
-    sheet.set_column("A:B", 14)
-    sheet.set_column("C:C", 28)
-    sheet.set_column("D:I", 16)
-    sheet.set_column("J:L", 30)
-    sheet.set_column("M:M", 14)
+    sheet.set_column("A:A", 26)
+    sheet.set_column("B:B", 30)
+    sheet.set_column("C:D", 14)
+    sheet.set_column("E:E", 17)
+    sheet.set_column("F:F", 28)
+    sheet.set_column("G:J", 15)
+    sheet.set_column("K:M", 30)
     sheet.freeze_panes(10, 0)
 
 
@@ -569,24 +820,83 @@ def _flatten(prefix: str, value: object, output: list[tuple[str, object]]) -> No
         output.append((prefix, value))
 
 
+def _futures_history(frames: dict[str, object], symbol: str) -> pd.DataFrame:
+    for name in (f"{symbol}_dominant_tushare", f"{symbol}_continuous_exploratory"):
+        frame = frames["futures"].get(name, pd.DataFrame())
+        if not frame.empty:
+            return frame.copy()
+    return pd.DataFrame()
+
+
+def _research_signal(frames: dict[str, object], symbol: str, speed: str) -> pd.DataFrame:
+    return frames["signals"].get(f"{symbol}_{speed}_proxy_research", pd.DataFrame()).copy()
+
+
+def _return_over_rows(frame: pd.DataFrame, rows: int, column: str = "close") -> object:
+    values = pd.to_numeric(frame.get(column), errors="coerce").dropna()
+    if len(values) < 2:
+        return pd.NA
+    start = values.iloc[max(0, len(values) - rows - 1)]
+    return values.iloc[-1] / start - 1 if start else pd.NA
+
+
 def add_market_sheet(workbook: xlsxwriter.Workbook, frames: dict[str, object], formats: dict[str, Any]) -> None:
     sheet = workbook.add_worksheet(EXPECTED_SHEETS[5])
     sheet.set_tab_color("#ED7D31")
-    write_title(sheet, "05｜L3 市场定价", "验证价格、基差与期限结构是否已经共同定价；不以主题叙事代替行情", formats)
-    market = frames["monitor"].get("layers", {}).get("market_cta", {})
-    items: list[tuple[str, object]] = []
-    _flatten("market_cta", market, items)
-    rows = [[key, value, "当前监控快照", "行情过期、连续合约换月不透明时不确认"] for key, value in items] or [["状态", "NO_DATA", "当前监控快照", "需刷新 P/SR 行情"]]
-    _write_table(sheet, 4, ["指标", "当前值", "来源", "限制"], rows, formats)
-    sheet.set_column("A:A", 36)
-    sheet.set_column("B:D", 34)
+    write_title(sheet, "05｜L3 市场定价", "本页回答：棕榈油和白糖价格是否已开始为供需变化定价；迷你图展示主力合约近段走势", formats)
+    sheet.merge_range(3, 0, 3, 11, "期货价格=市场对未来供需的交易结果；Contango表示远月贵于近月，通常不支持眼前紧缺。现货基差尚未正式接入，会作为缺口披露。", formats["note"])
+    headers = [
+        "品种", "当前主力合约", "收盘价", "价格趋势", "20日涨跌", "60日涨跌",
+        "20日年化波动", "60日最大回撤", "前后月结构", "前后月价差", "数据截至", "领导怎么读",
+    ]
+    market = frames["monitor"].get("layers", {}).get("market", {})
+    rows: list[list[object]] = []
+    for symbol in ("P", "SR"):
+        item = market.get(symbol, {})
+        history = _futures_history(frames, symbol).sort_values("date")
+        latest = history.iloc[-1] if not history.empty else pd.Series()
+        term = item.get("term_structure", {})
+        staleness = item.get("staleness_days")
+        stale_text = (
+            f"行情已延迟{staleness}天，超过4天阈值，L3不能确认"
+            if staleness is not None and int(staleness) > 4
+            else "行情时效合格；仍需结合基差与CTA趋势"
+        )
+        rows.append([
+            SYMBOL_CN[symbol], item.get("contract", latest.get("contract", "")),
+            item.get("close", latest.get("close", "")), "",
+            item.get("price_return_20d", _return_over_rows(history, 20)),
+            item.get("price_return_60d", _return_over_rows(history, 60)),
+            item.get("realized_vol_20d", ""), item.get("max_price_drawdown_60d", ""),
+            term.get("curve", "未取得"), term.get("front_second_spread_pct", ""),
+            item.get("date", latest.get("date", "")), stale_text,
+        ])
+    _write_table(
+        sheet, 4, headers, rows, formats,
+        column_formats={4: formats["percent"], 5: formats["percent"], 6: formats["percent"],
+                        7: formats["percent"], 9: formats["percent"]},
+    )
+    source_col = 30
+    for offset, symbol in enumerate(("P", "SR"), start=1):
+        history = _futures_history(frames, symbol).sort_values("date")
+        values = pd.to_numeric(history.get("close"), errors="coerce").dropna().tail(60).tolist()
+        if not _add_row_sparkline(sheet, 4 + offset, 3, values, offset - 1, source_col, "#ED7D31"):
+            sheet.write(4 + offset, 3, "少于2期", formats["center"])
+    sheet.set_column(source_col, source_col + 80, None, None, {"hidden": True})
+    sheet.merge_range(9, 0, 9, 11, "尚缺数据：可审计的现货价格/基差序列尚未接入；在补齐前，L3只依据期货价格和期限结构，结论置信度受限。", formats["note"])
+    sheet.set_column("A:B", 18)
+    sheet.set_column("C:C", 13)
+    sheet.set_column("D:D", 18)
+    sheet.set_column("E:J", 15)
+    sheet.set_column("K:K", 15)
+    sheet.set_column("L:L", 34)
     sheet.freeze_panes(5, 0)
 
 
 def add_cta_sheet(workbook: xlsxwriter.Workbook, frames: dict[str, object], formats: dict[str, Any]) -> None:
     sheet = workbook.add_worksheet(EXPECTED_SHEETS[6])
     sheet.set_tab_color("#FFC000")
-    write_title(sheet, "06｜L4 CTA 环境", "Fast / Medium / Slow 均统一 20% 年化目标波动；信号次日执行、杠杆上限2倍、成本2bp", formats)
+    write_title(sheet, "06｜L4 CTA 环境", "CTA是按价格规则做多或做空的趋势策略；三档速度统一20%年化目标波动，信号次日执行", formats)
     headers = ["速度", "方向回看", "波动率窗口", "用途", "确认边界"]
     rows = [
         ["Fast", "20/60交易日", "20交易日", "快速风险变化；噪声较高", "不单独触发主题配置"],
@@ -594,50 +904,150 @@ def add_cta_sheet(workbook: xlsxwriter.Workbook, frames: dict[str, object], form
         ["Slow", "120/250交易日", "120交易日", "长期趋势确认", "起效慢，但更接近配置视角"],
     ]
     _write_table(sheet, 4, headers, rows, formats)
-    sheet.merge_range(10, 0, 10, 11, "当前信号文件", formats["section"])
-    signal_rows = []
-    for name, frame in frames["signals"].items():
-        latest = frame.iloc[-1] if not frame.empty else pd.Series()
-        signal_rows.append([
-            name, len(frame), latest.get("date", ""), latest.get("position", ""),
-            latest.get("net_return", ""), "研究代理；须审计换月和成本",
-        ])
-    _write_table(sheet, 11, ["文件", "行数", "截至", "仓位", "最近净收益", "限制"], signal_rows, formats)
-    sheet.set_column("A:A", 32)
-    sheet.set_column("B:F", 24)
+    sheet.merge_range(10, 0, 10, 11, "当前P/SR趋势策略代理", formats["section"])
+    signal_headers = [
+        "品种", "速度", "当前执行仓位", "代理净值趋势", "20日净收益", "60日净收益",
+        "60日最大回撤", "仓位持续天数", "数据截至", "当前含义", "确认角色",
+    ]
+    cta = frames["monitor"].get("layers", {}).get("cta", {})
+    signal_rows: list[list[object]] = []
+    for symbol in ("P", "SR"):
+        for speed in ("fast", "medium", "slow"):
+            item = cta.get(symbol, {}).get(speed, {})
+            frame = _research_signal(frames, symbol, speed).sort_values("date")
+            latest = frame.iloc[-1] if not frame.empty else pd.Series()
+            position = item.get("position", latest.get("position", ""))
+            numeric_position = _safe_float(position)
+            position_text = (
+                f"{numeric_position:+.2f}倍（做多）" if numeric_position is not None and numeric_position > 0
+                else f"{numeric_position:+.2f}倍（做空）" if numeric_position is not None and numeric_position < 0
+                else "0倍（空仓/中性）" if numeric_position == 0 else "未取得"
+            )
+            role = {
+                "fast": "快速预警，噪声高，不单独确认",
+                "medium": "核心中期确认",
+                "slow": "配置级长期确认",
+            }[speed]
+            signal_rows.append([
+                SYMBOL_CN[symbol], speed.capitalize(), position_text, "",
+                item.get("net_return_20d", _return_over_rows(frame, 20, "equity")),
+                item.get("net_return_60d", _return_over_rows(frame, 60, "equity")),
+                item.get("max_drawdown_60d", ""), item.get("position_persistence_days", ""),
+                item.get("date", latest.get("date", "")),
+                "多品种、中慢速同向才算CTA环境确认", role,
+            ])
+    _write_table(
+        sheet, 11, signal_headers, signal_rows, formats,
+        column_formats={4: formats["percent"], 5: formats["percent"], 6: formats["percent"]},
+    )
+    source_col = 30
+    row_index = 0
+    for symbol in ("P", "SR"):
+        for speed in ("fast", "medium", "slow"):
+            frame = _research_signal(frames, symbol, speed).sort_values("date")
+            values = pd.to_numeric(frame.get("equity"), errors="coerce").dropna().tail(60).tolist()
+            if not _add_row_sparkline(sheet, 12 + row_index, 3, values, row_index, source_col, "#FFC000"):
+                sheet.write(12 + row_index, 3, "少于2期", formats["center"])
+            row_index += 1
+    sheet.set_column(source_col, source_col + 80, None, None, {"hidden": True})
+    sheet.set_column("A:B", 16)
+    sheet.set_column("C:C", 22)
+    sheet.set_column("D:D", 18)
+    sheet.set_column("E:I", 16)
+    sheet.set_column("J:K", 30)
     sheet.freeze_panes(5, 0)
 
 
 def add_audit_sheet(workbook: xlsxwriter.Workbook, frames: dict[str, object], formats: dict[str, Any]) -> None:
     sheet = workbook.add_worksheet(EXPECTED_SHEETS[7])
     sheet.set_tab_color("#7F7F7F")
-    write_title(sheet, "07｜L5 数据审计", "逐项披露来源、状态、覆盖、刷新时间和是否进入结论；Token 不写入工作簿", formats)
+    write_title(
+        sheet,
+        "07｜L5 数据审计",
+        "本页回答：哪些数据能用、哪些缺失、为什么缺、怎样补齐，以及缺口会怎样影响结论；任何Token都不写入工作簿",
+        formats,
+    )
     external = frames["external_manifest"]
     sheet.write(3, 0, "外部观测总状态", formats["header"])
-    overall = external.get("overall", external.get("status", "MISSING"))
-    sheet.write(3, 1, overall, _status_format(overall, formats))
-    headers = ["数据集", "状态", "行数", "数据截至/发布时间", "刷新时间", "覆盖", "来源", "原因/限制", "是否参与当前结论"]
+    overall = str(external.get("overall", external.get("status", "MISSING")))
+    sheet.write(3, 1, _status_text(overall), _status_format(overall, formats))
+    headers = [
+        "数据集（中文）", "状态", "行数", "观测截至日", "官方发布时间", "本次刷新时间",
+        "覆盖率", "来源", "为什么没有/有什么限制", "怎么补齐", "对结论影响",
+    ]
     rows = []
     for name, item in external.get("datasets", {}).items():
+        raw_status = str(item.get("status", "UNKNOWN"))
+        reason = _external_reason(item, raw_status)
+        if not reason and raw_status in {"OK", "CONFIRMED"}:
+            reason = "数据可用；仍需按发布频率持续刷新"
         rows.append([
-            name, item.get("status", "UNKNOWN"), item.get("rows", ""),
-            item.get("max_date", item.get("published_at", "")),
-            item.get("refreshed_at", external.get("downloaded_at", "")),
-            item.get("coverage_pct", ""), item.get("source", ""), item.get("reason", ""), "否；仅外部补充观察",
+            EXTERNAL_DATASET_CN.get(name, name), _status_text(raw_status), item.get("rows", ""),
+            item.get("data_as_of", item.get("max_date", "")), item.get("published_at", ""),
+            item.get("refreshed_at", external.get("downloaded_at", "")), item.get("coverage_pct", ""),
+            item.get("source", item.get("source_host", "")), reason,
+            item.get("next_action", "按数据源发布频率自动重试"),
+            item.get("conclusion_impact", "作为L1补充证据；不单独触发CTA动作"),
         ])
-    _write_table(sheet, 5, headers, rows, formats)
-    for offset, row in enumerate(rows, start=1):
-        sheet.write(5 + offset, 1, row[1], _status_format(row[1], formats))
-    history_row = 8 + len(rows)
+    _write_table(sheet, 5, headers, rows, formats, column_formats={6: formats["percent"]})
+    for offset, (name, item) in enumerate(external.get("datasets", {}).items(), start=1):
+        raw_status = str(item.get("status", "UNKNOWN"))
+        sheet.write(5 + offset, 1, _status_text(raw_status), _status_format(raw_status, formats))
+    monitor = frames["monitor"]
+    blocker_row = 8 + len(rows)
+    sheet.merge_range(blocker_row, 0, blocker_row, 11, "当前阻断结论的数据缺口", formats["section"])
+    blocker_rows = []
+    for alert in monitor.get("alerts", []):
+        code = str(alert.get("code", "UNKNOWN"))
+        blocker_rows.append([
+            "当前告警", str(alert.get("severity", "unknown")).upper(), code,
+            alert.get("message", ""), ALERT_ACTION_CN.get(code, "回溯对应源数据，修复后重新运行监控"),
+        ])
+    for gap in monitor.get("scope_gaps", []):
+        action = (
+            "接入交易所或数据商的可审计连续合约历史，并验证换月规则与成本"
+            if any(keyword in str(gap) for keyword in ("BMD", "ICE", "期货"))
+            else "补齐对应数据或尽调材料后再进入配置判断"
+        )
+        blocker_rows.append(["范围缺口", "未覆盖", "SCOPE_GAP", gap, action])
+    if not blocker_rows:
+        blocker_rows.append(["当前状态", "无", "NONE", "未发现额外数据阻断项", "按计划持续刷新"])
+    blocker_header_row = blocker_row + 1
+    sheet.write(blocker_header_row, 0, "类型", formats["header"])
+    sheet.write(blocker_header_row, 1, "严重度/状态", formats["header"])
+    sheet.write(blocker_header_row, 2, "代码", formats["header"])
+    sheet.merge_range(blocker_header_row, 3, blocker_header_row, 6, "缺口或原因", formats["header"])
+    sheet.merge_range(blocker_header_row, 7, blocker_header_row, 10, "怎么补齐", formats["header"])
+    for offset, row in enumerate(blocker_rows, start=1):
+        output_row = blocker_header_row + offset
+        sheet.write(output_row, 0, row[0], formats["body"])
+        sheet.write(output_row, 1, row[1], formats["body"])
+        sheet.write(output_row, 2, row[2], formats["body"])
+        sheet.merge_range(output_row, 3, output_row, 6, row[3], formats["body"])
+        sheet.merge_range(output_row, 7, output_row, 10, row[4], formats["body"])
+        sheet.set_row(output_row, 34)
+    history_row = blocker_row + len(blocker_rows) + 4
     sheet.merge_range(history_row, 0, history_row, 11, "历史复盘审计", formats["section"])
     manifest = frames["history_manifest"]
     sheet.write(history_row + 1, 0, "复盘截至", formats["body"])
     sheet.write(history_row + 1, 1, manifest.get("as_of", ""), formats["body"])
     sheet.write(history_row + 2, 0, "逻辑边界", formats["body"])
     sheet.merge_range(history_row + 2, 1, history_row + 2, 8, manifest.get("boundary", "仅描述，不进入当前配置"), formats["note"])
+    glossary_row = history_row + 5
+    sheet.merge_range(glossary_row, 0, glossary_row, 11, "状态词怎么理解", formats["section"])
+    glossary = [
+        ["可用（OK）", "已取得并通过基本校验，可进入对应层判断"],
+        ["官方尚未宣布（NOT_ANNOUNCED）", "这是事件尚未发生或官方尚未确认，不是抓取故障"],
+        ["缺少授权（AUTH_REQUIRED）", "接口需要有效账户或令牌；配置后可自动补数"],
+        ["获取失败（FETCH_ERROR）", "本次访问数据源失败；原因列区分服务器、网络、解析等问题"],
+        ["数据过期（STALE）", "历史数据存在，但距报告日超过允许时滞，不能确认当前状态"],
+    ]
+    _write_table(sheet, glossary_row + 1, ["状态", "给领导的解释"], glossary, formats)
     sheet.set_column("A:A", 32)
     sheet.set_column("B:C", 18)
-    sheet.set_column("D:I", 28)
+    sheet.set_column("D:G", 18)
+    sheet.set_column("H:H", 36)
+    sheet.set_column("I:K", 34)
     sheet.freeze_panes(6, 0)
 
 
@@ -657,7 +1067,7 @@ def validate_workbook(path: Path) -> None:
 
 def build_research_workbook(repo_dir: Path, output_dir: Path, as_of: str) -> Path:
     output_dir.mkdir(parents=True, exist_ok=True)
-    output_path = output_dir / f"厄尔尼诺农产品CTA研究框架_八页复盘版_{as_of.replace('-', '')}.xlsx"
+    output_path = output_dir / f"厄尔尼诺农产品CTA研究框架_八页领导汇报版_{as_of.replace('-', '')}.xlsx"
     frames = load_workbook_inputs(repo_dir)
     with xlsxwriter.Workbook(str(output_path)) as workbook:
         workbook.set_properties({

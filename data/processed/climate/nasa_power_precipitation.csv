@@ -16668,7 +16668,7 @@ date,precip_mm,root_zone_soil_wetness,location,latitude,longitude,source,region
 2026-08-19,19.64,0.81,Johor,1.86,103.11,https://power.larc.nasa.gov/api/temporal/daily/point,malaysia_palm
 2026-08-20,4.64,0.82,Johor,1.86,103.11,https://power.larc.nasa.gov/api/temporal/daily/point,malaysia_palm
 2026-08-21,0.86,0.8,Johor,1.86,103.11,https://power.larc.nasa.gov/api/temporal/daily/point,malaysia_palm
-2026-08-22,,,Johor,1.86,103.11,https://power.larc.nasa.gov/api/temporal/daily/point,malaysia_palm
+2026-08-22,0.04,0.79,Johor,1.86,103.11,https://power.larc.nasa.gov/api/temporal/daily/point,malaysia_palm
 2026-08-23,,,Johor,1.86,103.11,https://power.larc.nasa.gov/api/temporal/daily/point,malaysia_palm
 2026-08-24,,,Johor,1.86,103.11,https://power.larc.nasa.gov/api/temporal/daily/point,malaysia_palm
 2026-08-25,,,Johor,1.86,103.11,https://power.larc.nasa.gov/api/temporal/daily/point,malaysia_palm
@@ -33341,7 +33341,7 @@ date,precip_mm,root_zone_soil_wetness,location,latitude,longitude,source,region
 2026-08-19,3.33,0.8,Sabah,5.98,116.07,https://power.larc.nasa.gov/api/temporal/daily/point,malaysia_palm
 2026-08-20,3.99,0.79,Sabah,5.98,116.07,https://power.larc.nasa.gov/api/temporal/daily/point,malaysia_palm
 2026-08-21,1.74,0.79,Sabah,5.98,116.07,https://power.larc.nasa.gov/api/temporal/daily/point,malaysia_palm
-2026-08-22,,,Sabah,5.98,116.07,https://power.larc.nasa.gov/api/temporal/daily/point,malaysia_palm
+2026-08-22,0.8,0.78,Sabah,5.98,116.07,https://power.larc.nasa.gov/api/temporal/daily/point,malaysia_palm
 2026-08-23,,,Sabah,5.98,116.07,https://power.larc.nasa.gov/api/temporal/daily/point,malaysia_palm
 2026-08-24,,,Sabah,5.98,116.07,https://power.larc.nasa.gov/api/temporal/daily/point,malaysia_palm
 2026-08-25,,,Sabah,5.98,116.07,https://power.larc.nasa.gov/api/temporal/daily/point,malaysia_palm
@@ -50014,7 +50014,7 @@ date,precip_mm,root_zone_soil_wetness,location,latitude,longitude,source,region
 2026-08-19,2.21,0.81,Sarawak,1.55,110.36,https://power.larc.nasa.gov/api/temporal/daily/point,malaysia_palm
 2026-08-20,1.41,0.81,Sarawak,1.55,110.36,https://power.larc.nasa.gov/api/temporal/daily/point,malaysia_palm
 2026-08-21,0.38,0.8,Sarawak,1.55,110.36,https://power.larc.nasa.gov/api/temporal/daily/point,malaysia_palm
-2026-08-22,,,Sarawak,1.55,110.36,https://power.larc.nasa.gov/api/temporal/daily/point,malaysia_palm
+2026-08-22,1.77,0.8,Sarawak,1.55,110.36,https://power.larc.nasa.gov/api/temporal/daily/point,malaysia_palm
 2026-08-23,,,Sarawak,1.55,110.36,https://power.larc.nasa.gov/api/temporal/daily/point,malaysia_palm
 2026-08-24,,,Sarawak,1.55,110.36,https://power.larc.nasa.gov/api/temporal/daily/point,malaysia_palm
 2026-08-25,,,Sarawak,1.55,110.36,https://power.larc.nasa.gov/api/temporal/daily/point,malaysia_palm
@@ -66687,7 +66687,7 @@ date,precip_mm,root_zone_soil_wetness,location,latitude,longitude,source,region
 2026-08-19,6.76,0.81,Riau,0.29,101.71,https://power.larc.nasa.gov/api/temporal/daily/point,indonesia_palm
 2026-08-20,1.27,0.8,Riau,0.29,101.71,https://power.larc.nasa.gov/api/temporal/daily/point,indonesia_palm
 2026-08-21,0.36,0.8,Riau,0.29,101.71,https://power.larc.nasa.gov/api/temporal/daily/point,indonesia_palm
-2026-08-22,,,Riau,0.29,101.71,https://power.larc.nasa.gov/api/temporal/daily/point,indonesia_palm
+2026-08-22,0.13,0.79,Riau,0.29,101.71,https://power.larc.nasa.gov/api/temporal/daily/point,indonesia_palm
 2026-08-23,,,Riau,0.29,101.71,https://power.larc.nasa.gov/api/temporal/daily/point,indonesia_palm
 2026-08-24,,,Riau,0.29,101.71,https://power.larc.nasa.gov/api/temporal/daily/point,indonesia_palm
 2026-08-25,,,Riau,0.29,101.71,https://power.larc.nasa.gov/api/temporal/daily/point,indonesia_palm
@@ -83360,7 +83360,7 @@ date,precip_mm,root_zone_soil_wetness,location,latitude,longitude,source,region
 2026-08-19,8.47,0.87,North Sumatra,2.12,99.55,https://power.larc.nasa.gov/api/temporal/daily/point,indonesia_palm
 2026-08-20,4.15,0.86,North Sumatra,2.12,99.55,https://power.larc.nasa.gov/api/temporal/daily/point,indonesia_palm
 2026-08-21,1.93,0.86,North Sumatra,2.12,99.55,https://power.larc.nasa.gov/api/temporal/daily/point,indonesia_palm
-2026-08-22,,,North Sumatra,2.12,99.55,https://power.larc.nasa.gov/api/temporal/daily/point,indonesia_palm
+2026-08-22,4.74,0.85,North Sumatra,2.12,99.55,https://power.larc.nasa.gov/api/temporal/daily/point,indonesia_palm
 2026-08-23,,,North Sumatra,2.12,99.55,https://power.larc.nasa.gov/api/temporal/daily/point,indonesia_palm
 2026-08-24,,,North Sumatra,2.12,99.55,https://power.larc.nasa.gov/api/temporal/daily/point,indonesia_palm
 2026-08-25,,,North Sumatra,2.12,99.55,https://power.larc.nasa.gov/api/temporal/daily/point,indonesia_palm
@@ -100033,7 +100033,7 @@ date,precip_mm,root_zone_soil_wetness,location,latitude,longitude,source,region
 2026-08-19,0.01,0.42,Central Kalimantan,-1.68,113.38,https://power.larc.nasa.gov/api/temporal/daily/point,indonesia_palm
 2026-08-20,0.05,0.42,Central Kalimantan,-1.68,113.38,https://power.larc.nasa.gov/api/temporal/daily/point,indonesia_palm
 2026-08-21,0.1,0.42,Central Kalimantan,-1.68,113.38,https://power.larc.nasa.gov/api/temporal/daily/point,indonesia_palm
-2026-08-22,,,Central Kalimantan,-1.68,113.38,https://power.larc.nasa.gov/api/temporal/daily/point,indonesia_palm
+2026-08-22,0.15,0.42,Central Kalimantan,-1.68,113.38,https://power.larc.nasa.gov/api/temporal/daily/point,indonesia_palm
 2026-08-23,,,Central Kalimantan,-1.68,113.38,https://power.larc.nasa.gov/api/temporal/daily/point,indonesia_palm
 2026-08-24,,,Central Kalimantan,-1.68,113.38,https://power.larc.nasa.gov/api/temporal/daily/point,indonesia_palm
 2026-08-25,,,Central Kalimantan,-1.68,113.38,https://power.larc.nasa.gov/api/temporal/daily/point,indonesia_palm
@@ -116706,7 +116706,7 @@ date,precip_mm,root_zone_soil_wetness,location,latitude,longitude,source,region
 2026-08-19,1.09,0.87,Maharashtra,19.75,75.71,https://power.larc.nasa.gov/api/temporal/daily/point,india_sugar
 2026-08-20,3.07,0.86,Maharashtra,19.75,75.71,https://power.larc.nasa.gov/api/temporal/daily/point,india_sugar
 2026-08-21,7.91,0.86,Maharashtra,19.75,75.71,https://power.larc.nasa.gov/api/temporal/daily/point,india_sugar
-2026-08-22,,,Maharashtra,19.75,75.71,https://power.larc.nasa.gov/api/temporal/daily/point,india_sugar
+2026-08-22,12.34,0.86,Maharashtra,19.75,75.71,https://power.larc.nasa.gov/api/temporal/daily/point,india_sugar
 2026-08-23,,,Maharashtra,19.75,75.71,https://power.larc.nasa.gov/api/temporal/daily/point,india_sugar
 2026-08-24,,,Maharashtra,19.75,75.71,https://power.larc.nasa.gov/api/temporal/daily/point,india_sugar
 2026-08-25,,,Maharashtra,19.75,75.71,https://power.larc.nasa.gov/api/temporal/daily/point,india_sugar
@@ -133379,7 +133379,7 @@ date,precip_mm,root_zone_soil_wetness,location,latitude,longitude,source,region
 2026-08-19,2.72,0.68,Uttar Pradesh,26.85,80.91,https://power.larc.nasa.gov/api/temporal/daily/point,india_sugar
 2026-08-20,5.2,0.68,Uttar Pradesh,26.85,80.91,https://power.larc.nasa.gov/api/temporal/daily/point,india_sugar
 2026-08-21,6.26,0.67,Uttar Pradesh,26.85,80.91,https://power.larc.nasa.gov/api/temporal/daily/point,india_sugar
-2026-08-22,,,Uttar Pradesh,26.85,80.91,https://power.larc.nasa.gov/api/temporal/daily/point,india_sugar
+2026-08-22,6.17,0.67,Uttar Pradesh,26.85,80.91,https://power.larc.nasa.gov/api/temporal/daily/point,india_sugar
 2026-08-23,,,Uttar Pradesh,26.85,80.91,https://power.larc.nasa.gov/api/temporal/daily/point,india_sugar
 2026-08-24,,,Uttar Pradesh,26.85,80.91,https://power.larc.nasa.gov/api/temporal/daily/point,india_sugar
 2026-08-25,,,Uttar Pradesh,26.85,80.91,https://power.larc.nasa.gov/api/temporal/daily/point,india_sugar
@@ -150052,7 +150052,7 @@ date,precip_mm,root_zone_soil_wetness,location,latitude,longitude,source,region
 2026-08-19,4.07,0.73,Karnataka,15.32,75.71,https://power.larc.nasa.gov/api/temporal/daily/point,india_sugar
 2026-08-20,2.83,0.73,Karnataka,15.32,75.71,https://power.larc.nasa.gov/api/temporal/daily/point,india_sugar
 2026-08-21,1.4,0.72,Karnataka,15.32,75.71,https://power.larc.nasa.gov/api/temporal/daily/point,india_sugar
-2026-08-22,,,Karnataka,15.32,75.71,https://power.larc.nasa.gov/api/temporal/daily/point,india_sugar
+2026-08-22,3.18,0.72,Karnataka,15.32,75.71,https://power.larc.nasa.gov/api/temporal/daily/point,india_sugar
 2026-08-23,,,Karnataka,15.32,75.71,https://power.larc.nasa.gov/api/temporal/daily/point,india_sugar
 2026-08-24,,,Karnataka,15.32,75.71,https://power.larc.nasa.gov/api/temporal/daily/point,india_sugar
 2026-08-25,,,Karnataka,15.32,75.71,https://power.larc.nasa.gov/api/temporal/daily/point,india_sugar
@@ -166725,7 +166725,7 @@ date,precip_mm,root_zone_soil_wetness,location,latitude,longitude,source,region
 2026-08-19,0.0,0.5,Sao Paulo,-22.19,-48.79,https://power.larc.nasa.gov/api/temporal/daily/point,brazil_cs_sugar
 2026-08-20,0.0,0.49,Sao Paulo,-22.19,-48.79,https://power.larc.nasa.gov/api/temporal/daily/point,brazil_cs_sugar
 2026-08-21,0.0,0.49,Sao Paulo,-22.19,-48.79,https://power.larc.nasa.gov/api/temporal/daily/point,brazil_cs_sugar
-2026-08-22,,,Sao Paulo,-22.19,-48.79,https://power.larc.nasa.gov/api/temporal/daily/point,brazil_cs_sugar
+2026-08-22,0.0,0.49,Sao Paulo,-22.19,-48.79,https://power.larc.nasa.gov/api/temporal/daily/point,brazil_cs_sugar
 2026-08-23,,,Sao Paulo,-22.19,-48.79,https://power.larc.nasa.gov/api/temporal/daily/point,brazil_cs_sugar
 2026-08-24,,,Sao Paulo,-22.19,-48.79,https://power.larc.nasa.gov/api/temporal/daily/point,brazil_cs_sugar
 2026-08-25,,,Sao Paulo,-22.19,-48.79,https://power.larc.nasa.gov/api/temporal/daily/point,brazil_cs_sugar
@@ -183398,7 +183398,7 @@ date,precip_mm,root_zone_soil_wetness,location,latitude,longitude,source,region
 2026-08-19,0.0,0.42,Goias,-16.64,-49.31,https://power.larc.nasa.gov/api/temporal/daily/point,brazil_cs_sugar
 2026-08-20,0.0,0.42,Goias,-16.64,-49.31,https://power.larc.nasa.gov/api/temporal/daily/point,brazil_cs_sugar
 2026-08-21,0.0,0.42,Goias,-16.64,-49.31,https://power.larc.nasa.gov/api/temporal/daily/point,brazil_cs_sugar
-2026-08-22,,,Goias,-16.64,-49.31,https://power.larc.nasa.gov/api/temporal/daily/point,brazil_cs_sugar
+2026-08-22,0.0,0.42,Goias,-16.64,-49.31,https://power.larc.nasa.gov/api/temporal/daily/point,brazil_cs_sugar
 2026-08-23,,,Goias,-16.64,-49.31,https://power.larc.nasa.gov/api/temporal/daily/point,brazil_cs_sugar
 2026-08-24,,,Goias,-16.64,-49.31,https://power.larc.nasa.gov/api/temporal/daily/point,brazil_cs_sugar
 2026-08-25,,,Goias,-16.64,-49.31,https://power.larc.nasa.gov/api/temporal/daily/point,brazil_cs_sugar
@@ -200071,7 +200071,7 @@ date,precip_mm,root_zone_soil_wetness,location,latitude,longitude,source,region
 2026-08-19,0.0,0.27,Minas Gerais,-18.51,-44.56,https://power.larc.nasa.gov/api/temporal/daily/point,brazil_cs_sugar
 2026-08-20,0.0,0.27,Minas Gerais,-18.51,-44.56,https://power.larc.nasa.gov/api/temporal/daily/point,brazil_cs_sugar
 2026-08-21,0.0,0.27,Minas Gerais,-18.51,-44.56,https://power.larc.nasa.gov/api/temporal/daily/point,brazil_cs_sugar
-2026-08-22,,,Minas Gerais,-18.51,-44.56,https://power.larc.nasa.gov/api/temporal/daily/point,brazil_cs_sugar
+2026-08-22,0.0,0.27,Minas Gerais,-18.51,-44.56,https://power.larc.nasa.gov/api/temporal/daily/point,brazil_cs_sugar
 2026-08-23,,,Minas Gerais,-18.51,-44.56,https://power.larc.nasa.gov/api/temporal/daily/point,brazil_cs_sugar
 2026-08-24,,,Minas Gerais,-18.51,-44.56,https://power.larc.nasa.gov/api/temporal/daily/point,brazil_cs_sugar
 2026-08-25,,,Minas Gerais,-18.51,-44.56,https://power.larc.nasa.gov/api/temporal/daily/point,brazil_cs_sugar

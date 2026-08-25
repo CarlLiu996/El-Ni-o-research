@@ -1,6 +1,6 @@
 {
-  "as_of": "2026-08-25",
-  "downloaded_at": "2026-08-25T05:24:49.973783+00:00",
+  "as_of": "2026-08-26",
+  "downloaded_at": "2026-08-25T16:06:08.622119+00:00",
   "files": {
     "events": "data\\processed\\history\\enso_events.csv",
     "evidence": "data\\processed\\history\\event_evidence_panel.csv",
@@ -44,7 +44,7 @@
       ],
       "min_date": "1951-10-01",
       "max_date": "2024-12-31",
-      "sha256": "ad8fc6db91738b6fdb5cdb51225e7de4efd3604dd34ae6518cb7e89cc7b805d7"
+      "sha256": "eb52ddbdad2f80a3fecab9ccb42627ed4ec9cd0a61e1d92e0d644873f8010971"
     },
     "price_paths": {
       "path": "data\\processed\\history\\event_price_paths.csv",
@@ -86,7 +86,7 @@
       "sources": [],
       "min_date": null,
       "max_date": null,
-      "sha256": "3bf72e4a8b703dc199fda5004667be7d4c63f77fc1a1a431fb8a20f3c2488a12"
+      "sha256": "8dfb429e083f5c82fa4d8408be606e1485e37f25733ba22a4165bf52cda06cc6"
     },
     "current_context": {
       "path": "data\\processed\\history\\current_event_context.csv",

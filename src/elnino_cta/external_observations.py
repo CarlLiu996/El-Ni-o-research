@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit
 
 import pandas as pd
 import requests
@@ -156,7 +158,18 @@ def build_india_monsoon_cumulative(
     result["status"] = result["current_cumulative_mm"].notna().map(
         {True: "OK", False: "INSUFFICIENT_COVERAGE"}
     )
-    result["data_as_of"] = cutoff
+    current_mask = result["season_year"].eq(cutoff.year)
+    usable_current = result[current_mask & result["valid_locations"].ge(2)]
+    effective_cutoff = cutoff
+    current_rows = result[current_mask]
+    latest_location_count = int(current_rows.iloc[-1]["valid_locations"]) if not current_rows.empty else 0
+    # An API publication lag leaves every configured point absent for the trailing
+    # dates.  A partially reported date (one point present) is a real coverage
+    # failure and must remain visible instead of being silently trimmed.
+    if latest_location_count == 0 and not usable_current.empty:
+        effective_cutoff = pd.Timestamp(usable_current["date"].max()).normalize()
+        result = result[~(current_mask & result["date"].gt(effective_cutoff))].copy()
+    result["data_as_of"] = effective_cutoff
     result["published_at"] = pd.NA
     result["downloaded_at"] = downloaded
     sources = sorted(str(value) for value in daily["source"].dropna().unique())
@@ -179,6 +192,52 @@ def sanitized_error_status(exc: Exception) -> str:
     if isinstance(exc, requests.RequestException):
         return "FETCH_ERROR"
     return "REVIEW_REQUIRED"
+
+
+def sanitized_error_details(exc: Exception, dataset: str) -> dict[str, object]:
+    status = sanitized_error_status(exc)
+    response = getattr(exc, "response", None)
+    status_code = getattr(response, "status_code", None)
+    response_url = getattr(response, "url", None)
+    host = urlsplit(str(response_url)).hostname if response_url else None
+    actions = {
+        "monsoon_cumulative": "重试 NASA POWER，并在报告中沿用最后一个完整数据日",
+        "imd_events": "跳过故障入口，继续读取其他 IMD 官方公告入口并人工复核",
+        "ndvi": "改走 Earthdata 官方备用接口；需让当前任务进程读取 EARTHDATA_TOKEN",
+    }
+    impacts = {
+        "monsoon_cumulative": "缺少最新季风进度验证，L1产区证据不完整",
+        "imd_events": "无法确认有效雨季起止长度，L1产区证据不完整",
+        "ndvi": "缺少印度甘蔗长势验证，L1产区证据不完整",
+    }
+    if status_code:
+        reason_code = f"HTTP_{status_code}"
+        if status_code == 500:
+            reason_cn = "官方数据服务返回 HTTP 500（服务器内部错误）"
+        else:
+            reason_cn = f"官方数据服务返回 HTTP {status_code}"
+    elif isinstance(exc, requests.Timeout):
+        reason_code = "TIMEOUT"
+        reason_cn = "官方数据服务请求超时"
+    elif isinstance(exc, PermissionError):
+        reason_code = "AUTH_REQUIRED"
+        reason_cn = "当前任务进程未检测到所需访问令牌"
+    elif isinstance(exc, FileNotFoundError):
+        reason_code = "NOT_PUBLISHED"
+        reason_cn = "截至本次刷新，官方文件尚未发布"
+    elif isinstance(exc, requests.RequestException):
+        reason_code = "NETWORK_ERROR"
+        reason_cn = "官方数据服务网络请求失败"
+    else:
+        reason_code = "REVIEW_REQUIRED"
+        reason_cn = "返回结构异常，需要人工复核采集规则"
+    return {
+        "reason_code": reason_code,
+        "reason_cn": reason_cn,
+        "source_host": host,
+        "next_action": actions[dataset],
+        "conclusion_impact": impacts[dataset],
+    }
 
 
 def _placeholder(dataset: str, status: str, as_of: str) -> pd.DataFrame:
@@ -207,7 +266,12 @@ def _latest_status(dataset: str, frame: pd.DataFrame) -> str:
     return str(frame.iloc[-1]["status"])
 
 
-def _artifact_metadata(dataset: str, target: Path, status: str) -> dict[str, object]:
+def _artifact_metadata(
+    dataset: str,
+    target: Path,
+    status: str,
+    diagnostic: dict[str, object] | None = None,
+) -> dict[str, object]:
     frame = pd.read_csv(target) if target.exists() else pd.DataFrame()
     data_date = None
     for column in ("data_as_of", "date", "official_date", "product_date"):
@@ -244,7 +308,7 @@ def _artifact_metadata(dataset: str, target: Path, status: str) -> dict[str, obj
     elif not frame.empty and dataset == "ndvi" and "valid_pixel_ratio" in frame:
         coverage = pd.to_numeric(frame["valid_pixel_ratio"], errors="coerce").dropna()
         coverage_pct = float(coverage.iloc[-1]) if not coverage.empty else None
-    return {
+    metadata = {
         "status": status,
         "path": target.as_posix(),
         "rows": len(frame),
@@ -255,6 +319,9 @@ def _artifact_metadata(dataset: str, target: Path, status: str) -> dict[str, obj
         "reason": "" if status == "OK" else status,
         "sha256": hashlib.sha256(target.read_bytes()).hexdigest() if target.exists() else None,
     }
+    if diagnostic:
+        metadata.update(diagnostic)
+    return metadata
 
 
 def _fetch_india_weather(
@@ -306,8 +373,6 @@ def refresh_external_observations(
         if source_bundle is not None and "ndvi" in source_bundle:
             ndvi = source_bundle["ndvi"]
         else:
-            import os
-
             if os.getenv("EARTHDATA_HDF_FALLBACK") == "1":
                 ndvi = fetch_india_sugar_ndvi(
                     locations,
@@ -316,11 +381,21 @@ def refresh_external_observations(
                     cache_dir=output_dir.parent / "raw" / "earthdata",
                 )
             else:
-                ndvi = fetch_india_sugar_ndvi_ornl(
-                    locations,
-                    start=ndvi_start,
-                    end=as_of,
-                )
+                try:
+                    ndvi = fetch_india_sugar_ndvi_ornl(
+                        locations,
+                        start=ndvi_start,
+                        end=as_of,
+                    )
+                except requests.RequestException:
+                    if not os.getenv("EARTHDATA_TOKEN"):
+                        raise
+                    ndvi = fetch_india_sugar_ndvi(
+                        locations,
+                        start=ndvi_start,
+                        end=as_of,
+                        cache_dir=output_dir.parent / "raw" / "earthdata",
+                    )
         if not isinstance(ndvi, pd.DataFrame):
             raise TypeError("NDVI source must be a DataFrame")
         return ndvi
@@ -332,6 +407,7 @@ def refresh_external_observations(
     }
     for dataset, filename in EXTERNAL_FILES.items():
         target = climate_dir / filename
+        diagnostic: dict[str, object] | None = None
         try:
             if source_bundle is not None and error_keys[dataset] in source_bundle:
                 error = source_bundle[error_keys[dataset]]
@@ -344,9 +420,10 @@ def refresh_external_observations(
         except Exception as exc:
             failures += 1
             status = sanitized_error_status(exc)
+            diagnostic = sanitized_error_details(exc, dataset)
             if not target.exists():
                 atomic_write_csv(_placeholder(dataset, status, as_of), target)
-        dataset_meta[dataset] = _artifact_metadata(dataset, target, status)
+        dataset_meta[dataset] = _artifact_metadata(dataset, target, status, diagnostic)
 
     manifest: dict[str, object] = {
         "overall": "PARTIAL" if failures else "OK",

@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 
 import pandas as pd
+import requests
 
 from elnino_cta.sources.imd import (
     fetch_imd_monsoon_events,
@@ -87,16 +88,28 @@ def test_conflicting_official_dates_require_review() -> None:
 
 
 class FakeResponse:
-    def __init__(self, body: str, *, url: str, last_modified: str | None = None):
+    def __init__(
+        self,
+        body: str,
+        *,
+        url: str,
+        last_modified: str | None = None,
+        status_code: int = 200,
+    ):
         self.content = body.encode("utf-8")
         self.text = body
         self.url = url
+        self.status_code = status_code
         self.headers = {"Content-Type": "text/html"}
         if last_modified:
             self.headers["Last-Modified"] = last_modified
 
     def raise_for_status(self) -> None:
-        return None
+        if self.status_code >= 400:
+            response = requests.Response()
+            response.status_code = self.status_code
+            response.url = self.url
+            raise requests.HTTPError(f"HTTP {self.status_code}", response=response)
 
 
 class FakeSession:
@@ -141,3 +154,24 @@ def test_fetch_imd_events_discovers_official_pages_and_returns_unique_rows(tmp_p
     assert not result.duplicated(["season_year", "event_type"]).any()
     assert set(result["status"]) == {"OK"}
     assert result["announcement_date"].notna().all()
+
+
+class PartialFailureSession(FakeSession):
+    def get(self, url: str, **kwargs: object) -> FakeResponse:
+        if "press_release.php" in url:
+            return FakeResponse("server error", url=url, status_code=500)
+        return super().get(url, **kwargs)
+
+
+def test_fetch_imd_events_uses_working_discovery_page_when_another_returns_500(tmp_path) -> None:
+    normals_path = tmp_path / "normals.json"
+    normals_path.write_text(json.dumps(normal_dates()), encoding="utf-8")
+
+    result = fetch_imd_monsoon_events(
+        2026,
+        normals_path=normals_path,
+        session=PartialFailureSession(),
+    )
+
+    assert set(result["event_type"]) == {"ONSET_KERALA", "WITHDRAWAL_NORTHWEST_START"}
+    assert set(result["status"]) == {"OK"}

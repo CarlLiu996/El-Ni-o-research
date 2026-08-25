@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from zipfile import ZipFile
 
@@ -59,6 +60,16 @@ def fixture_repo(tmp_path: Path, external_status: str = "PARTIAL") -> Path:
     _write_csv(fundamentals / "global_palm_stock_use.csv", palm_rows)
 
     climate = repo / "data" / "processed" / "climate"
+    for name, column, values in (
+        ("noaa_oni", "oni", [0.1, 0.4, 0.8, 1.2]),
+        ("noaa_roni", "roni", [-0.1, 0.2, 0.6, 1.0]),
+        ("noaa_soi", "soi", [0.5, 0.1, -0.8, -1.4]),
+        ("noaa_dmi", "dmi", [-0.2, 0.0, 0.3, 0.4]),
+    ):
+        _write_csv(climate / f"{name}.csv", [
+            {"date": date, column: value, "source": "NOAA"}
+            for date, value in zip(pd.date_range("2026-03-01", periods=4, freq="MS"), values)
+        ])
     _write_csv(climate / "india_monsoon_cumulative.csv", [{
         "date": "2026-08-20", "season_year": 2026, "actual_cumulative_mm": 510,
         "normal_cumulative_mm": 530, "cumulative_departure_pct": -0.0377,
@@ -81,9 +92,9 @@ def fixture_repo(tmp_path: Path, external_status: str = "PARTIAL") -> Path:
         "status": external_status,
         "as_of": "2026-08-25",
         "datasets": {
-            "india_monsoon_cumulative": {"status": "OK", "source": "NASA POWER", "rows": 1},
-            "india_monsoon_events": {"status": "OK", "source": "IMD", "rows": 2},
-            "india_sugar_ndvi": {
+            "monsoon_cumulative": {"status": "OK", "source": "NASA POWER", "rows": 1},
+            "imd_events": {"status": "OK", "source": "IMD", "rows": 2},
+            "ndvi": {
                 "status": "AUTH_REQUIRED", "source": "MOD13Q1.061", "rows": 1,
                 "reason": "Earthdata authentication required",
             },
@@ -113,9 +124,10 @@ def fixture_repo(tmp_path: Path, external_status: str = "PARTIAL") -> Path:
     ])
     _write_csv(history / "event_cta_paths.csv", [
         {"event_id": "2009-2010", "status": "COMPLETED", "commodity": commodity,
-         "speed": speed, "date": "2010-01-31", "relative_month": 0,
-         "net_return": 0.01, "event_equity": 1.01, "position": 0.5}
+         "speed": speed, "date": f"2010-{month:02d}-28", "relative_month": offset,
+         "net_return": 0.01, "event_equity": 1.0 + offset * 0.01, "position": 0.5}
         for commodity in ("palm_oil", "sugar") for speed in ("medium", "slow")
+        for month, offset in ((1, 0), (4, 3), (7, 6))
     ])
     _write_csv(history / "event_cta_summary.csv", [
         {"event_id": "2009-2010", "status": "COMPLETED", "commodity": commodity,
@@ -152,8 +164,33 @@ def fixture_repo(tmp_path: Path, external_status: str = "PARTIAL") -> Path:
         "market_confirmation": {"status": "NOT_CONFIRMED"},
         "layers": {"climate": {}, "fundamentals": {}, "market_cta": {}},
         "critical_alerts": 1, "warning_alerts": 1, "scope_gaps": ["sample scope gap"],
+        "alerts": [{
+            "severity": "critical", "code": "P_PRICE_STALE",
+            "message": "P 期货数据已过期",
+        }],
         "external_observations": external_manifest,
     }, ensure_ascii=False), encoding="utf-8")
+
+    futures = repo / "data" / "processed" / "futures"
+    signals = repo / "data" / "processed" / "signals"
+    price_dates = pd.bdate_range("2026-01-01", periods=12)
+    for symbol, base in (("P", 8000), ("SR", 5000)):
+        _write_csv(futures / f"{symbol}_dominant_tushare.csv", [
+            {
+                "date": date, "symbol": symbol, "contract": f"{symbol}2701",
+                "close": base + index * 10, "provider": "tushare_contract",
+            }
+            for index, date in enumerate(price_dates)
+        ])
+        for speed in ("fast", "medium", "slow"):
+            _write_csv(signals / f"{symbol}_{speed}_proxy_research.csv", [
+                {
+                    "date": date, "close": base + index * 10, "position": 1.0,
+                    "target_position": 1.0, "realized_vol": 0.2,
+                    "net_return": 0.001, "equity": 1 + index * 0.01, "speed": speed,
+                }
+                for index, date in enumerate(price_dates)
+            ])
     return repo
 
 
@@ -208,6 +245,123 @@ def test_history_sheet_has_price_and_cta_sparklines_and_explicit_headers(tmp_pat
     assert "sparklineGroup" in worksheet_xml
     for label in ("价格路径", "CTA代理净值", "商品收益", "CTA成本后收益"):
         assert label in text
+
+
+def test_leadership_workbook_explains_climate_metrics_and_withholds_incomplete_conclusion(tmp_path) -> None:
+    path = build_research_workbook(fixture_repo(tmp_path), tmp_path / "out", "2026-08-25")
+    workbook = openpyxl.load_workbook(path, data_only=False, read_only=False)
+
+    climate_text = sheet_text(workbook["03_L1气候天气"])
+    conclusion_text = sheet_text(workbook["00_结论-CTA建议"])
+    for label in (
+        "海洋尼诺指数", "相对海洋尼诺指数", "南方涛动指数", "印度洋偶极子指数",
+        "海水是否异常变暖", "大气是否配合", "印度洋区域修正",
+    ):
+        assert label in climate_text
+    assert "证据不完整：暂不形成CTA增配结论" in conclusion_text
+    assert "CTA是按规则跟随趋势的期货策略" in conclusion_text
+
+
+def _sparkline_targets(path: Path, sheet_number: int) -> list[str]:
+    with ZipFile(path) as archive:
+        xml = archive.read(f"xl/worksheets/sheet{sheet_number}.xml").decode("utf-8")
+    return re.findall(r"<xm:sqref>([^<]+)", xml)
+
+
+def _sparkline_groups(path: Path, sheet_number: int) -> list[str]:
+    with ZipFile(path) as archive:
+        xml = archive.read(f"xl/worksheets/sheet{sheet_number}.xml").decode("utf-8")
+    return re.findall(r"<x14:sparklineGroup\b[^>]*>", xml)
+
+
+def test_leadership_sparklines_are_visible_near_primary_values(tmp_path) -> None:
+    path = build_research_workbook(fixture_repo(tmp_path), tmp_path / "out", "2026-08-25")
+
+    history_targets = _sparkline_targets(path, 3)
+    climate_targets = _sparkline_targets(path, 4)
+    l2_targets = _sparkline_targets(path, 5)
+    market_targets = _sparkline_targets(path, 6)
+    cta_targets = _sparkline_targets(path, 7)
+    assert history_targets and {target[0] for target in history_targets} <= {"C", "D"}
+    assert climate_targets and {target[0] for target in climate_targets} <= {"H"}
+    assert l2_targets and {target[0] for target in l2_targets} <= {"E"}
+    assert market_targets and {target[0] for target in market_targets} <= {"D"}
+    assert cta_targets and {target[0] for target in cta_targets} <= {"D"}
+
+
+def test_sparklines_plot_values_from_hidden_source_columns(tmp_path) -> None:
+    path = build_research_workbook(fixture_repo(tmp_path), tmp_path / "out", "2026-08-25")
+
+    for sheet_number in range(3, 8):
+        groups = _sparkline_groups(path, sheet_number)
+        assert groups
+        assert all('displayHidden="1"' in group for group in groups)
+
+
+def test_history_sparklines_stay_on_their_event_rows_when_earlier_event_has_no_path(tmp_path) -> None:
+    repo = fixture_repo(tmp_path)
+    events_path = repo / "data" / "processed" / "history" / "enso_events.csv"
+    events = pd.read_csv(events_path)
+    missing = pd.DataFrame([{
+        "event_id": "1951-1952", "start_date": "1951-07-01",
+        "peak_date": "1951-12-01", "end_date": "1952-04-01",
+        "peak_oni": 1.2, "duration_seasons": 8, "status": "COMPLETED",
+        "source": "NOAA CPC",
+    }])
+    pd.concat([missing, events], ignore_index=True).to_csv(events_path, index=False)
+
+    path = build_research_workbook(repo, tmp_path / "out", "2026-08-25")
+    workbook = openpyxl.load_workbook(path, data_only=False, read_only=False)
+    history = workbook["02_H_历次厄尔尼诺复盘"]
+    targets = set(_sparkline_targets(path, 3))
+
+    assert history["C6"].value == "未覆盖"
+    assert history["D6"].value == "未覆盖"
+    assert history["C7"].value == "未覆盖"
+    assert history["D7"].value == "未覆盖"
+    assert {"C8", "D8", "C9", "D9"} <= targets
+
+
+def test_fetch_error_is_rendered_with_reason_action_and_impact(tmp_path) -> None:
+    repo = fixture_repo(tmp_path)
+    manifest_path = repo / "data" / "processed" / "climate" / "external_manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["datasets"]["ndvi"].update({
+        "status": "FETCH_ERROR",
+        "reason_cn": "官方数据服务返回 HTTP 500（服务器内部错误）",
+        "next_action": "改走 Earthdata 官方备用接口",
+        "conclusion_impact": "缺少甘蔗长势验证，L1证据不完整",
+    })
+    manifest_path.write_text(json.dumps(manifest, ensure_ascii=False), encoding="utf-8")
+
+    path = build_research_workbook(repo, tmp_path / "out", "2026-08-25")
+    workbook = openpyxl.load_workbook(path, data_only=False, read_only=False)
+    audit_text = sheet_text(workbook["07_L5数据审计"])
+    climate_text = sheet_text(workbook["03_L1气候天气"])
+    assert "获取失败（FETCH_ERROR）" in audit_text
+    assert "官方数据服务返回 HTTP 500" in audit_text
+    assert "改走 Earthdata 官方备用接口" in audit_text
+    assert "缺少甘蔗长势验证" in audit_text
+    assert "为什么没有数据" in climate_text
+
+
+def test_audit_sheet_lists_all_decision_blockers_and_remediation(tmp_path) -> None:
+    path = build_research_workbook(fixture_repo(tmp_path), tmp_path / "out", "2026-08-25")
+    workbook = openpyxl.load_workbook(path, data_only=False, read_only=False)
+    audit = workbook["07_L5数据审计"]
+    audit_text = sheet_text(audit)
+
+    assert "当前阻断结论的数据缺口" in audit_text
+    assert "P 期货数据已过期" in audit_text
+    assert "sample scope gap" in audit_text
+    assert "刷新 Tushare fut_daily/fut_mapping" in audit_text
+    alert_row = next(
+        row for row in range(1, audit.max_row + 1) if audit.cell(row, 4).value == "P 期货数据已过期"
+    )
+    assert str(audit.cell(alert_row, 8).value).startswith("刷新 Tushare")
+    merged = {str(item) for item in audit.merged_cells.ranges}
+    assert f"D{alert_row}:G{alert_row}" in merged
+    assert f"H{alert_row}:K{alert_row}" in merged
 
 
 def test_validate_workbook_rejects_bearer_secret(tmp_path) -> None:

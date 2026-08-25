@@ -1,2 +1,3 @@
 season_year,event_type,official_date,normal_date,departure_days,announcement_date,source_url,normal_source,normal_version,status,review_status
-,,,,,,,,,FETCH_ERROR,
+2026,ONSET_KERALA,2026-06-04,2026-06-01,3,2026-06-04 08:30:40,https://internal.imd.gov.in/press_release/20260604_pr_5051.pdf,https://mausam.imd.gov.in/backend/assets/press_release_pdf/Onsetwithrawal_CRS_RESEARCH_REPORT_003_20201.pdf,IMD revised normal dates 2020,OK,AUTO_ACCEPTED
+2026,WITHDRAWAL_NORTHWEST_START,,2026-09-17,,,https://mausam.imd.gov.in/imd_latest/contents/press_release.php; https://mausam.imd.gov.in/responsive/monsooninformation.php; https://internal.imd.gov.in/pages/press_release_mausam.php,https://mausam.imd.gov.in/backend/assets/press_release_pdf/Onsetwithrawal_CRS_RESEARCH_REPORT_003_20201.pdf,IMD revised normal dates 2020,NOT_ANNOUNCED,NO_EXPLICIT_DECLARATION

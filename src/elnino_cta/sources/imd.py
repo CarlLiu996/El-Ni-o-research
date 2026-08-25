@@ -15,6 +15,7 @@ from pypdf import PdfReader
 IMD_DISCOVERY_URLS = (
     "https://mausam.imd.gov.in/imd_latest/contents/press_release.php",
     "https://mausam.imd.gov.in/responsive/monsooninformation.php",
+    "https://internal.imd.gov.in/pages/press_release_mausam.php",
 )
 EVENT_TYPES = ("ONSET_KERALA", "WITHDRAWAL_NORTHWEST_START")
 IMD_COLUMNS = [
@@ -134,8 +135,11 @@ def resolve_imd_candidates(candidates: pd.DataFrame) -> pd.DataFrame:
 
 def _discovery_links(html: bytes, base_url: str, season_year: int) -> list[str]:
     links: set[str] = set()
-    for anchor in BeautifulSoup(html, "html.parser").find_all("a", href=True):
-        label = f"{anchor.get_text(' ', strip=True)} {anchor['href']}".lower()
+    soup = BeautifulSoup(html, "html.parser")
+    for anchor in soup.find_all("a", href=True):
+        row = anchor.find_parent("tr")
+        context = row.get_text(" ", strip=True) if row is not None else anchor.get_text(" ", strip=True)
+        label = f"{context} {anchor['href']}".lower()
         if str(season_year) not in label or "monsoon" not in label:
             continue
         if not any(keyword in label for keyword in ("onset", "kerala", "withdraw")):
@@ -143,7 +147,8 @@ def _discovery_links(html: bytes, base_url: str, season_year: int) -> list[str]:
         if any(keyword in label for keyword in ("forecast", "likely", "outlook")):
             continue
         candidate = urljoin(base_url, anchor["href"])
-        if urlparse(candidate).hostname == "mausam.imd.gov.in":
+        hostname = urlparse(candidate).hostname or ""
+        if hostname == "imd.gov.in" or hostname.endswith(".imd.gov.in"):
             links.add(candidate)
     return sorted(links)
 
@@ -157,15 +162,24 @@ def fetch_imd_monsoon_events(
     normals = json.loads(normals_path.read_text(encoding="utf-8"))
     client = session or requests.Session()
     document_urls: set[str] = set()
+    discovery_errors: list[requests.RequestException] = []
     for discovery_url in IMD_DISCOVERY_URLS:
-        response = client.get(discovery_url, timeout=timeout)
-        response.raise_for_status()
-        document_urls.update(_discovery_links(response.content, response.url, season_year))
+        try:
+            response = client.get(discovery_url, timeout=timeout)
+            response.raise_for_status()
+            document_urls.update(_discovery_links(response.content, response.url, season_year))
+        except requests.RequestException as exc:
+            discovery_errors.append(exc)
+    if len(discovery_errors) == len(IMD_DISCOVERY_URLS):
+        raise discovery_errors[-1]
 
     candidates: list[dict[str, object]] = []
     for source_url in sorted(document_urls):
-        response = client.get(source_url, timeout=timeout)
-        response.raise_for_status()
+        try:
+            response = client.get(source_url, timeout=timeout)
+            response.raise_for_status()
+        except requests.RequestException:
+            continue
         announcement_date = response.headers.get("Last-Modified")
         text = extract_imd_text(response.content, response.headers.get("Content-Type", ""))
         parsed = parse_imd_event(
