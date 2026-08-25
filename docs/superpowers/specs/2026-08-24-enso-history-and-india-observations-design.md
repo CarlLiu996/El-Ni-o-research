@@ -54,7 +54,7 @@
 
 ### 3. 印度甘蔗 NDVI／长势代理
 
-来源为 NASA LP DAAC 的 MODIS 061 `MOD13Q1`，250 米、16 日一期。使用 Earthdata bearer token 访问数据，Token 只从 `EARTHDATA_TOKEN` 环境变量读取。
+来源为 NASA LP DAAC 的 MODIS 061 `MOD13Q1`，250 米、16 日一期。使用 Earthdata bearer token 访问数据，Token 只从 `EARTHDATA_TOKEN` 环境变量读取。Python 3.10 环境使用 Earthaccess 0.14 完成 CMR 元数据搜索，并由 `requests.Session` 在下载边界注入 Bearer；不调用该版本仅支持用户名/密码的 `earthaccess.login(strategy="environment")`。
 
 第一阶段明确标记为“印度糖蔗主产区 NDVI 代理”，不标记为糖蔗专属遥感单产指标：
 

@@ -14,7 +14,7 @@
 
 - 一期同时覆盖三项印度外部观测、历史复盘、L2 展示和八页 Excel 自动刷新。
 - 三项外部观测由独立 `external-refresh` 命令先落盘；单项来源失败时生成 `PARTIAL` 清单并继续处理，工作簿必须显示明确缺失状态。
-- `EARTHDATA_TOKEN` 只能由 `earthaccess.login(strategy="environment")` 读取；禁止把 Token、请求头或含凭据 URL 写入异常、日志、CSV、manifest、Excel 或提交。
+- `EARTHDATA_TOKEN` 只能在 Earthdata 下载边界读取；Python 3.10 使用 Earthaccess 0.14 搜索 CMR 元数据，并由 `requests.Session` 注入 Bearer，不能调用该版本仅支持用户名/密码的 `earthaccess.login(strategy="environment")`。禁止把 Token、请求头或含凭据 URL 写入异常、日志、CSV、manifest、Excel 或提交。
 - 已结束历史事件的定义为：NOAA ONI 至少连续五个重叠季节达到或超过 `0.5°C`；样本末尾尚未结束的连续区间标为 `ONGOING`，不计入已结束事件频率。
 - 事件分析只使用规定历史窗口内可获得的数值；年度单产比较使用同比和此前五年中位数，禁止用未来年份拟合。
 - 世界银行月度价格只作为不含期货期限结构的研究基准；月度 CTA 结果是代理，不是可直接交易的期货回测。
@@ -382,16 +382,12 @@ def test_low_valid_pixel_ratio_is_not_usable():
 MOD13Q1_DOI = "https://doi.org/10.5067/MODIS/MOD13Q1.061"
 BUFFER_METRES = 50_000
 
-def earthdata_login():
+def earthdata_session() -> requests.Session:
     if not os.getenv("EARTHDATA_TOKEN"):
         raise PermissionError("AUTH_REQUIRED")
-    try:
-        auth = earthaccess.login(strategy="environment")
-    except Exception as exc:
-        raise PermissionError("AUTH_REQUIRED") from exc
-    if not auth.authenticated:
-        raise PermissionError("AUTH_REQUIRED")
-    return auth
+    session = requests.Session()
+    session.headers.update({"Authorization": f"Bearer {os.environ['EARTHDATA_TOKEN']}"})
+    return session
 
 def scale_and_mask_ndvi(ndvi_raw: np.ndarray, qa_raw: np.ndarray) -> np.ndarray:
     good = (qa_raw.astype("uint16") & 0b11) == 0
@@ -416,8 +412,8 @@ def locate_subdatasets(path: Path) -> tuple[str, str]:
 
 `fetch_india_sugar_ndvi` 必须按以下固定流程实现：
 
-1. 调用 `earthdata_login()`；从三个代表点计算 `search_bounds=(min_lon-0.75, min_lat-0.75, max_lon+0.75, max_lat+0.75)`，再调用 `earthaccess.search_data(short_name="MOD13Q1", version="061", bounding_box=search_bounds, temporal=(start, end))`；
-2. 使用 `earthaccess.download(results, cache_dir)` 下载 HDF，缓存目录不得进入 Git；
+1. 调用 `earthdata_session()`；从三个代表点计算 `search_bounds=(min_lon-0.75, min_lat-0.75, max_lon+0.75, max_lat+0.75)`，再调用无需鉴权的 `earthaccess.search_data(short_name="MOD13Q1", version="061", bounding_box=search_bounds, temporal=(start, end))`；
+2. 从 CMR granule 元数据选择 HTTPS HDF 数据链接，并由上述 Session 流式下载到 `cache_dir`；缓存目录不得进入 Git，下载异常不得包含请求头或 Token；
 3. 对每个 HDF 调用 `locate_subdatasets`，用 rasterio 打开 NDVI 和 VI Quality；通过 pyproj 把代表点从 EPSG:4326 转到栅格 CRS，读取中心点外 50,000 米窗口，并用像元中心到代表点的欧氏距离裁成圆形；
 4. 调用 `scale_and_mask_ndvi`，每个 `product_date × region` 输出有效像元中位数、有效/总像元数和比例；同一天跨 tile 时先合并有效像元再取中位数；
 5. `build_ndvi_anomalies` 对三个区域等权平均，以 `composite_slot=((dayofyear-1)//16)+1` 匹配 2001—2020 同期，输出历史均值、标准差、差值、z-score 和分位数；综合有效像元比例低于 30% 时状态为 `LOW_COVERAGE`；

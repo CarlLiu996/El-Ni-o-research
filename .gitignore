@@ -4,6 +4,7 @@ __pycache__/
 *.py[cod]
 .env
 data/cache/
+data/raw/earthdata/
 data/processed/**/*_exploratory.csv
 reports/generated/
 .reconstruct/
