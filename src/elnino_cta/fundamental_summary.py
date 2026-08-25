@@ -17,7 +17,7 @@ METRIC_META = {
     "global_sugar_stock_use": ("全球食糖期末库存相对消费", "高位偏松，低位偏紧", "综合结果，不替代库存与消费"),
     "global_palm_total_use": ("全球棕榈油消费需求", "高位偏紧，低位偏松", "USDA年度估计/预测"),
     "global_palm_ending_stocks": ("全球棕榈油期末库存缓冲", "高位偏松，低位偏紧", "USDA年度估计/预测"),
-    "brazil_cane_for_sugar_proxy": ("压榨量乘制糖比，代理制糖甘蔗投入", "高位通常偏松", "缺少ATR/出糖率，非食糖产量"),
+    "brazil_cane_for_sugar_proxy": ("压榨量 × 制糖比；非食糖产量", "高位通常偏松", "缺少ATR/出糖率，非食糖产量"),
 }
 
 

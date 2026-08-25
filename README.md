@@ -4,19 +4,22 @@
 
 ## 最新研究入口
 
-优先阅读七页精简工作簿：
+优先阅读八页复盘工作簿：
 
-- `research/厄尔尼诺农产品CTA研究框架_七页精简版_20260823.xlsx`
+- `research/厄尔尼诺农产品CTA研究框架_八页复盘版_20260825.xlsx`
 
 工作簿按以下顺序组织：
 
 1. CTA 配置结论；
 2. 总逻辑；
-3. L1 气候天气；
-4. L2 供给基本面；
-5. L3 市场定价；
-6. L4 CTA 环境；
-7. L5 数据审计。
+3. H 历次厄尔尼诺复盘；
+4. L1 气候天气；
+5. L2 供给基本面；
+6. L3 市场定价；
+7. L4 CTA 环境；
+8. L5 数据审计。
+
+历史复盘页使用统一 T0 窗口同时展示气候/基本面、棕榈油与白糖价格路径，以及 Medium/Slow CTA 成本后代理收益。该页当前只作描述，不进入 CTA 配置门槛、仓位或置信度修正。印度季风累计降雨偏差、IMD 季风开始/退出和印度糖蔗主产区 NDVI 代理进入 L1 与 L5 审计展示，但一期不单独触发配置动作。
 
 当前结论是 `KEEP_MONITORING`：RONI 与 SOI 已确认厄尔尼诺海气耦合，印尼棕榈区近30日降水明显偏少，但L2九项时效门槛只有八项通过，且MPOB库存、印度糖、UNICA与全球库销比尚未形成一致收紧；P/SR 的中慢速 CTA 也未跨品种共振。因此，不建议仅因厄尔尼诺主题额外追买 CTA；长期分散配置可维持基准仓位或小额分批进入。
 
@@ -39,8 +42,11 @@
 ```powershell
 python -m pip install -e ".[dev]"
 elnino-cta refresh --start 2023-01-01 --end 2026-08-14
-elnino-cta monitor --as-of 2026-08-17
+elnino-cta external-refresh --as-of 2026-08-25
+elnino-cta history-refresh --as-of 2026-08-25
+elnino-cta monitor --as-of 2026-08-25
 elnino-cta debrief
+python scripts/build_research_workbook.py --as-of 2026-08-25
 python -m pytest -q
 ```
 
