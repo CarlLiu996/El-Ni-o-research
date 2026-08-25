@@ -87,6 +87,69 @@ def test_monitoring_builds_gate_history_and_debrief(tmp_path):
     assert snapshot["critical_alerts"] >= 1
     assert any(alert["code"] == "FUND_MPOB_PRODUCTION" for alert in snapshot["alerts"])
 
+    original_gate = snapshot["research_gate"]
+    original_market_confirmation = snapshot["market_confirmation"]
+    original_cta = snapshot["layers"]["cta"]
+    pd.DataFrame({
+        "date": ["2025-09-30"],
+        "season_year": [2025],
+        "season_day": [122],
+        "current_cumulative_mm": [870.0],
+        "climatology_cumulative_mm": [900.0],
+        "cumulative_departure_pct": [-0.0333],
+        "historical_percentile": [0.45],
+        "valid_locations": [3],
+        "required_locations": [2],
+        "status": ["OK"],
+        "data_as_of": ["2025-09-30"],
+        "published_at": [pd.NA],
+        "downloaded_at": ["2026-01-01T00:00:00Z"],
+        "source": ["NASA POWER"],
+    }).to_csv(data / "climate" / "india_monsoon_cumulative.csv", index=False)
+    pd.DataFrame({
+        "season_year": [2025],
+        "event_type": ["ONSET_KERALA"],
+        "official_date": ["2025-05-24"],
+        "normal_date": ["2025-06-01"],
+        "departure_days": [-8],
+        "announcement_date": ["2025-05-24"],
+        "source_url": ["https://mausam.imd.gov.in/onset.pdf"],
+        "status": ["OK"],
+    }).to_csv(data / "climate" / "india_monsoon_events.csv", index=False)
+    pd.DataFrame({
+        "product_date": ["2026-01-01"],
+        "ndvi": [0.62],
+        "same_period_difference": [0.04],
+        "z_score": [1.1],
+        "historical_percentile": [0.85],
+        "valid_pixel_ratio": [0.8],
+        "region_count": [3],
+        "status": ["OK"],
+        "published_at": ["2026-01-10"],
+        "downloaded_at": ["2026-01-11T00:00:00Z"],
+        "source": ["MOD13Q1.061"],
+    }).to_csv(data / "climate" / "india_sugar_ndvi.csv", index=False)
+    (data / "climate" / "external_manifest.json").write_text(json.dumps({
+        "overall": "OK",
+        "as_of": as_of,
+        "refreshed_at": "2026-01-11T00:00:00Z",
+        "datasets": {
+            "monsoon_cumulative": {"status": "OK"},
+            "imd_events": {"status": "OK"},
+            "ndvi": {"status": "OK"},
+        },
+    }), encoding="utf-8")
+
+    with_external = build_snapshot(data, config, as_of)
+    assert with_external["research_gate"] == original_gate
+    assert with_external["market_confirmation"] == original_market_confirmation
+    assert with_external["layers"]["cta"] == original_cta
+    assert set(with_external["external_observations"]) == {
+        "monsoon_cumulative", "imd_events", "ndvi"
+    }
+    assert with_external["external_observations"]["ndvi"]["value"] == pytest.approx(0.62)
+    assert with_external["layers"]["climate"]["external_observations"] == with_external["external_observations"]
+
     report_dir = tmp_path / "reports"
     latest, history = write_snapshot(snapshot, report_dir)
     debrief = write_debrief(snapshot, report_dir)

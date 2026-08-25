@@ -1,8 +1,16 @@
 from __future__ import annotations
 
+import hashlib
+import json
+from pathlib import Path
 from typing import Any
 
 import pandas as pd
+import requests
+
+from .sources.earthdata import NDVI_COLUMNS, fetch_india_sugar_ndvi
+from .sources.imd import IMD_COLUMNS, fetch_imd_monsoon_events
+from .sources.nasa_power import Location, fetch_daily_agroclimate
 
 
 MONSOON_START = (6, 1)
@@ -24,6 +32,11 @@ MONSOON_COLUMNS = [
     "downloaded_at",
     "source",
 ]
+EXTERNAL_FILES = {
+    "monsoon_cumulative": "india_monsoon_cumulative.csv",
+    "imd_events": "india_monsoon_events.csv",
+    "ndvi": "india_sugar_ndvi.csv",
+}
 
 
 def _timestamp(year: int, month_day: tuple[int, int]) -> pd.Timestamp:
@@ -145,3 +158,169 @@ def build_india_monsoon_cumulative(
     sources = sorted(str(value) for value in daily["source"].dropna().unique())
     result["source"] = "; ".join(sources) or "NASA POWER PRECTOTCORR"
     return result[MONSOON_COLUMNS].sort_values(["season_year", "season_day"]).reset_index(drop=True)
+
+
+def atomic_write_csv(frame: pd.DataFrame, target: Path) -> None:
+    target.parent.mkdir(parents=True, exist_ok=True)
+    temporary = target.with_suffix(".tmp")
+    frame.to_csv(temporary, index=False)
+    temporary.replace(target)
+
+
+def sanitized_error_status(exc: Exception) -> str:
+    if isinstance(exc, PermissionError):
+        return "AUTH_REQUIRED"
+    if isinstance(exc, FileNotFoundError):
+        return "NOT_PUBLISHED"
+    if isinstance(exc, requests.RequestException):
+        return "FETCH_ERROR"
+    return "REVIEW_REQUIRED"
+
+
+def _placeholder(dataset: str, status: str, as_of: str) -> pd.DataFrame:
+    columns = {
+        "monsoon_cumulative": MONSOON_COLUMNS,
+        "imd_events": IMD_COLUMNS,
+        "ndvi": NDVI_COLUMNS,
+    }[dataset]
+    row = {column: pd.NA for column in columns}
+    row["status"] = status
+    if "data_as_of" in row:
+        row["data_as_of"] = as_of
+    if "downloaded_at" in row:
+        row["downloaded_at"] = pd.Timestamp.now(tz="UTC").isoformat()
+    return pd.DataFrame([row], columns=columns)
+
+
+def _latest_status(dataset: str, frame: pd.DataFrame) -> str:
+    if frame.empty or "status" not in frame:
+        return "NOT_PUBLISHED"
+    statuses = set(frame["status"].dropna().astype(str))
+    if "REVIEW_REQUIRED" in statuses:
+        return "REVIEW_REQUIRED"
+    if dataset == "imd_events" and statuses.intersection({"OK", "NOT_ANNOUNCED"}):
+        return "OK"
+    return str(frame.iloc[-1]["status"])
+
+
+def _artifact_metadata(target: Path, status: str) -> dict[str, object]:
+    frame = pd.read_csv(target) if target.exists() else pd.DataFrame()
+    data_date = None
+    for column in ("data_as_of", "date", "official_date", "product_date"):
+        if column in frame:
+            dates = pd.to_datetime(frame[column], errors="coerce").dropna()
+            if not dates.empty:
+                data_date = dates.max().date().isoformat()
+                break
+    published_at = None
+    for column in ("published_at", "announcement_date"):
+        if column in frame:
+            dates = pd.to_datetime(frame[column], errors="coerce", utc=True).dropna()
+            if not dates.empty:
+                published_at = dates.max().isoformat()
+                break
+    return {
+        "status": status,
+        "path": target.as_posix(),
+        "rows": len(frame),
+        "data_as_of": data_date,
+        "published_at": published_at,
+        "sha256": hashlib.sha256(target.read_bytes()).hexdigest() if target.exists() else None,
+    }
+
+
+def _fetch_india_weather(
+    locations: list[dict[str, object]],
+    end: str,
+) -> pd.DataFrame:
+    frames: list[pd.DataFrame] = []
+    for item in locations:
+        frame = fetch_daily_agroclimate(Location(**item), "1991-01-01", end)
+        frame["region"] = INDIA_REGION
+        frames.append(frame)
+    return pd.concat(frames, ignore_index=True)
+
+
+def refresh_external_observations(
+    output_dir: Path,
+    as_of: str,
+    regions_path: Path,
+    normals_path: Path,
+    ndvi_start: str = "2001-01-01",
+    source_bundle: dict[str, object] | None = None,
+    refreshed_at: str | None = None,
+) -> dict[str, object]:
+    regions = json.loads(regions_path.read_text(encoding="utf-8"))
+    locations = regions[INDIA_REGION]
+    climate_dir = output_dir / "climate"
+    climate_dir.mkdir(parents=True, exist_ok=True)
+    refreshed = refreshed_at or pd.Timestamp.now(tz="UTC").isoformat()
+    dataset_meta: dict[str, dict[str, object]] = {}
+    failures = 0
+
+    def run_dataset(dataset: str) -> pd.DataFrame:
+        if dataset == "monsoon_cumulative":
+            if source_bundle is not None and "weather" in source_bundle:
+                weather = source_bundle["weather"]
+            else:
+                weather = _fetch_india_weather(locations, as_of)
+            if not isinstance(weather, pd.DataFrame):
+                raise TypeError("weather source must be a DataFrame")
+            return build_india_monsoon_cumulative(weather, as_of, refreshed)
+        if dataset == "imd_events":
+            if source_bundle is not None and "imd" in source_bundle:
+                imd = source_bundle["imd"]
+            else:
+                imd = fetch_imd_monsoon_events(pd.Timestamp(as_of).year, normals_path)
+            if not isinstance(imd, pd.DataFrame):
+                raise TypeError("IMD source must be a DataFrame")
+            return imd
+        if source_bundle is not None and "ndvi" in source_bundle:
+            ndvi = source_bundle["ndvi"]
+        else:
+            ndvi = fetch_india_sugar_ndvi(
+                locations,
+                start=ndvi_start,
+                end=as_of,
+                cache_dir=output_dir.parent / "raw" / "earthdata",
+            )
+        if not isinstance(ndvi, pd.DataFrame):
+            raise TypeError("NDVI source must be a DataFrame")
+        return ndvi
+
+    error_keys = {
+        "monsoon_cumulative": "weather_error",
+        "imd_events": "imd_error",
+        "ndvi": "ndvi_error",
+    }
+    for dataset, filename in EXTERNAL_FILES.items():
+        target = climate_dir / filename
+        try:
+            if source_bundle is not None and error_keys[dataset] in source_bundle:
+                error = source_bundle[error_keys[dataset]]
+                if isinstance(error, Exception):
+                    raise error
+                raise RuntimeError("Injected source error")
+            frame = run_dataset(dataset)
+            status = _latest_status(dataset, frame)
+            atomic_write_csv(frame, target)
+        except Exception as exc:
+            failures += 1
+            status = sanitized_error_status(exc)
+            if not target.exists():
+                atomic_write_csv(_placeholder(dataset, status, as_of), target)
+        dataset_meta[dataset] = _artifact_metadata(target, status)
+
+    manifest: dict[str, object] = {
+        "overall": "PARTIAL" if failures else "OK",
+        "as_of": as_of,
+        "refreshed_at": refreshed,
+        "datasets": dataset_meta,
+    }
+    manifest_path = climate_dir / "external_manifest.json"
+    temporary = manifest_path.with_suffix(".tmp")
+    temporary.write_text(
+        json.dumps(manifest, ensure_ascii=False, indent=2, default=str), encoding="utf-8"
+    )
+    temporary.replace(manifest_path)
+    return manifest

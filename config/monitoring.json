@@ -6,6 +6,11 @@
     "fundamentals": 45
   },
   "dry_day_threshold_mm": 1.0,
+  "external_freshness_days": {
+    "monsoon_cumulative": 2,
+    "imd_events": 30,
+    "ndvi": 24
+  },
   "rainfall_warning_pct": -0.10,
   "trend_confirmation_days": 20,
   "required_fundamentals": [

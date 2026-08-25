@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 
 from .debrief import write_debrief
+from .external_observations import refresh_external_observations
 from .monitoring import build_snapshot, write_snapshot
 from .pipeline import refresh
 
@@ -34,6 +35,14 @@ def build_parser() -> argparse.ArgumentParser:
     debrief_parser = sub.add_parser("debrief", help="Render a Markdown review from latest monitor JSON")
     debrief_parser.add_argument("--snapshot", default="reports/monitoring/latest.json")
     debrief_parser.add_argument("--output", default="reports/monitoring")
+    external_parser = sub.add_parser(
+        "external-refresh", help="Refresh India monsoon and NDVI observations"
+    )
+    external_parser.add_argument("--output", default="data/processed")
+    external_parser.add_argument("--as-of", required=True)
+    external_parser.add_argument("--regions", default="config/regions.json")
+    external_parser.add_argument("--normals", default="config/india_monsoon_normals.json")
+    external_parser.add_argument("--ndvi-start", default="2001-01-01")
     return parser
 
 
@@ -62,6 +71,16 @@ def main() -> None:
         snapshot = json.loads(Path(args.snapshot).read_text(encoding="utf-8"))
         path = write_debrief(snapshot, Path(args.output))
         print(path)
+    elif args.command == "external-refresh":
+        manifest = refresh_external_observations(
+            output_dir=Path(args.output),
+            as_of=args.as_of,
+            regions_path=Path(args.regions),
+            normals_path=Path(args.normals),
+            ndvi_start=args.ndvi_start,
+            source_bundle=None,
+        )
+        print(json.dumps(manifest, ensure_ascii=False, indent=2, default=str))
 
 
 if __name__ == "__main__":

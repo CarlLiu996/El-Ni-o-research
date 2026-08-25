@@ -268,6 +268,131 @@ def _fundamental_status(data_dir: Path, config: dict[str, Any], as_of: pd.Timest
     return {"status": "OK" if ok == len(items) else "INCOMPLETE", "available": ok, "required": len(items), "items": items}
 
 
+def build_external_observation_status(
+    data_dir: Path,
+    as_of: str | date | pd.Timestamp,
+    freshness_days: dict[str, int] | None = None,
+) -> dict[str, Any]:
+    climate_dir = data_dir / "climate"
+    manifest_path = climate_dir / "external_manifest.json"
+    manifest = (
+        json.loads(manifest_path.read_text(encoding="utf-8"))
+        if manifest_path.exists()
+        else {"overall": "PARTIAL", "refreshed_at": None, "datasets": {}}
+    )
+    thresholds = {
+        "monsoon_cumulative": 2,
+        "imd_events": 30,
+        "ndvi": 24,
+        **(freshness_days or {}),
+    }
+    cutoff = pd.Timestamp(as_of)
+
+    def read_optional(filename: str, date_columns: tuple[str, ...]) -> pd.DataFrame:
+        path = climate_dir / filename
+        return _read_csv(path, date_columns=date_columns) if path.exists() else pd.DataFrame()
+
+    def freshness(dataset: str, data_date: Any, status: str) -> tuple[int | None, str]:
+        days = _staleness(data_date, cutoff)
+        if status != "OK":
+            return days, status
+        return days, "STALE" if days is not None and days > thresholds[dataset] else "FRESH"
+
+    monsoon = read_optional(
+        "india_monsoon_cumulative.csv", ("date", "data_as_of", "published_at", "downloaded_at")
+    )
+    if monsoon.empty:
+        monsoon_status: dict[str, Any] = {"status": "MISSING", "value": None}
+    else:
+        latest = monsoon.sort_values(["season_year", "season_day"]).iloc[-1]
+        status = str(latest.get("status", "MISSING"))
+        data_date = latest.get("date")
+        stale_days, freshness_status = freshness("monsoon_cumulative", data_date, status)
+        monsoon_status = {
+            "status": status,
+            "freshness_status": freshness_status,
+            "date": _iso(data_date),
+            "data_as_of": _iso(latest.get("data_as_of")),
+            "published_at": _iso(latest.get("published_at")),
+            "downloaded_at": str(latest.get("downloaded_at")) if pd.notna(latest.get("downloaded_at")) else None,
+            "staleness_days": stale_days,
+            "value": _finite(latest.get("cumulative_departure_pct")),
+            "current_cumulative_mm": _finite(latest.get("current_cumulative_mm")),
+            "climatology_cumulative_mm": _finite(latest.get("climatology_cumulative_mm")),
+            "historical_percentile": _finite(latest.get("historical_percentile")),
+            "valid_locations": int(latest.get("valid_locations", 0)),
+            "required_locations": int(latest.get("required_locations", 2)),
+            "source": latest.get("source"),
+            "limitation": "NASA POWER三个代表点等权代理；不单独触发CTA配置动作",
+        }
+
+    imd = read_optional(
+        "india_monsoon_events.csv", ("official_date", "normal_date", "announcement_date")
+    )
+    if imd.empty:
+        imd_status: dict[str, Any] = {"status": "MISSING", "value": None, "events": []}
+    else:
+        events = []
+        for row in imd.sort_values("event_type").itertuples(index=False):
+            events.append({
+                "event_type": getattr(row, "event_type", None),
+                "official_date": _iso(getattr(row, "official_date", None)),
+                "normal_date": _iso(getattr(row, "normal_date", None)),
+                "departure_days": _finite(getattr(row, "departure_days", None)),
+                "status": getattr(row, "status", None),
+                "source": getattr(row, "source_url", None),
+            })
+        announced = imd[imd["official_date"].notna()] if "official_date" in imd else pd.DataFrame()
+        data_date = announced["official_date"].max() if not announced.empty else pd.NaT
+        manifest_status = manifest.get("datasets", {}).get("imd_events", {}).get("status")
+        status = str(manifest_status or ("OK" if events else "MISSING"))
+        stale_days, freshness_status = freshness("imd_events", data_date, status)
+        imd_status = {
+            "status": status,
+            "freshness_status": freshness_status,
+            "date": _iso(data_date),
+            "published_at": _iso(imd["announcement_date"].max()) if "announcement_date" in imd else None,
+            "downloaded_at": manifest.get("refreshed_at"),
+            "staleness_days": stale_days,
+            "value": events,
+            "events": events,
+            "source": "; ".join(sorted(imd.get("source_url", pd.Series(dtype=str)).dropna().astype(str).unique())),
+            "limitation": "仅采信IMD正式宣布；预测文字不作为事件，不单独触发CTA配置动作",
+        }
+
+    ndvi = read_optional(
+        "india_sugar_ndvi.csv", ("product_date", "published_at", "downloaded_at")
+    )
+    if ndvi.empty:
+        ndvi_status: dict[str, Any] = {"status": "MISSING", "value": None}
+    else:
+        latest = ndvi.sort_values("product_date", na_position="first").iloc[-1]
+        status = str(latest.get("status", "MISSING"))
+        data_date = latest.get("product_date")
+        stale_days, freshness_status = freshness("ndvi", data_date, status)
+        ndvi_status = {
+            "status": status,
+            "freshness_status": freshness_status,
+            "date": _iso(data_date),
+            "published_at": _iso(latest.get("published_at")),
+            "downloaded_at": str(latest.get("downloaded_at")) if pd.notna(latest.get("downloaded_at")) else None,
+            "staleness_days": stale_days,
+            "value": _finite(latest.get("ndvi")),
+            "same_period_difference": _finite(latest.get("same_period_difference")),
+            "z_score": _finite(latest.get("z_score")),
+            "historical_percentile": _finite(latest.get("historical_percentile")),
+            "valid_pixel_ratio": _finite(latest.get("valid_pixel_ratio")),
+            "region_count": int(latest.get("region_count", 0)) if pd.notna(latest.get("region_count")) else 0,
+            "source": latest.get("source"),
+            "limitation": "50公里缓冲区植被代理，非糖蔗专属；不单独触发CTA配置动作",
+        }
+    return {
+        "monsoon_cumulative": monsoon_status,
+        "imd_events": imd_status,
+        "ndvi": ndvi_status,
+    }
+
+
 def build_snapshot(
     data_dir: Path,
     config_path: Path,
@@ -349,6 +474,12 @@ def build_snapshot(
         if research_gate == {"climate": "CONFIRMED", "fundamentals": "OK", "market_cta": "CONFIRMED"}
         else "KEEP_MONITORING"
     )
+    external_observations = build_external_observation_status(
+        data_dir,
+        as_of_ts,
+        config.get("external_freshness_days"),
+    )
+    climate["external_observations"] = external_observations
     return {
         "schema_version": 1,
         "generated_at": datetime.now(timezone.utc).isoformat(),
@@ -356,6 +487,7 @@ def build_snapshot(
         "data_as_of": max(metrics["date"] for metrics in markets.values()),
         "research_gate": research_gate,
         "market_confirmation": market_confirmation,
+        "external_observations": external_observations,
         "layers": {"climate": climate, "fundamentals": fundamentals, "market": markets, "cta": cta},
         "alerts": alerts,
         "critical_alerts": sum(alert["severity"] == "critical" for alert in alerts),
