@@ -7,7 +7,7 @@ from pathlib import Path
 from .debrief import write_debrief
 from .external_observations import refresh_external_observations
 from .monitoring import build_snapshot, write_snapshot
-from .pipeline import refresh
+from .pipeline import refresh, refresh_history
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -43,6 +43,12 @@ def build_parser() -> argparse.ArgumentParser:
     external_parser.add_argument("--regions", default="config/regions.json")
     external_parser.add_argument("--normals", default="config/india_monsoon_normals.json")
     external_parser.add_argument("--ndvi-start", default="2001-01-01")
+    history_parser = sub.add_parser(
+        "history-refresh", help="Build independent ENSO history review data"
+    )
+    history_parser.add_argument("--output", default="data/processed")
+    history_parser.add_argument("--as-of", required=True)
+    history_parser.add_argument("--regions", default="config/regions.json")
     return parser
 
 
@@ -79,6 +85,13 @@ def main() -> None:
             normals_path=Path(args.normals),
             ndvi_start=args.ndvi_start,
             source_bundle=None,
+        )
+        print(json.dumps(manifest, ensure_ascii=False, indent=2, default=str))
+    elif args.command == "history-refresh":
+        manifest = refresh_history(
+            output_dir=Path(args.output),
+            as_of=args.as_of,
+            regions_path=Path(args.regions),
         )
         print(json.dumps(manifest, ensure_ascii=False, indent=2, default=str))
 

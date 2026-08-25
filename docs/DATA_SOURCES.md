@@ -55,3 +55,11 @@
 - 信号至少滞后一个交易日；
 - 披露交易日历、时区、缺失值、换月政策和成本；
 - 未完成样本外、参数平台、成本与市场状态检验前，不标记为可部署。
+
+## 历史复盘专用数据源与边界
+
+- FAOSTAT Crops and livestock products：`https://bulks-faostat.fao.org/production/Crops_Livestock_E_All_Data_(Normalized).zip`。保留印度/巴西甘蔗与马来西亚/印度尼西亚油棕果的产量、收获面积、单产、原始单位和 `Flag`。FAOSTAT 日历年不等同于作物年度，历史基准只使用目标年前五个已知年份，不回填未来修订值。
+- World Bank Commodity Price Data（Pink Sheet）：`https://thedocs.worldbank.org/en/doc/18675f1d1639c7a34d463f59263ba0a2-0050012025/related/CMO-Historical-Data-Monthly.xlsx`。使用月度 Palm oil（USD/mt）和 Sugar, world（USD/kg）现货基准。它们不是中国期货可交易连续合约，不能代表换月、基差、保证金或实际成交成本。
+- 历史气候复用 NOAA CPC ONI/SOI、NOAA PSL DMI 与 NASA POWER。事件统一以 ONI 连续至少五个重叠季达到 0.5℃ 定义；天气和价格固定为 T0 至 T+12/T+18 窗口，ONGOING 事件不进入规律强弱统计。
+- 历史 CTA 月频代理只设置 Medium/Slow，目标年化波动统一为 20%，仓位滞后一期、杠杆上限 2 倍、单边换手成本 2bp；现有 P/SR 日频 Fast/Medium/Slow 只在可覆盖年份展示，否则标为 `UNAVAILABLE`。
+- `data/processed/history/manifest.json` 记录每个产物的来源、行数、日期范围、下载时间和 SHA-256。历史复盘是独立描述性旁路，不把规律标签、价格结果或 CTA 代理收益导入当前 CTA 配置门槛、仓位建议或置信度修正。
