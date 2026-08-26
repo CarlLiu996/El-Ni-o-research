@@ -1,18 +1,18 @@
 {
   "overall": "PARTIAL",
   "as_of": "2026-08-26",
-  "refreshed_at": "2026-08-25T16:06:24.383183+00:00",
+  "refreshed_at": "2026-08-26T14:30:08.022269+00:00",
   "datasets": {
     "monsoon_cumulative": {
       "status": "OK",
       "path": "data/processed/climate/india_monsoon_cumulative.csv",
-      "rows": 4353,
-      "data_as_of": "2026-08-22",
+      "rows": 4354,
+      "data_as_of": "2026-08-23",
       "published_at": null,
       "coverage_pct": 1.0,
       "source": "https://power.larc.nasa.gov/api/temporal/daily/point",
       "reason": "",
-      "sha256": "750b235bcb98f676e0cff5e4275e3ed8428f904926485aa0e294fcc3a766ad6a"
+      "sha256": "d8f120ee10b8c1dcda35c7f137199bf936222855d9addb595de3d0fe9d7c1231"
     },
     "imd_events": {
       "status": "OK",
@@ -23,23 +23,24 @@
       "coverage_pct": null,
       "source": "https://internal.imd.gov.in/press_release/20260604_pr_5051.pdf; https://mausam.imd.gov.in/imd_latest/contents/press_release.php; https://mausam.imd.gov.in/responsive/monsooninformation.php; https://internal.imd.gov.in/pages/press_release_mausam.php",
       "reason": "",
-      "sha256": "bcc8df265b931835559b4d6ecabfb32ec7fc521b10d6363c121b2bcd74c27c3c"
+      "sha256": "c32230ed90b849c6cf76a1d79b3c8a6e98ee94c3a2cf253371a7945ba208f3db"
     },
     "ndvi": {
-      "status": "FETCH_ERROR",
+      "status": "LOW_COVERAGE",
       "path": "data/processed/climate/india_sugar_ndvi.csv",
-      "rows": 1,
-      "data_as_of": null,
+      "rows": 106,
+      "data_as_of": "2026-08-05",
       "published_at": null,
-      "coverage_pct": null,
-      "source": "https://modis.ornl.gov/data/modis_webservice.html",
-      "reason": "FETCH_ERROR",
-      "sha256": "920be01e357cb9d5b4047219c71c053692eb83f42cffd9174e6eb72fe073d90d",
-      "reason_code": "HTTP_500",
-      "reason_cn": "官方数据服务返回 HTTP 500（服务器内部错误）",
-      "source_host": "modis.ornl.gov",
-      "next_action": "改走 Earthdata 官方备用接口；需让当前任务进程读取 EARTHDATA_TOKEN",
-      "conclusion_impact": "缺少印度甘蔗长势验证，L1产区证据不完整"
+      "coverage_pct": 0.0,
+      "source": "https://doi.org/10.5067/MODIS/MYD13Q1.061 via Microsoft Planetary Computer modis-13Q1-061 point gateway",
+      "reason": "LOW_COVERAGE",
+      "sha256": "bf9ab36785f00c36abe55a6e1a631f84e8b0dbd82e5f49d0d4c157e6d618ea21",
+      "valid_pixels": 0,
+      "total_pixels": 15,
+      "region_count": 0,
+      "reason_cn": "最新合成期受季风云层/质量位影响，高质量采样点不足",
+      "next_action": "等待下一期16日合成发布后增量重试；保留原始低覆盖记录",
+      "conclusion_impact": "当前印度糖蔗长势暂不可判，不作为L1方向证据"
     }
   }
 }

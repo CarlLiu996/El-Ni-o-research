@@ -92,6 +92,10 @@ def _market_metrics(frame: pd.DataFrame, as_of: pd.Timestamp) -> dict[str, Any]:
         "staleness_days": _staleness(latest["date"], as_of),
         "contract": latest.get("contract"),
         "close": _finite(latest["close"]),
+        "provider": latest.get("provider"),
+        "indicator_code": latest.get("indicator_code"),
+        "indicator_name": latest.get("indicator_name"),
+        "source": latest.get("source"),
         "realized_vol_20d": _finite(close.pct_change(fill_method=None).tail(20).std() * math.sqrt(252)),
         "max_price_drawdown_60d": _drawdown(close.tail(60)),
         "quality": audit_timeseries(ordered),
@@ -393,6 +397,58 @@ def build_external_observation_status(
     }
 
 
+def assess_cta_confirmation(
+    cta: dict[str, dict[str, dict[str, Any]]],
+    trend_confirmation_days: int,
+) -> dict[str, Any]:
+    """Confirm each symbol independently; cross-symbol signs may differ."""
+    details: dict[str, dict[str, Any]] = {}
+    for symbol, speeds in cta.items():
+        medium = speeds["medium"]
+        slow = speeds["slow"]
+        medium_position = _finite(medium.get("position"))
+        slow_position = _finite(slow.get("position"))
+        same_sign = (
+            medium_position is not None
+            and slow_position is not None
+            and medium_position != 0
+            and slow_position != 0
+            and (medium_position > 0) == (slow_position > 0)
+        )
+        medium_profitable = (
+            medium.get("net_return_20d") is not None
+            and medium["net_return_20d"] > 0
+        )
+        slow_profitable = (
+            slow.get("net_return_20d") is not None
+            and slow["net_return_20d"] > 0
+        )
+        persistent = int(medium.get("position_persistence_days") or 0) >= int(
+            trend_confirmation_days
+        )
+        confirmed = same_sign and medium_profitable and slow_profitable and persistent
+        details[symbol] = {
+            "confirmed": confirmed,
+            "same_sign": same_sign,
+            "direction": (
+                "LONG" if same_sign and medium_position > 0
+                else "SHORT" if same_sign and medium_position < 0
+                else "MIXED_OR_FLAT"
+            ),
+            "medium_profitable_20d": medium_profitable,
+            "slow_profitable_20d": slow_profitable,
+            "medium_persistent": persistent,
+        }
+    confirmed_count = sum(item["confirmed"] for item in details.values())
+    return {
+        "status": "CONFIRMED" if details and confirmed_count == len(details) else "NOT_CONFIRMED",
+        "symbols_confirmed": int(confirmed_count),
+        "symbols_required": len(details),
+        "details": details,
+        "cross_symbol_same_sign_required": False,
+    }
+
+
 def build_snapshot(
     data_dir: Path,
     config_path: Path,
@@ -417,8 +473,10 @@ def build_snapshot(
     cta: dict[str, Any] = {}
     for symbol in ("P", "SR"):
         dominant = _read_csv(data_dir / "futures" / f"{symbol}_dominant_tushare.csv")
+        wind_path = data_dir / "futures" / f"{symbol}_active_wind.csv"
+        price_history = _read_csv(wind_path) if wind_path.exists() else dominant
         contracts = _read_csv(data_dir / "futures" / f"{symbol}_contracts_tushare.csv")
-        markets[symbol] = _market_metrics(dominant, as_of_ts)
+        markets[symbol] = _market_metrics(price_history, as_of_ts)
         markets[symbol]["term_structure"] = _term_structure(contracts)
         cta[symbol] = {}
         for speed in ("fast", "medium", "slow"):
@@ -444,22 +502,9 @@ def build_snapshot(
         if item["status"] != "OK":
             alerts.append({"severity": "critical", "code": f"FUND_{item['dataset'].upper()}", "message": f"基本面指标缺失或过期：{item['label']}"})
 
-    confirmed = []
-    for symbol in ("P", "SR"):
-        medium = cta[symbol]["medium"]
-        slow = cta[symbol]["slow"]
-        confirmed.append(
-            medium["net_return_20d"] is not None
-            and medium["net_return_20d"] > 0
-            and slow["net_return_20d"] is not None
-            and slow["net_return_20d"] > 0
-            and medium["position_persistence_days"] >= int(config["trend_confirmation_days"])
-        )
-    market_confirmation = {
-        "status": "CONFIRMED" if all(confirmed) else "NOT_CONFIRMED",
-        "symbols_confirmed": int(sum(confirmed)),
-        "symbols_required": len(confirmed),
-    }
+    market_confirmation = assess_cta_confirmation(
+        cta, int(config["trend_confirmation_days"])
+    )
     research_gate = {
         "climate": (
             "CONFIRMED"

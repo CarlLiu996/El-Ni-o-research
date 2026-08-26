@@ -19,20 +19,15 @@
 
 | 品种 | 主力合约 | 收盘 | 20日价格 | 期限结构 | Fast 20日 | Medium 20日 | Slow 20日 |
 |---|---:|---:|---:|---|---:|---:|---:|
-| P | P2701.DCE | 9,838 | 6.6% | contango -0.5% | -5.1% | 2.0% | 6.7% |
-| SR | SR2701.ZCE | 5,309 | 3.6% | contango -0.3% | -7.2% | -8.3% | -8.3% |
+| P | None | 10,002 | 6.6% | contango -0.5% | -5.1% | 2.0% | 6.7% |
+| SR | None | 5,340 | 4.3% | contango -0.3% | -7.2% | -8.3% | -8.3% |
 
 ## 较上次变化
 
-- 对比日期：2026-08-25；研究门禁变化：否。
-- P/SR 收盘变化：0.0% / 0.0%。
-- P Medium/Slow 20日收益变化：0.0% / 0.0%。
-- SR Medium/Slow 20日收益变化：0.0% / 0.0%。
+- 首次生成监控快照，暂无可比历史。
 
 ## 告警
 
-- [CRITICAL] `P_PRICE_STALE`：P 期货数据已过期
-- [CRITICAL] `SR_PRICE_STALE`：SR 期货数据已过期
 - [WARNING] `BRAZIL_CS_SUGAR_DRY`：brazil_cs_sugar 近 30 日降水显著低于历史同期
 - [CRITICAL] `FUND_UNICA_SUGAR_MIX`：基本面指标缺失或过期：UNICA 制糖比
 

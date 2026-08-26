@@ -14,6 +14,7 @@ from .sources.earthdata import (
     NDVI_COLUMNS,
     fetch_india_sugar_ndvi,
     fetch_india_sugar_ndvi_ornl,
+    fetch_india_sugar_ndvi_planetary,
 )
 from .sources.imd import IMD_COLUMNS, fetch_imd_monsoon_events
 from .sources.nasa_power import Location, fetch_daily_agroclimate
@@ -43,6 +44,33 @@ EXTERNAL_FILES = {
     "imd_events": "india_monsoon_events.csv",
     "ndvi": "india_sugar_ndvi.csv",
 }
+
+
+def _preserve_confirmed_imd_events(
+    refreshed: pd.DataFrame,
+    previous: pd.DataFrame,
+) -> pd.DataFrame:
+    """Keep an official event immutable when a later index page drops its link."""
+    result = refreshed.copy()
+    if previous.empty:
+        return result
+    for _, prior in previous.iterrows():
+        if pd.isna(prior.get("official_date")) or str(prior.get("status")) != "OK":
+            continue
+        mask = (
+            result.get("season_year", pd.Series(index=result.index, dtype=object)).eq(prior.get("season_year"))
+            & result.get("event_type", pd.Series(index=result.index, dtype=object)).eq(prior.get("event_type"))
+        )
+        if not mask.any():
+            result = pd.concat([result, prior.to_frame().T], ignore_index=True)
+            continue
+        if result.loc[mask, "official_date"].notna().any():
+            continue
+        for column, value in prior.items():
+            if column not in result:
+                result[column] = pd.NA
+            result.loc[mask, column] = value
+    return result
 
 
 def _timestamp(year: int, month_day: tuple[int, int]) -> pd.Timestamp:
@@ -287,6 +315,15 @@ def _artifact_metadata(
             if not dates.empty:
                 published_at = dates.max().isoformat()
                 break
+    if dataset == "ndvi" and not frame.empty and "product_date" in frame:
+        ordered_dates = pd.to_datetime(frame["product_date"], errors="coerce")
+        latest_rows = frame.loc[ordered_dates.eq(ordered_dates.max())]
+        latest_published = (
+            pd.to_datetime(latest_rows["published_at"], errors="coerce", utc=True).dropna()
+            if "published_at" in latest_rows
+            else pd.Series(dtype="datetime64[ns, UTC]")
+        )
+        published_at = latest_published.max().isoformat() if not latest_published.empty else None
     default_sources = {
         "monsoon_cumulative": "https://power.larc.nasa.gov/api/temporal/daily/point",
         "imd_events": "https://mausam.imd.gov.in/responsive/monsooninformation_onset.php",
@@ -319,6 +356,22 @@ def _artifact_metadata(
         "reason": "" if status == "OK" else status,
         "sha256": hashlib.sha256(target.read_bytes()).hexdigest() if target.exists() else None,
     }
+    if dataset == "ndvi" and not frame.empty:
+        latest = frame.iloc[-1]
+        def integer_or_zero(value: object) -> int:
+            numeric = pd.to_numeric(pd.Series([value]), errors="coerce").iloc[0]
+            return int(numeric) if pd.notna(numeric) else 0
+        metadata.update({
+            "valid_pixels": integer_or_zero(latest.get("valid_pixels")),
+            "total_pixels": integer_or_zero(latest.get("total_pixels")),
+            "region_count": integer_or_zero(latest.get("region_count")),
+        })
+        if status == "LOW_COVERAGE":
+            metadata.update({
+                "reason_cn": "最新合成期受季风云层/质量位影响，高质量采样点不足",
+                "next_action": "等待下一期16日合成发布后增量重试；保留原始低覆盖记录",
+                "conclusion_impact": "当前印度糖蔗长势暂不可判，不作为L1方向证据",
+            })
     if diagnostic:
         metadata.update(diagnostic)
     return metadata
@@ -388,14 +441,21 @@ def refresh_external_observations(
                         end=as_of,
                     )
                 except requests.RequestException:
-                    if not os.getenv("EARTHDATA_TOKEN"):
-                        raise
-                    ndvi = fetch_india_sugar_ndvi(
-                        locations,
-                        start=ndvi_start,
-                        end=as_of,
-                        cache_dir=output_dir.parent / "raw" / "earthdata",
-                    )
+                    try:
+                        ndvi = fetch_india_sugar_ndvi_planetary(
+                            locations,
+                            start=ndvi_start,
+                            end=as_of,
+                        )
+                    except requests.RequestException:
+                        if not os.getenv("EARTHDATA_TOKEN"):
+                            raise
+                        ndvi = fetch_india_sugar_ndvi(
+                            locations,
+                            start=ndvi_start,
+                            end=as_of,
+                            cache_dir=output_dir.parent / "raw" / "earthdata",
+                        )
         if not isinstance(ndvi, pd.DataFrame):
             raise TypeError("NDVI source must be a DataFrame")
         return ndvi
@@ -415,6 +475,8 @@ def refresh_external_observations(
                     raise error
                 raise RuntimeError("Injected source error")
             frame = run_dataset(dataset)
+            if dataset == "imd_events" and target.exists():
+                frame = _preserve_confirmed_imd_events(frame, pd.read_csv(target))
             status = _latest_status(dataset, frame)
             atomic_write_csv(frame, target)
         except Exception as exc:
@@ -425,8 +487,12 @@ def refresh_external_observations(
                 atomic_write_csv(_placeholder(dataset, status, as_of), target)
         dataset_meta[dataset] = _artifact_metadata(dataset, target, status, diagnostic)
 
+    incomplete_status = any(
+        item.get("status") not in {"OK", "NOT_ANNOUNCED"}
+        for item in dataset_meta.values()
+    )
     manifest: dict[str, object] = {
-        "overall": "PARTIAL" if failures else "OK",
+        "overall": "PARTIAL" if failures or incomplete_status else "OK",
         "as_of": as_of,
         "refreshed_at": refreshed,
         "datasets": dataset_meta,

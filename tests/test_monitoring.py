@@ -4,7 +4,41 @@ import pandas as pd
 import pytest
 
 from elnino_cta.debrief import write_debrief
-from elnino_cta.monitoring import build_snapshot, write_snapshot
+from elnino_cta.monitoring import assess_cta_confirmation, build_snapshot, write_snapshot
+
+
+def test_cta_confirmation_requires_medium_slow_same_sign_but_not_cross_symbol_same_sign():
+    cta = {
+        "P": {
+            "medium": {"position": 1.0, "net_return_20d": 0.02, "position_persistence_days": 21},
+            "slow": {"position": 0.8, "net_return_20d": 0.01, "position_persistence_days": 30},
+        },
+        "SR": {
+            "medium": {"position": -1.0, "net_return_20d": 0.03, "position_persistence_days": 22},
+            "slow": {"position": -0.7, "net_return_20d": 0.02, "position_persistence_days": 40},
+        },
+    }
+
+    result = assess_cta_confirmation(cta, trend_confirmation_days=20)
+
+    assert result["status"] == "CONFIRMED"
+    assert result["symbols_confirmed"] == 2
+    assert result["details"]["P"]["direction"] == "LONG"
+    assert result["details"]["SR"]["direction"] == "SHORT"
+
+
+def test_cta_confirmation_rejects_opposite_medium_and_slow_positions():
+    cta = {
+        "P": {
+            "medium": {"position": 1.0, "net_return_20d": 0.02, "position_persistence_days": 21},
+            "slow": {"position": -0.8, "net_return_20d": 0.01, "position_persistence_days": 30},
+        }
+    }
+
+    result = assess_cta_confirmation(cta, trend_confirmation_days=20)
+
+    assert result["status"] == "NOT_CONFIRMED"
+    assert result["details"]["P"]["same_sign"] is False
 
 
 def test_monitoring_builds_gate_history_and_debrief(tmp_path):
@@ -46,6 +80,14 @@ def test_monitoring_builds_gate_history_and_debrief(tmp_path):
         })
         dominant.to_csv(data / "futures" / f"{symbol}_dominant_tushare.csv", index=False)
         pd.DataFrame({
+            "date": dates,
+            "close": [base + 1000 + index for index in range(len(dates))],
+            "indicator_code": "WIND_TEST",
+            "indicator_name": f"{symbol} active contract",
+            "source": "exchange",
+            "provider": "Wind EDB",
+        }).to_csv(data / "futures" / f"{symbol}_active_wind.csv", index=False)
+        pd.DataFrame({
             "date": [dates[-1], dates[-1]],
             "contract": [f"{symbol}2605.{exchange}", f"{symbol}2609.{exchange}"],
             "close": [base + 300, base + 320],
@@ -83,6 +125,8 @@ def test_monitoring_builds_gate_history_and_debrief(tmp_path):
     assert snapshot["layers"]["climate"]["rainfall"]["regions"]["india_sugar"]["root_zone_soil_wetness"] == pytest.approx(0.6)
     assert snapshot["research_gate"]["fundamentals"] == "INCOMPLETE"
     assert snapshot["research_gate"]["market_cta"] == "CONFIRMED"
+    assert snapshot["layers"]["market"]["P"]["provider"] == "Wind EDB"
+    assert snapshot["layers"]["market"]["P"]["close"] == 8000 + 1000 + len(dates) - 1
     assert snapshot["research_gate"]["overall"] == "KEEP_MONITORING"
     assert snapshot["critical_alerts"] >= 1
     assert any(alert["code"] == "FUND_MPOB_PRODUCTION" for alert in snapshot["alerts"])

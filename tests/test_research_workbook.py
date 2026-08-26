@@ -208,6 +208,30 @@ def test_workbook_has_eight_ordered_sheets_and_l2_six_rows(tmp_path) -> None:
     assert categories == ["供给", "需求", "库存", "供给", "需求", "库存"]
 
 
+def test_l3_prefers_newer_wind_active_contract_over_stale_monitor_values(tmp_path) -> None:
+    repo = fixture_repo(tmp_path)
+    _write_csv(repo / "data" / "processed" / "futures" / "P_active_wind.csv", [
+        {
+            "date": date,
+            "close": close,
+            "indicator_code": "M0066353",
+            "indicator_name": "期货收盘价(活跃合约):棕榈油",
+            "source": "大商所",
+            "provider": "Wind EDB",
+        }
+        for date, close in (("2026-08-24", 9800), ("2026-08-25", 9900), ("2026-08-26", 9999))
+    ])
+
+    path = build_research_workbook(repo, tmp_path / "out", "2026-08-26")
+    workbook = openpyxl.load_workbook(path, data_only=False, read_only=False)
+    sheet = workbook["05_L3市场定价"]
+
+    assert "Wind活跃合约" in str(sheet["B6"].value)
+    assert sheet["C6"].value == 9999
+    assert str(sheet["K6"].value).startswith("2026-08-26")
+    assert "Wind" in str(sheet["L6"].value)
+
+
 def test_workbook_contains_three_external_observations_and_statuses(tmp_path) -> None:
     path = build_research_workbook(fixture_repo(tmp_path), tmp_path / "out", "2026-08-25")
     workbook = openpyxl.load_workbook(path, data_only=False, read_only=False)
@@ -287,6 +311,51 @@ def test_leadership_sparklines_are_visible_near_primary_values(tmp_path) -> None
     assert l2_targets and {target[0] for target in l2_targets} <= {"E"}
     assert market_targets and {target[0] for target in market_targets} <= {"D"}
     assert cta_targets and {target[0] for target in cta_targets} <= {"D"}
+
+
+def test_l2_six_summary_rows_have_sparklines_and_direction_audit_text(tmp_path) -> None:
+    path = build_research_workbook(fixture_repo(tmp_path), tmp_path / "out", "2026-08-25")
+    workbook = openpyxl.load_workbook(path, data_only=False, read_only=False)
+    sheet = workbook["04_L2供给基本面"]
+    targets = set(_sparkline_targets(path, 5))
+
+    assert {f"E{row}" for row in range(11, 17)} <= targets
+    text = sheet_text(sheet)
+    assert "方向怎么算" in text
+    assert "季节分位怎么算" in text
+    assert "供给/库存低位→偏紧" in text
+
+
+def test_l4_explains_target_vs_executed_and_cross_commodity_direction(tmp_path) -> None:
+    path = build_research_workbook(fixture_repo(tmp_path), tmp_path / "out", "2026-08-25")
+    workbook = openpyxl.load_workbook(path, data_only=False, read_only=False)
+    text = sheet_text(workbook["06_L4_CTA环境"])
+
+    assert "目标信号" in text
+    assert "执行仓位" in text
+    assert "P与SR方向不必相同" in text
+    assert "同一品种Medium与Slow同号" in text
+
+
+def test_l4_labels_wind_cta_cross_check_as_exploratory_and_newer(tmp_path) -> None:
+    repo = fixture_repo(tmp_path)
+    for symbol, target in (("P", 1.15), ("SR", 0.0)):
+        for speed in ("medium", "slow"):
+            _write_csv(
+                repo / "data" / "processed" / "signals" / f"{symbol}_{speed}_proxy_wind_exploratory.csv",
+                [{
+                    "date": "2026-08-26", "target_position": target,
+                    "position": target, "equity": 1.0, "speed": speed,
+                }],
+            )
+
+    path = build_research_workbook(repo, tmp_path / "out", "2026-08-26")
+    workbook = openpyxl.load_workbook(path, data_only=False, read_only=False)
+    text = sheet_text(workbook["06_L4_CTA环境"])
+
+    assert "Wind 2026-08-26仅方向复核" in text
+    assert "活跃合约换月规则未公开" in text
+    assert "SR最新复核已转中性" in text
 
 
 def test_sparklines_plot_values_from_hidden_source_columns(tmp_path) -> None:

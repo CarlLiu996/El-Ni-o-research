@@ -8,12 +8,32 @@ import requests
 
 from elnino_cta.cli import build_parser
 from elnino_cta.external_observations import (
+    _preserve_confirmed_imd_events,
     build_india_monsoon_cumulative,
     refresh_external_observations,
 )
 
 
 LOCATIONS = ("Maharashtra", "Uttar Pradesh", "Karnataka")
+
+
+def test_confirmed_imd_event_does_not_regress_when_source_page_drops_link() -> None:
+    previous = pd.DataFrame([{
+        "season_year": 2026, "event_type": "ONSET_KERALA",
+        "official_date": "2026-06-04", "status": "OK",
+        "source_url": "https://imd.example/confirmed.pdf",
+    }])
+    refreshed = pd.DataFrame([{
+        "season_year": 2026, "event_type": "ONSET_KERALA",
+        "official_date": pd.NaT, "status": "NOT_ANNOUNCED",
+        "source_url": "https://imd.example/index",
+    }])
+
+    result = _preserve_confirmed_imd_events(refreshed, previous)
+
+    assert pd.Timestamp(result.iloc[0]["official_date"]) == pd.Timestamp("2026-06-04")
+    assert result.iloc[0]["status"] == "OK"
+    assert result.iloc[0]["source_url"] == "https://imd.example/confirmed.pdf"
 
 
 def monsoon_weather(
@@ -239,11 +259,11 @@ def test_refresh_manifest_explains_http_error_without_leaking_url_query(tmp_path
     assert "secret" not in json.dumps(meta, ensure_ascii=False)
 
 
-def test_ndvi_automatically_falls_back_to_earthdata_when_token_exists(tmp_path, monkeypatch) -> None:
+def test_ndvi_automatically_falls_back_to_planetary_point_gateway(tmp_path, monkeypatch) -> None:
     regions_path, normals_path = _write_external_config(tmp_path)
-    monkeypatch.setenv("EARTHDATA_TOKEN", "test-token")
+    monkeypatch.delenv("EARTHDATA_TOKEN", raising=False)
     monkeypatch.delenv("EARTHDATA_HDF_FALLBACK", raising=False)
-    calls = {"earthdata": 0}
+    calls = {"planetary": 0}
 
     def fail_ornl(*args, **kwargs):
         response = requests.Response()
@@ -251,8 +271,8 @@ def test_ndvi_automatically_falls_back_to_earthdata_when_token_exists(tmp_path, 
         response.url = "https://modis.ornl.gov/rst/api/v1/MOD13Q1/dates"
         raise requests.HTTPError("server error", response=response)
 
-    def succeed_earthdata(*args, **kwargs):
-        calls["earthdata"] += 1
+    def succeed_planetary(*args, **kwargs):
+        calls["planetary"] += 1
         return pd.DataFrame([{
             "product_date": "2026-05-25", "composite_slot": 10, "ndvi": 0.55,
             "climatology_mean": 0.52, "climatology_std": 0.02,
@@ -268,7 +288,7 @@ def test_ndvi_automatically_falls_back_to_earthdata_when_token_exists(tmp_path, 
         "elnino_cta.external_observations.fetch_india_sugar_ndvi_ornl", fail_ornl
     )
     monkeypatch.setattr(
-        "elnino_cta.external_observations.fetch_india_sugar_ndvi", succeed_earthdata
+        "elnino_cta.external_observations.fetch_india_sugar_ndvi_planetary", succeed_planetary
     )
 
     result = refresh_external_observations(
@@ -279,7 +299,7 @@ def test_ndvi_automatically_falls_back_to_earthdata_when_token_exists(tmp_path, 
         source_bundle={"weather": monsoon_weather(), "imd": _imd_events_ok()},
     )
 
-    assert calls["earthdata"] == 1
+    assert calls["planetary"] == 1
     assert result["datasets"]["ndvi"]["status"] == "OK"
 
 

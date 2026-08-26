@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import os
 import re
+import threading
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Any, Callable
 from urllib.parse import urlparse
@@ -16,8 +18,15 @@ from rasterio.windows import Window, from_bounds
 
 
 MOD13Q1_DOI = "https://doi.org/10.5067/MODIS/MOD13Q1.061"
+MYD13Q1_DOI = "https://doi.org/10.5067/MODIS/MYD13Q1.061"
 ORNL_MODIS_API = "https://modis.ornl.gov/rst/api/v1"
 ORNL_MODIS_DOCS = "https://modis.ornl.gov/data/modis_webservice.html"
+PLANETARY_STAC_API = "https://planetarycomputer.microsoft.com/api/stac/v1"
+PLANETARY_DATA_API = "https://planetarycomputer.microsoft.com/api/data/v1"
+PLANETARY_MODIS_SOURCE = (
+    f"{MYD13Q1_DOI} via Microsoft Planetary Computer modis-13Q1-061 point gateway"
+)
+PLANETARY_SAMPLE_OFFSETS = ((0.0, 0.0), (0.05, 0.0), (-0.05, 0.0), (0.0, 0.05), (0.0, -0.05))
 ORNL_NDVI_BAND = "250m_16_days_NDVI"
 ORNL_QA_BAND = "250m_16_days_VI_Quality"
 BUFFER_METRES = 50_000
@@ -398,6 +407,170 @@ def fetch_india_sugar_ndvi_ornl(
                     "source": f"{MOD13Q1_DOI} via {ORNL_MODIS_DOCS}",
                     "granules": f"ORNL:{modis_date}:{location['name']}:r{buffer_km}km",
                 })
+    if not regional_rows:
+        return _not_published(downloaded_at)
+    return build_ndvi_anomalies(pd.DataFrame(regional_rows), downloaded_at=downloaded_at)
+
+
+def _planetary_product_date(item_id: str) -> pd.Timestamp:
+    match = re.search(r"\.A(\d{4})(\d{3})\.", item_id)
+    if not match:
+        return pd.NaT
+    return pd.Timestamp(year=int(match.group(1)), month=1, day=1) + pd.Timedelta(
+        days=int(match.group(2)) - 1
+    )
+
+
+def fetch_india_sugar_ndvi_planetary(
+    locations: list[dict[str, object]],
+    start: str,
+    end: str,
+    *,
+    session: requests.Session | None = None,
+    baseline_years: tuple[int, int] = (2003, 2020),
+    recent_composites: int = 6,
+    sample_offsets: tuple[tuple[float, float], ...] = PLANETARY_SAMPLE_OFFSETS,
+    max_workers: int = 8,
+    downloaded_at: str | None = None,
+) -> pd.DataFrame:
+    """Read a compact MYD13Q1 point proxy through Planetary Computer.
+
+    The gateway samples the original NASA MODIS COG assets server-side, so the
+    repository stores only the three-region statistics instead of hundreds of
+    200+ MB source granules. Aqua MYD13Q1 is used because its 16-day cycle is
+    more current in the catalog; the 2003-2020 baseline is product-consistent.
+    """
+    if not locations:
+        raise ValueError("At least one India sugar region is required")
+    if recent_composites < 1:
+        raise ValueError("recent_composites must be positive")
+    if not sample_offsets:
+        raise ValueError("sample_offsets must not be empty")
+    client = session or requests.Session()
+    if session is None:
+        client.trust_env = False
+    thread_state = threading.local()
+
+    def point_client() -> requests.Session:
+        if session is not None:
+            return client
+        if not hasattr(thread_state, "client"):
+            thread_state.client = requests.Session()
+            thread_state.client.trust_env = False
+        return thread_state.client
+    regional_rows: list[dict[str, object]] = []
+    start_year, end_year = baseline_years
+
+    for location in locations:
+        longitude = float(location["longitude"])
+        latitude = float(location["latitude"])
+        response = client.post(
+            f"{PLANETARY_STAC_API}/search",
+            json={
+                "collections": ["modis-13Q1-061"],
+                "bbox": [longitude - 0.1, latitude - 0.1, longitude + 0.1, latitude + 0.1],
+                "datetime": f"{start}/{end}",
+                "limit": 1000,
+            },
+            timeout=60,
+        )
+        response.raise_for_status()
+        dated_items: list[tuple[pd.Timestamp, dict[str, object]]] = []
+        for item in response.json().get("features", []):
+            item_id = str(item.get("id", ""))
+            assets = item.get("assets", {})
+            product_date = _planetary_product_date(item_id)
+            if (
+                item_id.startswith("MYD13Q1.")
+                and pd.notna(product_date)
+                and "250m_16_days_NDVI" in assets
+                and "250m_16_days_VI_Quality" in assets
+            ):
+                dated_items.append((product_date, item))
+        if not dated_items:
+            continue
+
+        current_dates = sorted({
+            product_date
+            for product_date, _ in dated_items
+            if product_date.year > end_year
+        })[-recent_composites:]
+        slots = {int((date.dayofyear - 1) // 16 + 1) for date in current_dates}
+        selected = [
+            (product_date, item)
+            for product_date, item in dated_items
+            if product_date in current_dates
+            or (
+                start_year <= product_date.year <= end_year
+                and int((product_date.dayofyear - 1) // 16 + 1) in slots
+            )
+        ]
+        candidates_by_date = {
+            product_date: [item for date, item in selected if date == product_date]
+            for product_date in sorted({date for date, _ in selected})
+        }
+
+        def sample_point(task: tuple[pd.Timestamp, float, float]) -> dict[str, object]:
+            product_date, longitude_offset, latitude_offset = task
+            for item in candidates_by_date[product_date]:
+                item_id = str(item["id"])
+                try:
+                    point = point_client().get(
+                        f"{PLANETARY_DATA_API}/item/point/"
+                        f"{longitude + longitude_offset},{latitude + latitude_offset}",
+                        params={
+                            "collection": "modis-13Q1-061",
+                            "item": item_id,
+                            "assets": ["250m_16_days_NDVI", "250m_16_days_VI_Quality"],
+                        },
+                        timeout=60,
+                    )
+                    point.raise_for_status()
+                except (requests.RequestException, RuntimeError):
+                    continue
+                payload = point.json()
+                observations = dict(zip(payload.get("band_names", []), payload.get("values", [])))
+                ndvi_raw = observations.get("250m_16_days_NDVI_b1")
+                qa_raw = observations.get("250m_16_days_VI_Quality_b1")
+                if ndvi_raw is None or qa_raw is None:
+                    continue
+                scaled = scale_and_mask_ndvi(
+                    np.asarray([[ndvi_raw]]), np.asarray([[qa_raw]])
+                )[0, 0]
+                properties = item.get("properties", {})
+                return {
+                    "product_date": product_date,
+                    "value": scaled,
+                    "published_at": properties.get("created") or properties.get("updated"),
+                    "granule": item_id,
+                }
+            return {
+                "product_date": product_date,
+                "value": np.nan,
+                "published_at": pd.NaT,
+                "granule": "",
+            }
+
+        tasks = [
+            (product_date, longitude_offset, latitude_offset)
+            for product_date in candidates_by_date
+            for longitude_offset, latitude_offset in sample_offsets
+        ]
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            samples = pd.DataFrame(executor.map(sample_point, tasks))
+        for product_date, group in samples.groupby("product_date", sort=True):
+            values = pd.to_numeric(group["value"], errors="coerce").dropna()
+            regional_rows.append({
+                "product_date": product_date,
+                "region": str(location["name"]),
+                "ndvi": float(values.median()) if not values.empty else np.nan,
+                "valid_pixels": len(values),
+                "total_pixels": len(group),
+                "published_at": pd.to_datetime(group["published_at"], errors="coerce").max(),
+                "source": PLANETARY_MODIS_SOURCE,
+                "granules": _join_unique(group["granule"]),
+            })
+
     if not regional_rows:
         return _not_published(downloaded_at)
     return build_ndvi_anomalies(pd.DataFrame(regional_rows), downloaded_at=downloaded_at)

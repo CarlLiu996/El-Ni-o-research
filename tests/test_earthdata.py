@@ -12,6 +12,7 @@ from elnino_cta.sources.earthdata import (
     earthdata_session,
     fetch_india_sugar_ndvi,
     fetch_india_sugar_ndvi_ornl,
+    fetch_india_sugar_ndvi_planetary,
     locate_subdatasets,
     parse_modis_date,
     read_mod13q1_granule,
@@ -359,3 +360,69 @@ def test_ornl_subset_fetch_builds_ndvi_without_earthdata_token() -> None:
     assert any("/MOD13Q1/dates" in url for url in session.urls)
     assert any("/MOD13Q1/subset" in url for url in session.urls)
     assert not any("Authorization" in url for url in session.urls)
+
+
+class PlanetaryResponse:
+    def __init__(self, payload, status_code: int = 200):
+        self.payload = payload
+        self.status_code = status_code
+
+    def raise_for_status(self) -> None:
+        if self.status_code >= 400:
+            raise RuntimeError(f"HTTP {self.status_code}")
+
+    def json(self):
+        return self.payload
+
+
+class PlanetarySession:
+    def post(self, url: str, **kwargs: object) -> PlanetaryResponse:
+        assert url.endswith("/search")
+        features = []
+        for year, value in ((2003, 5000), (2020, 5200), (2026, 5600)):
+            features.append({
+                "id": f"MYD13Q1.A{year}217.h25v07.061.fake",
+                "properties": {"created": f"{year}-08-10T00:00:00Z", "test_value": value},
+                "assets": {
+                    "250m_16_days_NDVI": {},
+                    "250m_16_days_VI_Quality": {},
+                },
+            })
+        return PlanetaryResponse({"features": features})
+
+    def get(self, url: str, **kwargs: object) -> PlanetaryResponse:
+        item = kwargs["params"]["item"]
+        value = 5600 if ".A2026" in item else 5200 if ".A2020" in item else 5000
+        return PlanetaryResponse({
+            "values": [value, 0],
+            "band_names": [
+                "250m_16_days_NDVI_b1",
+                "250m_16_days_VI_Quality_b1",
+            ],
+        })
+
+
+def test_planetary_point_gateway_builds_small_auditable_ndvi_history() -> None:
+    locations = [
+        {"name": "Maharashtra", "latitude": 19.75, "longitude": 75.71},
+        {"name": "Uttar Pradesh", "latitude": 26.85, "longitude": 80.91},
+        {"name": "Karnataka", "latitude": 15.32, "longitude": 75.71},
+    ]
+
+    result = fetch_india_sugar_ndvi_planetary(
+        locations,
+        start="2003-01-01",
+        end="2026-08-26",
+        session=PlanetarySession(),
+        baseline_years=(2003, 2020),
+        recent_composites=1,
+        downloaded_at="2026-08-26T00:00:00Z",
+    )
+
+    latest = result.iloc[-1]
+    assert latest["product_date"] == pd.Timestamp("2026-08-05")
+    assert latest["ndvi"] == pytest.approx(0.56)
+    assert latest["climatology_mean"] == pytest.approx(0.51)
+    assert latest["region_count"] == 3
+    assert latest["status"] == "OK"
+    assert "Planetary Computer" in latest["source"]

@@ -8,7 +8,7 @@ import pandas as pd
 import requests
 
 from .quality import audit_timeseries
-from .signals import LOOKBACKS, build_cta_proxy
+from .signals import LOOKBACKS, build_cta_proxy, build_roll_adjusted_dominant
 from .historical_review import (
     build_event_cta_paths,
     build_event_evidence_panel,
@@ -313,8 +313,7 @@ def refresh(
             contracts.to_csv(output_dir / "futures" / f"{symbol}_contracts_tushare.csv", index=False)
             mapping.to_csv(output_dir / "futures" / f"{symbol}_dominant_mapping_tushare.csv", index=False)
             metadata.to_csv(output_dir / "futures" / f"{symbol}_contract_metadata_tushare.csv", index=False)
-            mapping_for_join = mapping.rename(columns={"trade_date": "date", "mapping_ts_code": "contract"})
-            futures = mapping_for_join.merge(contracts, on=["date", "contract"], how="left")
+            futures = build_roll_adjusted_dominant(mapping, contracts)
             provider_label = "Tushare contract + dominant mapping"
             filename_label = "dominant_tushare"
         else:

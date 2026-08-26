@@ -119,3 +119,22 @@ def test_proxy_value_type_uses_matched_mix_observation_date_not_later_crush_date
     details = build_l2_details(frames).set_index("metric_id")
 
     assert details.loc["brazil_cane_for_sugar_proxy", "value_type"] == "actual"
+
+
+def test_l2_details_explain_seasonal_percentile_sample_and_method() -> None:
+    details = build_l2_details(fundamental_frames()).set_index("metric_id")
+
+    row = details.loc["mpob_production"]
+    assert row["seasonal_sample_size"] == 3
+    assert row["seasonal_bucket"] == "同月（7月）"
+    assert "历史同月有效值中" in row["seasonal_method"]
+
+
+def test_l2_summary_explains_each_direction_from_metric_percentiles() -> None:
+    summary = build_l2_summary(fundamental_frames(), as_of="2026-08-25")
+
+    row = summary.query("commodity == 'palm_oil' and category == 'supply'").iloc[0]
+    assert row["direction"] == "LOOSE"
+    assert "棕榈油产量" in row["direction_reason"]
+    assert "高于67%" in row["direction_reason"]
+    assert "供给高位意味着供应压力偏松" in row["direction_reason"]

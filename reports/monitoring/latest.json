@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-08-25T16:08:43.813904+00:00",
+  "generated_at": "2026-08-26T14:30:11.993963+00:00",
   "as_of": "2026-08-26",
-  "data_as_of": "2026-08-14",
+  "data_as_of": "2026-08-26",
   "research_gate": {
     "climate": "CONFIRMED",
     "fundamentals": "INCOMPLETE",
@@ -12,21 +12,40 @@
   "market_confirmation": {
     "status": "NOT_CONFIRMED",
     "symbols_confirmed": 0,
-    "symbols_required": 2
+    "symbols_required": 2,
+    "details": {
+      "P": {
+        "confirmed": false,
+        "same_sign": true,
+        "direction": "LONG",
+        "medium_profitable_20d": true,
+        "slow_profitable_20d": true,
+        "medium_persistent": false
+      },
+      "SR": {
+        "confirmed": false,
+        "same_sign": true,
+        "direction": "SHORT",
+        "medium_profitable_20d": false,
+        "slow_profitable_20d": false,
+        "medium_persistent": false
+      }
+    },
+    "cross_symbol_same_sign_required": false
   },
   "external_observations": {
     "monsoon_cumulative": {
       "status": "OK",
       "freshness_status": "STALE",
-      "date": "2026-08-22",
-      "data_as_of": "2026-08-22",
+      "date": "2026-08-23",
+      "data_as_of": "2026-08-23",
       "published_at": null,
-      "downloaded_at": "2026-08-25 16:06:24.383183+00:00",
-      "staleness_days": 4,
-      "value": 0.0664857530529172,
-      "current_cumulative_mm": 444.9633333333333,
-      "climatology_cumulative_mm": 417.2238888888888,
-      "historical_percentile": 0.5666666666666667,
+      "downloaded_at": "2026-08-26 14:07:48.588824+00:00",
+      "staleness_days": 3,
+      "value": 0.0822211029967261,
+      "current_cumulative_mm": 458.3999999999999,
+      "climatology_cumulative_mm": 423.5733333333333,
+      "historical_percentile": 0.6,
       "valid_locations": 3,
       "required_locations": 2,
       "source": "https://power.larc.nasa.gov/api/temporal/daily/point",
@@ -37,7 +56,7 @@
       "freshness_status": "STALE",
       "date": "2026-06-04",
       "published_at": "2026-06-04",
-      "downloaded_at": "2026-08-25T16:06:24.383183+00:00",
+      "downloaded_at": "2026-08-26T14:30:08.022269+00:00",
       "staleness_days": 83,
       "value": [
         {
@@ -51,7 +70,7 @@
         {
           "event_type": "WITHDRAWAL_NORTHWEST_START",
           "official_date": null,
-          "normal_date": "2026-09-17",
+          "normal_date": null,
           "departure_days": null,
           "status": "NOT_ANNOUNCED",
           "source": "https://mausam.imd.gov.in/imd_latest/contents/press_release.php; https://mausam.imd.gov.in/responsive/monsooninformation.php; https://internal.imd.gov.in/pages/press_release_mausam.php"
@@ -69,7 +88,7 @@
         {
           "event_type": "WITHDRAWAL_NORTHWEST_START",
           "official_date": null,
-          "normal_date": "2026-09-17",
+          "normal_date": null,
           "departure_days": null,
           "status": "NOT_ANNOUNCED",
           "source": "https://mausam.imd.gov.in/imd_latest/contents/press_release.php; https://mausam.imd.gov.in/responsive/monsooninformation.php; https://internal.imd.gov.in/pages/press_release_mausam.php"
@@ -79,19 +98,19 @@
       "limitation": "仅采信IMD正式宣布；预测文字不作为事件，不单独触发CTA配置动作"
     },
     "ndvi": {
-      "status": "FETCH_ERROR",
-      "freshness_status": "FETCH_ERROR",
-      "date": null,
+      "status": "LOW_COVERAGE",
+      "freshness_status": "LOW_COVERAGE",
+      "date": "2026-08-05",
       "published_at": null,
-      "downloaded_at": "2026-08-25 02:12:18.944702+00:00",
-      "staleness_days": null,
+      "downloaded_at": "2026-08-26 14:14:41.852866+00:00",
+      "staleness_days": 21,
       "value": null,
       "same_period_difference": null,
       "z_score": null,
       "historical_percentile": null,
-      "valid_pixel_ratio": null,
+      "valid_pixel_ratio": 0.0,
       "region_count": 0,
-      "source": NaN,
+      "source": "https://doi.org/10.5067/MODIS/MYD13Q1.061 via Microsoft Planetary Computer modis-13Q1-061 point gateway",
       "limitation": "主产区代表点邻域植被代理，非糖蔗专属；不单独触发CTA配置动作"
     }
   },
@@ -178,15 +197,15 @@
         "monsoon_cumulative": {
           "status": "OK",
           "freshness_status": "STALE",
-          "date": "2026-08-22",
-          "data_as_of": "2026-08-22",
+          "date": "2026-08-23",
+          "data_as_of": "2026-08-23",
           "published_at": null,
-          "downloaded_at": "2026-08-25 16:06:24.383183+00:00",
-          "staleness_days": 4,
-          "value": 0.0664857530529172,
-          "current_cumulative_mm": 444.9633333333333,
-          "climatology_cumulative_mm": 417.2238888888888,
-          "historical_percentile": 0.5666666666666667,
+          "downloaded_at": "2026-08-26 14:07:48.588824+00:00",
+          "staleness_days": 3,
+          "value": 0.0822211029967261,
+          "current_cumulative_mm": 458.3999999999999,
+          "climatology_cumulative_mm": 423.5733333333333,
+          "historical_percentile": 0.6,
           "valid_locations": 3,
           "required_locations": 2,
           "source": "https://power.larc.nasa.gov/api/temporal/daily/point",
@@ -197,7 +216,7 @@
           "freshness_status": "STALE",
           "date": "2026-06-04",
           "published_at": "2026-06-04",
-          "downloaded_at": "2026-08-25T16:06:24.383183+00:00",
+          "downloaded_at": "2026-08-26T14:30:08.022269+00:00",
           "staleness_days": 83,
           "value": [
             {
@@ -211,7 +230,7 @@
             {
               "event_type": "WITHDRAWAL_NORTHWEST_START",
               "official_date": null,
-              "normal_date": "2026-09-17",
+              "normal_date": null,
               "departure_days": null,
               "status": "NOT_ANNOUNCED",
               "source": "https://mausam.imd.gov.in/imd_latest/contents/press_release.php; https://mausam.imd.gov.in/responsive/monsooninformation.php; https://internal.imd.gov.in/pages/press_release_mausam.php"
@@ -229,7 +248,7 @@
             {
               "event_type": "WITHDRAWAL_NORTHWEST_START",
               "official_date": null,
-              "normal_date": "2026-09-17",
+              "normal_date": null,
               "departure_days": null,
               "status": "NOT_ANNOUNCED",
               "source": "https://mausam.imd.gov.in/imd_latest/contents/press_release.php; https://mausam.imd.gov.in/responsive/monsooninformation.php; https://internal.imd.gov.in/pages/press_release_mausam.php"
@@ -239,19 +258,19 @@
           "limitation": "仅采信IMD正式宣布；预测文字不作为事件，不单独触发CTA配置动作"
         },
         "ndvi": {
-          "status": "FETCH_ERROR",
-          "freshness_status": "FETCH_ERROR",
-          "date": null,
+          "status": "LOW_COVERAGE",
+          "freshness_status": "LOW_COVERAGE",
+          "date": "2026-08-05",
           "published_at": null,
-          "downloaded_at": "2026-08-25 02:12:18.944702+00:00",
-          "staleness_days": null,
+          "downloaded_at": "2026-08-26 14:14:41.852866+00:00",
+          "staleness_days": 21,
           "value": null,
           "same_period_difference": null,
           "z_score": null,
           "historical_percentile": null,
-          "valid_pixel_ratio": null,
+          "valid_pixel_ratio": 0.0,
           "region_count": 0,
-          "source": NaN,
+          "source": "https://doi.org/10.5067/MODIS/MYD13Q1.061 via Microsoft Planetary Computer modis-13Q1-061 point gateway",
           "limitation": "主产区代表点邻域植被代理，非糖蔗专属；不单独触发CTA配置动作"
         }
       }
@@ -391,24 +410,28 @@
     },
     "market": {
       "P": {
-        "date": "2026-08-14",
-        "staleness_days": 12,
-        "contract": "P2701.DCE",
-        "close": 9838.0,
-        "realized_vol_20d": 0.19469028406219685,
+        "date": "2026-08-26",
+        "staleness_days": 0,
+        "contract": null,
+        "close": 10002.0,
+        "provider": "Wind EDB",
+        "indicator_code": "M0066353",
+        "indicator_name": "期货收盘价(活跃合约):棕榈油",
+        "source": "大连商品交易所",
+        "realized_vol_20d": 0.1400910642512015,
         "max_price_drawdown_60d": -0.06778619701003485,
         "quality": {
-          "rows": 2823,
+          "rows": 1612,
           "invalid_dates": 0,
           "duplicate_dates": 0,
           "missing_price": 0,
           "nonpositive_price": 0
         },
-        "price_return_5d": 0.051517742625053486,
-        "price_return_20d": 0.06564124783362213,
-        "price_return_60d": 0.03362050851019127,
-        "price_return_120d": 0.12024595764062851,
-        "price_return_250d": 0.11314777098891149,
+        "price_return_5d": 0.0008004802881729223,
+        "price_return_20d": 0.06574320724560478,
+        "price_return_60d": 0.028377544725478154,
+        "price_return_120d": 0.11108642523883572,
+        "price_return_250d": 0.06767719897523494,
         "term_structure": {
           "date": "2026-08-14",
           "status": "OK",
@@ -421,24 +444,28 @@
         }
       },
       "SR": {
-        "date": "2026-08-14",
-        "staleness_days": 12,
-        "contract": "SR2701.ZCE",
-        "close": 5309.0,
-        "realized_vol_20d": 0.1326697903865588,
-        "max_price_drawdown_60d": -0.07216305545354385,
+        "date": "2026-08-26",
+        "staleness_days": 0,
+        "contract": null,
+        "close": 5340.0,
+        "provider": "Wind EDB",
+        "indicator_code": "M0066364",
+        "indicator_name": "期货收盘价(活跃合约):白砂糖",
+        "source": "郑州商品交易所",
+        "realized_vol_20d": 0.13242318365830136,
+        "max_price_drawdown_60d": -0.07079808753218098,
         "quality": {
-          "rows": 2823,
+          "rows": 1612,
           "invalid_dates": 0,
           "duplicate_dates": 0,
           "missing_price": 0,
           "nonpositive_price": 0
         },
-        "price_return_5d": 0.030273627013390314,
-        "price_return_20d": 0.03610460577673691,
-        "price_return_60d": -0.010068991236248381,
-        "price_return_120d": 0.010468214693566846,
-        "price_return_250d": -0.071528506470794,
+        "price_return_5d": -0.007250418293363037,
+        "price_return_20d": 0.04296875,
+        "price_return_60d": -0.01711761457758143,
+        "price_return_120d": 0.006028636021100153,
+        "price_return_250d": -0.05637038345997525,
         "term_structure": {
           "date": "2026-08-14",
           "status": "OK",
@@ -538,16 +565,6 @@
   },
   "alerts": [
     {
-      "severity": "critical",
-      "code": "P_PRICE_STALE",
-      "message": "P 期货数据已过期"
-    },
-    {
-      "severity": "critical",
-      "code": "SR_PRICE_STALE",
-      "message": "SR 期货数据已过期"
-    },
-    {
       "severity": "warning",
       "code": "BRAZIL_CS_SUGAR_DRY",
       "message": "brazil_cs_sugar 近 30 日降水显著低于历史同期"
@@ -558,25 +575,11 @@
       "message": "基本面指标缺失或过期：UNICA 制糖比"
     }
   ],
-  "critical_alerts": 3,
+  "critical_alerts": 1,
   "warning_alerts": 1,
   "scope_gaps": [
     "境外 BMD FCPO、ICE Sugar No.11、ICE Coffee 长历史尚未接入；早期事件仅能用世界银行现货基准复盘，不能验证可交易期货与跨市场CTA",
     "管理人映射按项目目标延后至尽调数据可用后"
   ],
-  "changes": {
-    "previous_as_of": "2026-08-25",
-    "gate_changed": false,
-    "added_alerts": [],
-    "cleared_alerts": [],
-    "oni_delta": 0.0,
-    "P_close_change_pct": 0.0,
-    "P_fast_pnl_20d_delta": 0.0,
-    "P_medium_pnl_20d_delta": 0.0,
-    "P_slow_pnl_20d_delta": 0.0,
-    "SR_close_change_pct": 0.0,
-    "SR_fast_pnl_20d_delta": 0.0,
-    "SR_medium_pnl_20d_delta": 0.0,
-    "SR_slow_pnl_20d_delta": 0.0
-  }
+  "changes": null
 }

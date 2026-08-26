@@ -43,12 +43,33 @@ def _classify_value_type(row: pd.Series) -> str:
     return "forecast" if pd.notna(observed) and pd.notna(published) and observed > published else "actual"
 
 
+def _seasonal_reference(
+    metric_id: str,
+    ordered: pd.DataFrame,
+    latest_date: pd.Timestamp,
+) -> tuple[pd.Series, str, str]:
+    annual = metric_id.startswith("global_")
+    seasonal = metric_id.startswith("unica_")
+    if annual:
+        values = pd.to_numeric(ordered["value"], errors="coerce").dropna()
+        return values, "年度历史", "在全部历史年度有效值中计算当前值排名"
+    values = pd.to_numeric(
+        ordered.loc[ordered["date"].dt.month.eq(latest_date.month), "value"],
+        errors="coerce",
+    ).dropna()
+    bucket = (
+        f"同榨季月份（{latest_date.month}月）"
+        if seasonal else f"同月（{latest_date.month}月）"
+    )
+    return values, bucket, f"历史同月有效值中不高于当前值的比例（{bucket}）"
+
+
 def _detail_row(metric_id: str, ordered: pd.DataFrame) -> dict[str, object]:
     latest = ordered.iloc[-1]
     latest_date = pd.Timestamp(latest["date"])
-    seasonal = pd.to_numeric(
-        ordered.loc[ordered["date"].dt.month.eq(latest_date.month), "value"], errors="coerce"
-    ).dropna()
+    seasonal, seasonal_bucket, seasonal_method = _seasonal_reference(
+        metric_id, ordered, latest_date
+    )
     value = float(latest["value"])
     return {
         "metric_id": metric_id,
@@ -60,6 +81,9 @@ def _detail_row(metric_id: str, ordered: pd.DataFrame) -> dict[str, object]:
         "published_at": pd.to_datetime(latest.get("published_at"), errors="coerce"),
         "value_type": _classify_value_type(latest),
         "seasonal_percentile": seasonal.le(value).mean() if not seasonal.empty else pd.NA,
+        "seasonal_sample_size": int(len(seasonal)),
+        "seasonal_bucket": seasonal_bucket,
+        "seasonal_method": seasonal_method,
     }
 
 
@@ -97,6 +121,9 @@ def build_l2_details(frames: dict[str, pd.DataFrame]) -> pd.DataFrame:
             "published_at": pd.to_datetime(palm_latest.get("published_at"), errors="coerce"),
             "value_type": _classify_value_type(palm_latest),
             "seasonal_percentile": seasonal.le(value).mean() if not seasonal.empty else pd.NA,
+            "seasonal_sample_size": int(len(seasonal)),
+            "seasonal_bucket": "年度历史",
+            "seasonal_method": "在全部历史年度有效值中计算当前值排名",
         })
 
     crush = frames["unica_crush"].copy()
@@ -143,6 +170,9 @@ def build_l2_details(frames: dict[str, pd.DataFrame]) -> pd.DataFrame:
                 for suffix, date_column in (("crush", "date"), ("mix", "mix_date"))
             ) else "actual",
             "seasonal_percentile": proxy_season.le(proxy_value).mean(),
+            "seasonal_sample_size": int(len(proxy_season)),
+            "seasonal_bucket": f"同榨季月份（{pd.Timestamp(latest['date']).month}月）",
+            "seasonal_method": "历史同榨季月份有效值中不高于当前值的比例",
         })
 
     result = pd.DataFrame(details)
@@ -167,6 +197,37 @@ def _direction(category: str, percentile: float) -> str:
     if category == "demand":
         return "TIGHT" if percentile >= 2 / 3 else "LOOSE" if percentile <= 1 / 3 else "NEUTRAL"
     return "TIGHT" if percentile <= 1 / 3 else "LOOSE" if percentile >= 2 / 3 else "NEUTRAL"
+
+
+def _direction_reason(category: str, scoring: pd.DataFrame, direction: str) -> str:
+    if scoring["value_type"].ne("actual").any():
+        return "评分指标含预测值；预测只作背景，因此方向为证据不足"
+    if scoring["seasonal_percentile"].isna().any():
+        return "评分指标缺少可比历史分位，因此方向为证据不足"
+    phrases: list[str] = []
+    for item in scoring.itertuples(index=False):
+        percentile = float(item.seasonal_percentile)
+        if percentile >= 2 / 3:
+            position = "高于67%"
+            meaning = {
+                "supply": "供给高位意味着供应压力偏松",
+                "inventory": "库存高位意味着缓冲充足偏松",
+                "demand": "需求高位意味着需求支撑偏紧",
+            }[category]
+        elif percentile <= 1 / 3:
+            position = "低于33%"
+            meaning = {
+                "supply": "供给低位意味着供应压力偏紧",
+                "inventory": "库存低位意味着缓冲不足偏紧",
+                "demand": "需求低位意味着需求支撑偏松",
+            }[category]
+        else:
+            position = "位于33%-67%"
+            meaning = "处于历史中位区间，因此方向中性"
+        phrases.append(f"{item.label}季节分位{percentile:.0%}，{position}；{meaning}")
+    if direction == "NEUTRAL" and len(scoring) > 1:
+        phrases.append("评分指标方向不一致，因此合并结论为中性")
+    return "；".join(phrases)
 
 
 def build_l2_summary(
@@ -207,6 +268,7 @@ def build_l2_summary(
             "driver_value_types": ",".join(details.loc[driver, "value_type"] for driver in drivers),
             "seasonal_percentile": item["seasonal_percentile"],
             "direction": direction,
+            "direction_reason": _direction_reason(category, scoring, direction),
             "as_of": pd.Timestamp(as_of),
         })
     return pd.DataFrame(rows)
