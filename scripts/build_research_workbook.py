@@ -99,6 +99,18 @@ CLIMATE_GUIDE = {
         "meaning": "西印度洋减东印度洋海温差；不是ENSO本身，用于修正印度和印尼影响落区",
     },
 }
+FOCUS_HISTORY_EVENTS = {
+    "1982-1983": "1982/83",
+    "1997-1998": "1997/98",
+    "2014-2016": "2015/16",
+    "2023-2024": "2023/24",
+}
+REPORT_PALM_YIELD_NOTES = {
+    "1982-1983": "研报棕榈单产：印尼0.0%、马来0.0%",
+    "1997-1998": "研报棕榈单产：印尼-19.9%、马来-11.5%",
+    "2014-2016": "研报棕榈单产：印尼-10.4%、马来-13.0%",
+    "2023-2024": "研报棕榈单产：印尼-4.2%、马来+6.3%",
+}
 
 
 def load_csv_directory(path: Path) -> dict[str, pd.DataFrame]:
@@ -183,6 +195,21 @@ def create_formats(workbook: xlsxwriter.Workbook) -> dict[str, Any]:
         "note": workbook.add_format({
             "font_color": "#7F6000", "bg_color": "#FFF2CC", "text_wrap": True,
             "border": 1, "border_color": "#E6B800", "valign": "top",
+        }),
+        "summary_blue": workbook.add_format({
+            "bold": True, "font_color": "#17365D", "bg_color": "#D9EAF7",
+            "text_wrap": True, "valign": "vcenter", "align": "left",
+            "border": 1, "border_color": "#9EBDD7",
+        }),
+        "summary_gold": workbook.add_format({
+            "bold": True, "font_color": "#7F6000", "bg_color": "#FFF2CC",
+            "text_wrap": True, "valign": "vcenter", "align": "left",
+            "border": 1, "border_color": "#E6B800",
+        }),
+        "summary_gray": workbook.add_format({
+            "bold": True, "font_color": "#404040", "bg_color": "#E7E6E6",
+            "text_wrap": True, "valign": "vcenter", "align": "left",
+            "border": 1, "border_color": "#BFBFBF",
         }),
         "good": workbook.add_format({**border, "font_color": "#006100", "bg_color": "#C6EFCE", "bold": True}),
         "warn": workbook.add_format({**border, "font_color": "#9C6500", "bg_color": "#FFEB9C", "bold": True}),
@@ -357,165 +384,382 @@ def _lookup_metric(frame: pd.DataFrame, **conditions: object) -> pd.Series | Non
     return found.iloc[-1] if not found.empty else None
 
 
-def write_event_summary_table(
+def _focus_events(events: pd.DataFrame) -> pd.DataFrame:
+    if events.empty or "event_id" not in events:
+        return pd.DataFrame(columns=events.columns)
+    focus = events[events["event_id"].astype(str).isin(FOCUS_HISTORY_EVENTS)].copy()
+    order = {event_id: index for index, event_id in enumerate(FOCUS_HISTORY_EVENTS)}
+    focus["_focus_order"] = focus["event_id"].astype(str).map(order)
+    return focus.sort_values("_focus_order").drop(columns="_focus_order")
+
+
+def _event_price_returns(
+    price_paths: pd.DataFrame,
+    event_id: str,
+    commodity: str,
+) -> dict[int, float]:
+    if price_paths.empty:
+        return {}
+    group = price_paths[
+        price_paths.get("event_id", pd.Series(dtype=str)).astype(str).eq(event_id)
+        & price_paths.get("commodity", pd.Series(dtype=str)).eq(commodity)
+    ].copy()
+    if group.empty or "relative_month" not in group or "price_index" not in group:
+        return {}
+    group["relative_month"] = pd.to_numeric(group["relative_month"], errors="coerce")
+    group["price_index"] = pd.to_numeric(group["price_index"], errors="coerce")
+    indexed = group.dropna(subset=["relative_month", "price_index"]).drop_duplicates(
+        "relative_month", keep="last"
+    ).set_index("relative_month")["price_index"]
+    base = indexed.get(0)
+    if pd.isna(base) or float(base) == 0:
+        return {}
+    return {
+        horizon: float(indexed.get(horizon)) / float(base) - 1
+        for horizon in (6, 12, 18)
+        if pd.notna(indexed.get(horizon))
+    }
+
+
+def _cta_return(
+    cta_summary: pd.DataFrame,
+    event_id: str,
+    commodity: str,
+    speed: str,
+) -> float | None:
+    row = _lookup_metric(
+        cta_summary,
+        event_id=event_id,
+        commodity=commodity,
+        speed=speed,
+        horizon_months=12,
+    )
+    if row is None:
+        return None
+    value = pd.to_numeric(pd.Series([row.get("net_return")]), errors="coerce").iloc[0]
+    return float(value) if pd.notna(value) else None
+
+
+def _format_percent(value: float | None) -> str:
+    return "未覆盖" if value is None or pd.isna(value) else f"{value:+.1%}"
+
+
+def _format_price_returns(values: dict[int, float]) -> str:
+    return "｜".join(f"{horizon}M {_format_percent(values.get(horizon))}" for horizon in (6, 12, 18))
+
+
+def _format_cta_returns(cta_summary: pd.DataFrame, event_id: str, commodity: str) -> str:
+    medium = _cta_return(cta_summary, event_id, commodity, "medium")
+    slow = _cta_return(cta_summary, event_id, commodity, "slow")
+    return f"中速12M {_format_percent(medium)}\n慢速12M {_format_percent(slow)}"
+
+
+def _sugar_yield_note(evidence: pd.DataFrame, event_id: str) -> str:
+    values: list[str] = []
+    for country_cn, country in (("巴西", "Brazil"), ("印度", "India")):
+        row = _lookup_metric(
+            evidence,
+            event_id=event_id,
+            commodity="sugar",
+            metric_id=f"crop:{country}:Sugar cane:Yield:y1:yoy",
+        )
+        numeric = None if row is None else pd.to_numeric(
+            pd.Series([row.get("value")]), errors="coerce"
+        ).iloc[0]
+        if pd.notna(numeric):
+            values.append(f"{country_cn}{float(numeric):+.1%}")
+    return "项目FAOSTAT次年甘蔗单产：" + ("、".join(values) if values else "未覆盖")
+
+
+def _event_takeaway(
+    price_paths: pd.DataFrame,
+    cta_summary: pd.DataFrame,
+    event_id: str,
+) -> str:
+    palm = _event_price_returns(price_paths, event_id, "palm_oil")
+    sugar = _event_price_returns(price_paths, event_id, "sugar")
+    palm_cta = _cta_return(cta_summary, event_id, "palm_oil", "medium")
+    sugar_cta = _cta_return(cta_summary, event_id, "sugar", "medium")
+    palm_12, sugar_12 = palm.get(12), sugar.get(12)
+    if palm_cta is not None and sugar_cta is not None and palm_cta < 0 and sugar_cta < 0:
+        return "强厄尔尼诺也会出现两个品种CTA同时亏损；趋势路径比气候标签更重要。"
+    if palm_12 is not None and sugar_12 is not None and (palm_12 > 0) != (sugar_12 > 0):
+        return "同一次气候冲击下两个品种12M价格方向相反，不能由ENSO直接推出交易方向。"
+    if (
+        palm_12 is not None and sugar_12 is not None and palm_12 < 0 and sugar_12 < 0
+        and palm_cta is not None and sugar_cta is not None and palm_cta > 0 and sugar_cta > 0
+    ):
+        return "价格均下跌但中速CTA均盈利，CTA收益来自双向趋势而不是只做多。"
+    return "价格与CTA必须逐品种确认；气候只提供风险背景，不直接生成交易信号。"
+
+
+def _history_summary_texts(
+    focus: pd.DataFrame,
+    price_paths: pd.DataFrame,
+    cta_summary: pd.DataFrame,
+) -> tuple[str, str, str]:
+    event_ids = focus.get("event_id", pd.Series(dtype=str)).astype(str).tolist()
+
+    def price_stat(commodity: str, horizon: int) -> tuple[int, int]:
+        values = [
+            _event_price_returns(price_paths, event_id, commodity).get(horizon)
+            for event_id in event_ids
+        ]
+        valid = [value for value in values if value is not None and pd.notna(value)]
+        return sum(value > 0 for value in valid), len(valid)
+
+    palm_6, palm_6_n = price_stat("palm_oil", 6)
+    palm_18, palm_18_n = price_stat("palm_oil", 18)
+    sugar_stats = [price_stat("sugar", horizon) for horizon in (6, 12, 18)]
+    cta_values = [
+        _cta_return(cta_summary, event_id, commodity, "medium")
+        for event_id in event_ids
+        for commodity in ("palm_oil", "sugar")
+    ]
+    cta_valid = [value for value in cta_values if value is not None and pd.notna(value)]
+    cta_positive = sum(value > 0 for value in cta_valid)
+    palm_text = (
+        f"棕榈油｜T+6月仅{palm_6}/{palm_6_n}次上涨，T+18月{palm_18}/{palm_18_n}次上涨。"
+        "历史更像滞后传导，不是事件发生后立即做多。"
+    )
+    sugar_counts = "、".join(
+        f"{horizon}M {positive}/{sample}次上涨"
+        for horizon, (positive, sample) in zip((6, 12, 18), sugar_stats)
+    )
+    sugar_text = f"白糖｜{sugar_counts}。印度、巴西和库存条件会改变方向，未形成稳定上涨规律。"
+    cta_text = (
+        "CTA｜厄尔尼诺不是直接买入信号。"
+        f"12个月中速代理共{cta_positive}/{len(cta_valid)}个事件×品种观察盈利；"
+        "策略可做多也可做空，必须等待价格趋势形成。"
+    )
+    return palm_text, sugar_text, cta_text
+
+
+def _write_focus_event_table(
     sheet: Any,
-    events: pd.DataFrame,
+    focus: pd.DataFrame,
     evidence: pd.DataFrame,
     price_paths: pd.DataFrame,
-    cta_paths: pd.DataFrame,
     cta_summary: pd.DataFrame,
-    daily_cta_summary: pd.DataFrame,
     formats: dict[str, Any],
-) -> tuple[int, dict[tuple[str, str], int]]:
+    start_row: int,
+) -> tuple[int, dict[str, int]]:
     headers = [
-        "事件", "品种", "价格路径", "CTA代理净值", "状态", "起始", "峰值ONI",
-        "证据覆盖", "商品收益3M", "商品收益6M", "商品收益12M", "商品收益18M",
-        "CTA成本后收益 Medium12M", "CTA成本后收益 Slow12M", "现有日频代理",
+        "研报重点事件", "强度与事件窗", "棕榈油价格路径", "棕榈油收益",
+        "棕榈油CTA代理", "棕榈油CTA收益", "白糖价格路径", "白糖收益",
+        "白糖CTA代理", "白糖CTA收益", "基本面证据", "这次说明什么",
     ]
     rows: list[list[object]] = []
-    row_map: dict[tuple[str, str], int] = {}
-    for event in events.itertuples(index=False):
-        for commodity in ("palm_oil", "sugar"):
-            event_evidence = evidence[
-                evidence.get("event_id", pd.Series(dtype=str)).eq(event.event_id)
-                & evidence.get("commodity", pd.Series(dtype=str)).eq(commodity)
-            ]
-            price_group = price_paths[
-                price_paths.get("event_id", pd.Series(dtype=str)).eq(event.event_id)
-                & price_paths.get("commodity", pd.Series(dtype=str)).eq(commodity)
-            ]
-            price_index = price_group.drop_duplicates("relative_month").set_index("relative_month").get("price_index", pd.Series(dtype=float))
-            def price_return(horizon: int) -> object:
-                return price_index.get(horizon, pd.NA) / price_index.get(0, pd.NA) - 1 if 0 in price_index.index and horizon in price_index.index else pd.NA
-            cta_values = []
-            for speed in ("medium", "slow"):
-                row = _lookup_metric(
-                    cta_summary, event_id=event.event_id, commodity=commodity,
-                    speed=speed, horizon_months=12,
-                )
-                cta_values.append(row.get("net_return", pd.NA) if row is not None else pd.NA)
-            symbol = "P" if commodity == "palm_oil" else "SR"
-            daily = daily_cta_summary[
-                daily_cta_summary.get("event_id", pd.Series(dtype=str)).eq(event.event_id)
-                & daily_cta_summary.get("symbol", pd.Series(dtype=str)).eq(symbol)
-            ]
-            if daily.empty or daily.get("coverage_status", pd.Series(dtype=str)).eq("UNAVAILABLE").all():
-                daily_text = "未覆盖"
-            else:
-                daily_text = "; ".join(
-                    f"{item.speed}:{item.coverage_status}"
-                    + (f"/{float(item.net_return):.1%}" if pd.notna(item.net_return) else "")
-                    for item in daily.itertuples(index=False)
-                )
-            cta_group = cta_paths[
-                cta_paths.get("event_id", pd.Series(dtype=str)).eq(event.event_id)
-                & cta_paths.get("commodity", pd.Series(dtype=str)).eq(commodity)
-            ]
-            medium = cta_group[cta_group.get("speed", pd.Series(dtype=str)).eq("medium")]
-            slow = cta_group[cta_group.get("speed", pd.Series(dtype=str)).eq("slow")]
-            chosen_cta = medium if not medium.empty else slow
-            price_available = pd.to_numeric(price_group.get("price_index"), errors="coerce").notna().sum() >= 2
-            cta_available = pd.to_numeric(chosen_cta.get("event_equity"), errors="coerce").notna().sum() >= 2
-            row_map[(str(event.event_id), commodity)] = 5 + len(rows)
-            rows.append([
-                event.event_id, COMMODITY_CN[commodity], "" if price_available else "未覆盖",
-                "" if cta_available else "未覆盖", _status_text(event.status),
-                pd.to_datetime(event.start_date), event.peak_oni,
-                pd.to_numeric(event_evidence.get("coverage_pct"), errors="coerce").mean() if not event_evidence.empty else pd.NA,
-                *(price_return(horizon) for horizon in (3, 6, 12, 18)),
-                *cta_values, daily_text,
-            ])
-    _write_table(
-        sheet,
-        4,
-        headers,
-        rows,
-        formats,
-        column_formats={7: formats["percent"], 8: formats["percent"], 9: formats["percent"],
-                        10: formats["percent"], 11: formats["percent"], 12: formats["percent"],
-                        13: formats["percent"]},
-    )
-    return 5 + len(rows), row_map
+    row_map: dict[str, int] = {}
+    for event in focus.itertuples(index=False):
+        event_id = str(event.event_id)
+        palm_returns = _event_price_returns(price_paths, event_id, "palm_oil")
+        sugar_returns = _event_price_returns(price_paths, event_id, "sugar")
+        start = pd.to_datetime(event.start_date, errors="coerce")
+        end = pd.to_datetime(event.end_date, errors="coerce")
+        window = (
+            f"峰值ONI {float(event.peak_oni):.2f}\n持续{int(event.duration_seasons)}季\n"
+            f"NOAA窗 {start:%Y-%m}—{end:%Y-%m}"
+            if pd.notna(start) and pd.notna(end)
+            else f"峰值ONI {float(event.peak_oni):.2f}"
+        )
+        row_map[event_id] = start_row + 1 + len(rows)
+        rows.append([
+            FOCUS_HISTORY_EVENTS[event_id], window, "", _format_price_returns(palm_returns),
+            "", _format_cta_returns(cta_summary, event_id, "palm_oil"),
+            "", _format_price_returns(sugar_returns), "",
+            _format_cta_returns(cta_summary, event_id, "sugar"),
+            REPORT_PALM_YIELD_NOTES[event_id] + "\n" + _sugar_yield_note(evidence, event_id),
+            _event_takeaway(price_paths, cta_summary, event_id),
+        ])
+    _write_table(sheet, start_row, headers, rows, formats)
+    for offset in range(1, len(rows) + 1):
+        sheet.set_row(start_row + offset, 76)
+    return start_row + len(rows) + 1, row_map
 
 
-def write_event_path_data_and_sparklines(
+def _write_focus_sparklines(
     sheet: Any,
     price_paths: pd.DataFrame,
     cta_paths: pd.DataFrame,
-    row_map: dict[tuple[str, str], int],
-    formats: dict[str, Any],
+    row_map: dict[str, int],
 ) -> None:
     source_col = 40
     source_row = 0
-    for keys, group in price_paths.groupby(["event_id", "commodity"], sort=False):
-        normalized_keys = (str(keys[0]), str(keys[1]))
-        visible_row = row_map.get(normalized_keys)
-        if visible_row is None:
-            continue
-        ordered = group.sort_values("relative_month")
-        values = pd.to_numeric(ordered["price_index"], errors="coerce").dropna().tolist()
-        if len(values) >= 2:
-            sheet.write_row(source_row, source_col, values)
-            sheet.add_sparkline(visible_row, 2, {
-                "range": xlsxwriter.utility.xl_range(source_row, source_col, source_row, source_col + len(values) - 1),
-                "type": "line", "series_color": "#4472C4", "show_hidden": True,
-            })
-        cta_group = cta_paths[
-            cta_paths.get("event_id", pd.Series(dtype=str)).eq(keys[0])
-            & cta_paths.get("commodity", pd.Series(dtype=str)).eq(keys[1])
-        ]
-        medium = cta_group[cta_group.get("speed", pd.Series(dtype=str)).eq("medium")]
-        slow = cta_group[cta_group.get("speed", pd.Series(dtype=str)).eq("slow")]
-        chosen = medium if not medium.empty else slow
-        cta_values = pd.to_numeric(
-            chosen.sort_values("relative_month").get("event_equity"), errors="coerce"
-        ).dropna().tolist()
-        if len(cta_values) >= 2:
-            cta_source_row = source_row + 200
-            sheet.write_row(cta_source_row, source_col, cta_values)
-            sheet.add_sparkline(visible_row, 3, {
-                "range": xlsxwriter.utility.xl_range(
-                    cta_source_row, source_col, cta_source_row, source_col + len(cta_values) - 1
-                ),
-                "type": "line", "series_color": "#C55A11", "show_hidden": True,
-            })
-        source_row += 1
+    for event_id, visible_row in row_map.items():
+        for commodity, price_col, cta_col, price_color in (
+            ("palm_oil", 2, 4, "#4472C4"),
+            ("sugar", 6, 8, "#8064A2"),
+        ):
+            price_group = price_paths[
+                price_paths.get("event_id", pd.Series(dtype=str)).astype(str).eq(event_id)
+                & price_paths.get("commodity", pd.Series(dtype=str)).eq(commodity)
+            ].sort_values("relative_month")
+            price_values = pd.to_numeric(price_group.get("price_index"), errors="coerce").dropna().tolist()
+            if len(price_values) >= 2:
+                sheet.write_row(source_row, source_col, price_values)
+                sheet.add_sparkline(visible_row, price_col, {
+                    "range": xlsxwriter.utility.xl_range(
+                        source_row, source_col, source_row, source_col + len(price_values) - 1
+                    ),
+                    "type": "line", "series_color": price_color, "show_hidden": True,
+                })
+            else:
+                sheet.write(visible_row, price_col, "未覆盖")
+            source_row += 1
+            cta_group = cta_paths[
+                cta_paths.get("event_id", pd.Series(dtype=str)).astype(str).eq(event_id)
+                & cta_paths.get("commodity", pd.Series(dtype=str)).eq(commodity)
+                & cta_paths.get("speed", pd.Series(dtype=str)).eq("medium")
+            ].sort_values("relative_month")
+            cta_values = pd.to_numeric(cta_group.get("event_equity"), errors="coerce").dropna().tolist()
+            if len(cta_values) >= 2:
+                sheet.write_row(source_row, source_col, cta_values)
+                sheet.add_sparkline(visible_row, cta_col, {
+                    "range": xlsxwriter.utility.xl_range(
+                        source_row, source_col, source_row, source_col + len(cta_values) - 1
+                    ),
+                    "type": "line", "series_color": "#C55A11", "show_hidden": True,
+                })
+            else:
+                sheet.write(visible_row, cta_col, "未覆盖")
+            source_row += 1
     sheet.set_column(source_col, source_col + 80, None, None, {"hidden": True})
 
 
-def write_pattern_table(sheet: Any, patterns: pd.DataFrame, start_row: int, formats: dict[str, Any]) -> None:
-    headers = ["品种", "指标", "样本", "正/负/平", "同向占比", "中位数", "Q25", "Q75", "规律强度", "解释边界"]
-    rows = []
-    for item in patterns.itertuples(index=False):
-        rows.append([
-            COMMODITY_CN.get(item.commodity, item.commodity), METRIC_CN.get(item.metric_id, item.metric_id), item.sample_size,
-            f"{item.positive_count}/{item.negative_count}/{item.flat_count}",
-            item.same_direction_share, item.median, item.q25, item.q75,
-            item.pattern_strength, "仅描述已完成事件；不生成配置或置信度修正",
-        ])
-    _write_table(sheet, start_row, headers, rows, formats)
+def _history_pattern_rows(
+    focus: pd.DataFrame,
+    price_paths: pd.DataFrame,
+    cta_summary: pd.DataFrame,
+) -> list[list[object]]:
+    event_ids = focus.get("event_id", pd.Series(dtype=str)).astype(str).tolist()
+
+    def price_values(commodity: str, horizon: int) -> list[float]:
+        values = [
+            _event_price_returns(price_paths, event_id, commodity).get(horizon)
+            for event_id in event_ids
+        ]
+        return [float(value) for value in values if value is not None and pd.notna(value)]
+
+    palm_18 = price_values("palm_oil", 18)
+    sugar_12 = price_values("sugar", 12)
+    paired = [
+        (_event_price_returns(price_paths, event_id, "palm_oil").get(12),
+         _event_price_returns(price_paths, event_id, "sugar").get(12))
+        for event_id in event_ids
+    ]
+    valid_pairs = [(palm, sugar) for palm, sugar in paired if palm is not None and sugar is not None]
+    opposite = sum((palm > 0) != (sugar > 0) for palm, sugar in valid_pairs)
+    cta = [
+        _cta_return(cta_summary, event_id, commodity, "medium")
+        for event_id in event_ids
+        for commodity in ("palm_oil", "sugar")
+    ]
+    cta = [float(value) for value in cta if value is not None and pd.notna(value)]
+    return [
+        ["气候强度不能决定商品方向", f"12M价格方向相反 {opposite}/{len(valid_pairs)}次",
+         "较高", "必须分别看棕榈油与白糖基本面和价格", "不能把强厄尔尼诺直接翻译成统一多头"],
+        ["棕榈油存在延迟上涨特征", f"T+18月上涨 {sum(value > 0 for value in palm_18)}/{len(palm_18)}次",
+         "中等（仅4次）", "用于提示减产可能滞后进入价格", "不能据此在T0立即做多"],
+        ["白糖未形成稳定上涨规律", f"T+12月上涨 {sum(value > 0 for value in sugar_12)}/{len(sugar_12)}次",
+         "较高", "继续依赖印度/巴西、库存和糖醇比验证", "不能使用“厄尔尼诺=多糖”规则"],
+        ["CTA收益来自趋势而非气候方向", f"中速12M盈利 {sum(value > 0 for value in cta)}/{len(cta)}个观察",
+         "中等（代理回测）", "价格形成趋势后再看中慢速是否确认", "不能把气候事件当成CTA入场信号"],
+    ]
+
+
+def _write_history_pattern_table(
+    sheet: Any,
+    start_row: int,
+    headers: list[str],
+    rows: list[list[object]],
+    formats: dict[str, Any],
+) -> None:
+    column_groups = ((0, 1), (2, 3), (4, 5), (6, 8), (9, 11))
+    for value, (first_col, last_col) in zip(headers, column_groups):
+        sheet.merge_range(start_row, first_col, start_row, last_col, value, formats["header"])
+    for offset, values in enumerate(rows, start=1):
+        for value, (first_col, last_col) in zip(values, column_groups):
+            sheet.merge_range(
+                start_row + offset,
+                first_col,
+                start_row + offset,
+                last_col,
+                "" if pd.isna(value) else value,
+                formats["body"],
+            )
 
 
 def add_history_sheet(workbook: xlsxwriter.Workbook, frames: dict[str, object], formats: dict[str, Any]) -> None:
     sheet = workbook.add_worksheet(EXPECTED_SHEETS[2])
     sheet.set_tab_color("#8064A2")
-    write_title(sheet, "02｜历次厄尔尼诺复盘", "每行同时看气候证据、品种价格和CTA代理；迷你图左端为T-6月、中间为T0、右端为T+18月", formats)
-    end_row, row_map = write_event_summary_table(
-        sheet, frames["events"], frames["evidence"], frames["price_paths"], frames["cta_paths"],
-        frames["cta_summary"], frames["daily_cta_summary"], formats,
+    write_title(
+        sheet,
+        "02｜四次强厄尔尼诺复盘：历史到底说明什么",
+        "只展示研报重点事件；价格与中速CTA迷你图均为T-6月至T+18月，T0为NOAA事件起点",
+        formats,
     )
-    write_event_path_data_and_sparklines(
-        sheet, frames["price_paths"], frames["cta_paths"], row_map, formats
+    focus = _focus_events(frames["events"])
+    sheet.merge_range(3, 0, 3, 11, "领导先看结论（Executive Summary）", formats["section"])
+    palm_text, sugar_text, cta_text = _history_summary_texts(
+        focus, frames["price_paths"], frames["cta_summary"]
     )
-    pattern_row = max(end_row + 3, 11)
-    sheet.merge_range(pattern_row, 0, pattern_row, 11, "历史规律统计", formats["section"])
-    write_pattern_table(sheet, frames["patterns"], pattern_row + 1, formats)
-    sheet.set_column("A:B", 13)
-    sheet.set_column("C:D", 18)
-    sheet.set_column("E:G", 13)
-    sheet.set_column("H:N", 15)
-    sheet.set_column("O:O", 24)
-    sheet.freeze_panes(5, 0)
+    sheet.merge_range(4, 0, 7, 3, palm_text, formats["summary_blue"])
+    sheet.merge_range(4, 4, 7, 7, sugar_text, formats["summary_gold"])
+    sheet.merge_range(4, 8, 7, 11, cta_text, formats["summary_gray"])
+    sheet.set_row(4, 24)
+    sheet.set_row(5, 24)
+    sheet.set_row(6, 24)
+    sheet.set_row(7, 24)
+
+    sheet.merge_range(9, 0, 9, 11, "四次重点事件：气候 → 基本面 → 价格 → CTA", formats["section"])
+    end_row, row_map = _write_focus_event_table(
+        sheet, focus, frames["evidence"], frames["price_paths"], frames["cta_summary"], formats, 10
+    )
+    _write_focus_sparklines(sheet, frames["price_paths"], frames["cta_paths"], row_map)
+
+    pattern_row = max(end_row + 2, 17)
+    sheet.merge_range(pattern_row, 0, pattern_row, 11, "这四次真正告诉我们什么", formats["section"])
+    pattern_headers = ["规律", "四次样本结果", "判断强度", "可以怎么用", "不能怎么用"]
+    pattern_rows = _history_pattern_rows(focus, frames["price_paths"], frames["cta_summary"])
+    _write_history_pattern_table(sheet, pattern_row + 1, pattern_headers, pattern_rows, formats)
+    for row in range(pattern_row + 2, pattern_row + 2 + len(pattern_rows)):
+        sheet.set_row(row, 38)
+
+    boundary_row = pattern_row + 7
+    sheet.merge_range(boundary_row, 0, boundary_row, 11, "使用边界与下一步", formats["section"])
+    sheet.merge_range(
+        boundary_row + 1, 0, boundary_row + 1, 11,
+        "怎么用：历史复盘用于理解传导顺序——气候只是背景，基本面决定落地，价格确认方向，CTA等待趋势。",
+        formats["body"],
+    )
+    sheet.merge_range(
+        boundary_row + 2, 0, boundary_row + 2, 11,
+        "暂不做：本页不修改当前CTA配置、不做置信度修正；其余事件保留在底层数据，仅供审计和稳健性检查。",
+        formats["note"],
+    )
+    sheet.merge_range(
+        boundary_row + 3, 0, boundary_row + 3, 11,
+        "口径与来源：重点事件来自华泰期货《厄尔尼诺下全球农业产区天气及历史对比》（2026-05-11）；"
+        "事件窗与峰值采用NOAA ONI，价格采用World Bank月度现货代理，CTA为月度Medium/Slow成本后研究代理。"
+        "研报NINO3.4峰值与NOAA ONI因口径和数据版本不同，不应直接混用。",
+        formats["note"],
+    )
+    sheet.set_row(boundary_row + 3, 46)
+    sheet.set_column("A:A", 13)
+    sheet.set_column("B:B", 19)
+    sheet.set_column("C:C", 14)
+    sheet.set_column("D:D", 22)
+    sheet.set_column("E:E", 14)
+    sheet.set_column("F:F", 18)
+    sheet.set_column("G:G", 14)
+    sheet.set_column("H:H", 22)
+    sheet.set_column("I:I", 14)
+    sheet.set_column("J:J", 18)
+    sheet.set_column("K:K", 31)
+    sheet.set_column("L:L", 34)
+    sheet.freeze_panes(11, 0)
+    sheet.print_area(0, 0, boundary_row + 3, 11)
 
 
 def _last_record(frame: pd.DataFrame) -> pd.Series | None:

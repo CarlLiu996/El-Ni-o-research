@@ -107,37 +107,37 @@ def fixture_repo(tmp_path: Path, external_status: str = "PARTIAL") -> Path:
 
     history = repo / "data" / "processed" / "history"
     _write_csv(history / "enso_events.csv", [{
-        "event_id": "2009-2010", "start_date": "2009-07-01", "peak_date": "2009-12-01",
-        "end_date": "2010-04-01", "peak_oni": 1.6, "duration_seasons": 10,
+        "event_id": "2014-2016", "start_date": "2014-10-01", "peak_date": "2015-12-01",
+        "end_date": "2016-05-01", "peak_oni": 2.59, "duration_seasons": 20,
         "status": "COMPLETED", "source": "NOAA CPC",
     }])
     _write_csv(history / "event_evidence_panel.csv", [{
-        "event_id": "2009-2010", "status": "COMPLETED", "commodity": "sugar",
-        "layer": "L1", "metric_id": "oni_peak", "value": 1.6, "unit": "degC",
+        "event_id": "2014-2016", "status": "COMPLETED", "commodity": "sugar",
+        "layer": "L1", "metric_id": "oni_peak", "value": 2.59, "unit": "degC",
         "coverage_pct": 1.0, "source": "NOAA CPC", "limitation": "描述性",
     }])
     _write_csv(history / "event_price_paths.csv", [
-        {"event_id": "2009-2010", "status": "COMPLETED", "commodity": commodity,
-         "date": f"2010-{month:02d}-28", "relative_month": offset,
+        {"event_id": "2014-2016", "status": "COMPLETED", "commodity": commodity,
+         "date": f"2015-{month:02d}-28", "relative_month": offset,
          "price": 100 + offset, "price_index": 100 + offset, "source": "World Bank"}
         for commodity in ("palm_oil", "sugar") for month, offset in ((1, 0), (4, 3), (7, 6))
     ])
     _write_csv(history / "event_cta_paths.csv", [
-        {"event_id": "2009-2010", "status": "COMPLETED", "commodity": commodity,
-         "speed": speed, "date": f"2010-{month:02d}-28", "relative_month": offset,
+        {"event_id": "2014-2016", "status": "COMPLETED", "commodity": commodity,
+         "speed": speed, "date": f"2015-{month:02d}-28", "relative_month": offset,
          "net_return": 0.01, "event_equity": 1.0 + offset * 0.01, "position": 0.5}
         for commodity in ("palm_oil", "sugar") for speed in ("medium", "slow")
         for month, offset in ((1, 0), (4, 3), (7, 6))
     ])
     _write_csv(history / "event_cta_summary.csv", [
-        {"event_id": "2009-2010", "status": "COMPLETED", "commodity": commodity,
+        {"event_id": "2014-2016", "status": "COMPLETED", "commodity": commodity,
          "speed": speed, "horizon_months": horizon, "net_return": 0.05,
          "max_drawdown": -0.02, "turnover": 1.0}
         for commodity in ("palm_oil", "sugar") for speed in ("medium", "slow")
         for horizon in (3, 6, 12, 18)
     ])
     _write_csv(history / "existing_daily_cta_summary.csv", [{
-        "event_id": "2009-2010", "status": "COMPLETED", "symbol": "SR", "speed": "fast",
+        "event_id": "2014-2016", "status": "COMPLETED", "symbol": "SR", "speed": "fast",
         "coverage_status": "UNAVAILABLE", "net_return": "", "max_drawdown": "",
     }])
     _write_csv(history / "historical_patterns.csv", [{
@@ -267,8 +267,33 @@ def test_history_sheet_has_price_and_cta_sparklines_and_explicit_headers(tmp_pat
     text = sheet_text(workbook["02_H_历次厄尔尼诺复盘"])
 
     assert "sparklineGroup" in worksheet_xml
-    for label in ("价格路径", "CTA代理净值", "商品收益", "CTA成本后收益"):
+    for label in ("棕榈油价格路径", "棕榈油CTA代理", "白糖价格路径", "白糖CTA代理"):
         assert label in text
+
+
+def test_history_sheet_is_answer_first_and_limits_display_to_report_focus_events(tmp_path) -> None:
+    repo = fixture_repo(tmp_path)
+    events_path = repo / "data" / "processed" / "history" / "enso_events.csv"
+    events = pd.read_csv(events_path)
+    non_focus = pd.DataFrame([{
+        "event_id": "2009-2010", "start_date": "2009-07-01",
+        "peak_date": "2009-12-01", "end_date": "2010-04-01",
+        "peak_oni": 1.5, "duration_seasons": 9, "status": "COMPLETED",
+        "source": "NOAA CPC",
+    }])
+    pd.concat([non_focus, events], ignore_index=True).to_csv(events_path, index=False)
+
+    path = build_research_workbook(repo, tmp_path / "out", "2026-08-25")
+    workbook = openpyxl.load_workbook(path, data_only=False, read_only=False)
+    sheet = workbook["02_H_历次厄尔尼诺复盘"]
+    text = sheet_text(sheet)
+
+    assert "领导先看结论（Executive Summary）" in text
+    assert "厄尔尼诺不是直接买入信号" in text
+    assert "2015/16" in text
+    assert "2009-2010" not in text
+    assert "其余事件保留在底层数据" in text
+    assert "不修改当前CTA配置" in text
 
 
 def test_leadership_workbook_explains_climate_metrics_and_withholds_incomplete_conclusion(tmp_path) -> None:
@@ -306,7 +331,7 @@ def test_leadership_sparklines_are_visible_near_primary_values(tmp_path) -> None
     l2_targets = _sparkline_targets(path, 5)
     market_targets = _sparkline_targets(path, 6)
     cta_targets = _sparkline_targets(path, 7)
-    assert history_targets and {target[0] for target in history_targets} <= {"C", "D"}
+    assert history_targets and {target[0] for target in history_targets} <= {"C", "E", "G", "I"}
     assert climate_targets and {target[0] for target in climate_targets} <= {"H"}
     assert l2_targets and {target[0] for target in l2_targets} <= {"E"}
     assert market_targets and {target[0] for target in market_targets} <= {"D"}
@@ -384,11 +409,10 @@ def test_history_sparklines_stay_on_their_event_rows_when_earlier_event_has_no_p
     history = workbook["02_H_历次厄尔尼诺复盘"]
     targets = set(_sparkline_targets(path, 3))
 
-    assert history["C6"].value == "未覆盖"
-    assert history["D6"].value == "未覆盖"
-    assert history["C7"].value == "未覆盖"
-    assert history["D7"].value == "未覆盖"
-    assert {"C8", "D8", "C9", "D9"} <= targets
+    text = sheet_text(history)
+    assert "1951-1952" not in text
+    assert "2015/16" in text
+    assert {target[0] for target in targets} <= {"C", "E", "G", "I"}
 
 
 def test_fetch_error_is_rendered_with_reason_action_and_impact(tmp_path) -> None:
