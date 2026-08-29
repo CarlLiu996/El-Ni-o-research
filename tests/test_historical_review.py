@@ -12,6 +12,7 @@ from elnino_cta.historical_review import (
     build_external_climate_evidence,
     build_index_evidence,
     build_monthly_cta_proxy,
+    build_current_weather_monitor,
     build_weather_evidence,
     build_yield_evidence,
     identify_enso_events,
@@ -62,6 +63,38 @@ def events() -> pd.DataFrame:
         "status": ["COMPLETED"],
         "source": ["NOAA CPC"],
     })
+
+
+def test_current_weather_monitor_aggregates_regions_to_six_independent_chains() -> None:
+    dates = pd.date_range("1991-08-01", periods=30, freq="D").append(
+        pd.date_range("2026-08-01", periods=29, freq="D")
+    )
+    rows = []
+    regions = {
+        "malaysia_palm": "palm_oil", "india_sugar": "sugar",
+        "us_cotton": "cotton", "us_corn": "corn",
+        "us_soybean": "soybean", "canada_rapeseed": "rapeseed",
+    }
+    for region in regions:
+        for date in dates:
+            rows.append({
+                "date": date, "region": region, "location": region,
+                "precip_mm": 2.0 if date.year == 1991 else 1.0,
+                "root_zone_soil_wetness": 0.5 if date.year == 1991 else 0.4,
+                "source": "NASA POWER",
+            })
+    weather = pd.DataFrame(rows)
+
+    snapshot, path = build_current_weather_monitor(
+        weather, as_of="2026-08-29", climatology_start=1991, climatology_end=1991
+    )
+
+    assert set(snapshot["chain_id"]) == set(regions.values())
+    assert snapshot["precip_anomaly_pct"].round(2).eq(-0.5).all()
+    assert snapshot["state"].eq("DRY").all()
+    assert snapshot["coverage_pct"].eq(1.0).all()
+    assert not path.empty
+    assert {"date", "chain_id", "precip_anomaly_pct"} <= set(path.columns)
 
 
 def test_index_evidence_uses_fixed_t0_t12_window_for_soi_and_dmi() -> None:
@@ -115,6 +148,33 @@ def test_weather_evidence_keeps_region_and_event_window_grain() -> None:
     assert evidence["observation_date"].max() <= pd.Timestamp("2010-07-01")
 
 
+def test_weather_evidence_maps_representative_regions_to_six_chains() -> None:
+    region_chain = {
+        "malaysia_palm": "palm_oil",
+        "india_sugar": "sugar",
+        "india_cotton": "cotton",
+        "us_corn": "corn",
+        "brazil_soybean": "soybean",
+        "canada_rapeseed": "rapeseed",
+    }
+    rows = [
+        {
+            "date": pd.Timestamp(year, month, 1),
+            "region": region,
+            "precip_mm": 2.0 if year < 2009 else 1.0,
+            "root_zone_soil_wetness": 0.6 if year < 2009 else 0.5,
+            "source": "NASA POWER",
+        }
+        for year in range(1991, 2021)
+        for month in range(1, 13)
+        for region in region_chain
+    ]
+
+    evidence = build_weather_evidence(events(), pd.DataFrame(rows))
+
+    assert set(evidence["commodity"]) == set(region_chain.values())
+
+
 def faostat_with_future_outlier() -> pd.DataFrame:
     values = {2004: 100, 2005: 100, 2006: 100, 2007: 100, 2008: 100, 2009: 110, 2010: 120, 2011: 9999}
     return pd.DataFrame([{
@@ -136,6 +196,37 @@ def test_yield_evidence_uses_only_prior_five_years() -> None:
     assert row["baseline_end_year"] == 2008
     assert row["baseline_years"] == 5
     assert row["deviation_vs_prior5_median"] == pytest.approx(0.10)
+
+
+def test_yield_evidence_maps_expanded_crops_to_six_chains() -> None:
+    item_area = {
+        "Oil palm fruit": "Indonesia",
+        "Sugar cane": "India",
+        "Seed cotton, unginned": "India",
+        "Maize (corn)": "United States of America",
+        "Soya beans": "Brazil",
+        "Rape or colza seed": "Canada",
+    }
+    crops = pd.DataFrame([
+        {
+            "area": area,
+            "item": item,
+            "element": "Yield",
+            "year": year,
+            "unit": "kg/ha",
+            "value": 100.0 + year - 2004,
+            "flag": "A",
+            "source": "FAOSTAT",
+        }
+        for item, area in item_area.items()
+        for year in range(2004, 2011)
+    ])
+
+    evidence = build_yield_evidence(events(), crops)
+
+    assert set(evidence["commodity"]) == {
+        "palm_oil", "sugar", "cotton", "corn", "soybean", "rapeseed"
+    }
 
 
 def test_external_climate_evidence_uses_only_event_window() -> None:
@@ -182,6 +273,9 @@ def test_event_evidence_panel_has_unique_long_grain() -> None:
 
     assert not panel.duplicated(["event_id", "commodity", "metric_id"]).any()
     assert set(panel["layer"]) == {"L1", "L2"}
+    assert set(panel.loc[panel["metric_id"].eq("oni_peak"), "commodity"]) == {
+        "palm_oil", "sugar", "cotton", "corn", "soybean", "rapeseed"
+    }
 
 
 def test_refresh_historical_climate_writes_index_and_weather_files(tmp_path, monkeypatch) -> None:

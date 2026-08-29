@@ -1,0 +1,7 @@
+﻿chain_id,chain_name_cn,valid_events,yield_negative_share,price_positive_share,cta_medium_positive_share,conversion_valid_events,conversion_success_count,conversion_success_share,cta_valid_events,cta_tendency,evidence_strength
+palm_oil,棕榈油,4,0.25,0.25,0.75,4,0,0.0,4,CTA_TENDENCY,NO_STABLE_CONVERSION
+sugar,白糖,4,0.25,0.25,0.75,4,0,0.0,4,CTA_TENDENCY,NO_STABLE_CONVERSION
+cotton,棉花,4,0.5,0.25,0.75,4,0,0.0,4,CTA_TENDENCY,NO_STABLE_CONVERSION
+corn,玉米,4,0.25,0.25,0.5,4,0,0.0,4,MIXED_CTA,NO_STABLE_CONVERSION
+soybean,大豆产业链,4,0.5,0.5,0.25,4,0,0.0,4,MIXED_CTA,NO_STABLE_CONVERSION
+rapeseed,菜籽产业链,4,0.25,0.5,0.5,2,0,0.0,2,INSUFFICIENT_CTA_DATA,INSUFFICIENT_EVIDENCE

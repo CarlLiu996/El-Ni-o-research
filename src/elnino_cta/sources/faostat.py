@@ -18,12 +18,33 @@ FAOSTAT_SQL_URL = (
     "resource/49452189-c6eb-4061-b718-964ec4474980/download/"
     "crop-production-yield-harvest-qcl-query.sql"
 )
-ITEM_CODES = {"Sugar cane": 156, "Oil palm fruit": 254}
+ITEM_CODES = {
+    "Maize (corn)": 56,
+    "Sugar cane": 156,
+    "Soya beans": 236,
+    "Oil palm fruit": 254,
+    "Rape or colza seed": 270,
+    "Seed cotton, unginned": 328,
+}
 TARGETS = {
     ("India", "Sugar cane"),
     ("Brazil", "Sugar cane"),
     ("Indonesia", "Oil palm fruit"),
     ("Malaysia", "Oil palm fruit"),
+    ("United States of America", "Seed cotton, unginned"),
+    ("India", "Seed cotton, unginned"),
+    ("Pakistan", "Seed cotton, unginned"),
+    ("China, mainland", "Seed cotton, unginned"),
+    ("United States of America", "Maize (corn)"),
+    ("China, mainland", "Maize (corn)"),
+    ("Brazil", "Maize (corn)"),
+    ("Argentina", "Maize (corn)"),
+    ("United States of America", "Soya beans"),
+    ("Brazil", "Soya beans"),
+    ("Argentina", "Soya beans"),
+    ("Canada", "Rape or colza seed"),
+    ("Australia", "Rape or colza seed"),
+    ("China, mainland", "Rape or colza seed"),
 }
 ELEMENTS = {"Production", "Area harvested", "Yield"}
 

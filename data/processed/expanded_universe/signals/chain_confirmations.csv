@@ -1,0 +1,7 @@
+chain_id,chain_name_cn,symbols,contract_count,available_contracts,status
+palm_oil,棕榈油,P,1,1,LONG_CONFIRMED
+sugar,白糖,SR,1,1,SPEED_DIVERGENCE
+cotton,棉花,CF,1,1,LONG_CONFIRMED
+corn,玉米,C,1,1,SPEED_DIVERGENCE
+soybean,大豆产业链,M+Y,2,2,LONG_CONFIRMED
+rapeseed,菜籽产业链,OI+RM,2,2,SPEED_DIVERGENCE

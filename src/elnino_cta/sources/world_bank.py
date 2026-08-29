@@ -15,10 +15,22 @@ WORLD_BANK_MONTHLY_URL = (
 COMMODITY_ALIASES = {
     "palm_oil": {"Palm oil"},
     "sugar": {"Sugar, world"},
+    "cotton": {"Cotton, A Index"},
+    "corn": {"Maize"},
+    "soybeans": {"Soybeans"},
+    "soybean_meal": {"Soybean meal"},
+    "soybean_oil": {"Soybean oil"},
+    "rapeseed_oil": {"Rapeseed oil"},
 }
 COMMODITY_UNITS = {
     "palm_oil": "USD/mt",
     "sugar": "USD/kg",
+    "cotton": "USD/kg",
+    "corn": "USD/mt",
+    "soybeans": "USD/mt",
+    "soybean_meal": "USD/mt",
+    "soybean_oil": "USD/mt",
+    "rapeseed_oil": "USD/mt",
 }
 WORLD_BANK_COLUMNS = ["date", "commodity", "price", "unit", "source", "downloaded_at"]
 

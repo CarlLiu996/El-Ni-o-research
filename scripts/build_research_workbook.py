@@ -11,6 +11,7 @@ import pandas as pd
 import xlsxwriter
 
 from elnino_cta.fundamental_summary import build_l2_details, build_l2_summary
+from elnino_cta.expanded_review import PRICE_CHAIN_MAP
 from elnino_cta.signals import build_cta_proxy
 
 
@@ -25,8 +26,23 @@ EXPECTED_SHEETS = [
     "07_L5数据审计",
 ]
 CATEGORY_CN = {"supply": "供给", "demand": "需求", "inventory": "库存"}
-COMMODITY_CN = {"palm_oil": "棕榈油", "sugar": "白糖"}
-SYMBOL_CN = {"P": "棕榈油 P", "SR": "白糖 SR"}
+COMMODITY_CN = {
+    "palm_oil": "棕榈油", "sugar": "白糖", "cotton": "棉花", "corn": "玉米",
+    "soybean": "大豆产业链", "rapeseed": "菜籽产业链",
+}
+SYMBOL_CN = {
+    "P": "棕榈油 P", "SR": "白糖 SR", "CF": "棉花 CF", "C": "玉米 C",
+    "M": "豆粕 M", "Y": "豆油 Y", "OI": "菜籽油 OI", "RM": "菜籽粕 RM",
+}
+UNIVERSE_SYMBOLS = ("P", "SR", "CF", "C", "M", "Y", "OI", "RM")
+CHAIN_STATUS_CN = {
+    "LONG_CONFIRMED": "中慢速同向做多",
+    "SHORT_CONFIRMED": "中慢速同向做空",
+    "SPEED_DIVERGENCE": "中慢速方向分歧",
+    "CHAIN_DIVERGENCE": "链内合约方向分歧",
+    "UNCONFIRMED": "方向未确认",
+    "INCOMPLETE": "数据不完整",
+}
 STATUS_CN = {
     "OK": "可用（OK）",
     "FRESH": "最新（FRESH）",
@@ -137,6 +153,20 @@ def load_workbook_inputs(repo_dir: Path) -> dict[str, object]:
     market = load_csv_directory(processed / "market")
     futures = load_csv_directory(processed / "futures")
     signals = load_csv_directory(processed / "signals")
+    expanded_history = load_csv_directory(processed / "expanded_universe" / "history")
+    expanded_baselines = load_csv_directory(processed / "expanded_universe")
+    expanded_futures = load_csv_directory(processed / "expanded_universe" / "futures")
+    expanded_signals = load_csv_directory(processed / "expanded_universe" / "signals")
+    expanded_climate_dir = processed / "expanded_universe" / "climate"
+    current_weather_snapshot = (
+        pd.read_csv(expanded_climate_dir / "current_weather_snapshot.csv")
+        if (expanded_climate_dir / "current_weather_snapshot.csv").exists() else pd.DataFrame()
+    )
+    current_weather_path = (
+        pd.read_csv(expanded_climate_dir / "current_weather_30d_path.csv")
+        if (expanded_climate_dir / "current_weather_30d_path.csv").exists() else pd.DataFrame()
+    )
+    expanded_research = load_csv_directory(repo_dir / "research" / "expanded_universe")
     monitor = _read_json(repo_dir / "reports" / "monitoring" / "latest.json")
     manifest = _read_json(processed / "history" / "manifest.json", {"as_of": monitor.get("as_of")})
     external_manifest = _read_json(
@@ -165,6 +195,15 @@ def load_workbook_inputs(repo_dir: Path) -> dict[str, object]:
         "patterns": history.get("historical_patterns", empty),
         "l2_details": build_l2_details(fundamentals),
         "l2_summary": build_l2_summary(fundamentals, manifest.get("as_of") or monitor.get("as_of")),
+        "expanded_matrix": expanded_research.get("focal_event_matrix", empty),
+        "expanded_patterns": expanded_research.get("focal_pattern_summary", empty),
+        "expanded_price_paths": expanded_history.get("event_price_paths", empty),
+        "expanded_cta_paths": expanded_history.get("event_cta_paths", empty),
+        "expanded_baselines": expanded_baselines,
+        "expanded_futures": expanded_futures,
+        "expanded_signals": expanded_signals,
+        "current_weather_snapshot": current_weather_snapshot,
+        "current_weather_path": current_weather_path,
     }
 
 
@@ -328,6 +367,12 @@ def add_current_conclusion_sheet(
     for offset, key in enumerate(questions, start=1):
         raw = gate.get(key, "UNKNOWN")
         sheet.write(6 + offset, 1, _status_text(raw), _status_format(raw, formats))
+    if frames.get("expanded_patterns") is not None and not frames.get("expanded_patterns", pd.DataFrame()).empty:
+        sheet.merge_range(
+            11, 0, 11, 11,
+            "扩品种复盘边界：新增棉花、玉米、大豆链和菜籽链的历史规律与探索性最新行情只用于研究观察；在正式连续合约、实时需求/库存和人工确认补齐前，不自动修改本页CTA配置结论。",
+            formats["note"],
+        )
     alerts: list[str] = []
     for label, value in (
         ("关键告警", monitor.get("critical_alerts", [])),
@@ -349,6 +394,7 @@ def add_current_conclusion_sheet(
     sheet.set_column("C:D", 34)
     sheet.set_column("E:L", 12)
     sheet.freeze_panes(6, 0)
+    sheet.print_area(0, 0, max(13, 12 + min(len(alerts), 8)), 11)
 
 
 def add_logic_sheet(workbook: xlsxwriter.Workbook, frames: dict[str, object], formats: dict[str, Any]) -> None:
@@ -356,13 +402,14 @@ def add_logic_sheet(workbook: xlsxwriter.Workbook, frames: dict[str, object], fo
     sheet.set_tab_color("#4472C4")
     write_title(sheet, "01｜总逻辑：从天气故事到可配置策略", "先看气候，再看供需库存，再看价格和趋势；任一关键层缺证据，就不升级配置", formats)
     headers = ["序号", "层级", "核心问题", "关键指标", "通过后才看", "否决边界"]
+    expanded_mode = bool(frames.get("expanded_futures") or frames.get("expanded_baselines"))
     rows = [
         [1, "L1 气候天气", "厄尔尼诺是否真实且影响主产区", "海温、大气、印度洋修正、产区降雨/土壤/长势", "L2", "气候异常不等于一定减产"],
-        [2, "L2 供给基本面", "天气是否已经转化成减产、需求或库存变化", "棕榈油/白糖各看供给、需求、库存", "L3", "预测值只作背景，实际数据不足就不下结论"],
-        [3, "L3 市场定价", "市场是否已经开始为紧缺或宽松定价", "P/SR价格趋势、前后月结构；现货基差缺失会披露", "L4", "行情过期或换月不透明则不确认"],
+        [2, "L2 供给基本面", "天气是否已经转化成减产、需求或库存变化", "六条作物链分别看供给、需求、库存" if expanded_mode else "棕榈油/白糖各看供给、需求、库存", "L3", "预测值只作背景，实际数据不足就不下结论"],
+        [3, "L3 市场定价", "市场是否已经开始为紧缺或宽松定价", "八合约价格趋势；正式与探索性口径分列" if expanded_mode else "P/SR价格趋势、前后月结构；现货基差缺失会披露", "L4", "行情过期或换月不透明则不确认"],
         [4, "L4 CTA环境", "规则化趋势策略是否能抓住这段行情", "Fast/Medium/Slow；统一20%目标波动", "L5", "次日执行、成本后，并要求中慢速与跨品种确认"],
         [5, "L5 数据审计", "来源、时效、覆盖与方法是否可信", "发布日期、缺失、哈希、限制", "配置结论", "关键数据不完整则保持观察"],
-        ["H", "历史复盘旁路", "历次事件中气候、基本面、价格、CTA如何共同演化", "统一T0窗口、价格收益、Medium/Slow CTA代理", "研究理解", "仅描述，不进入配置或置信度修正"],
+        ["H", "历史复盘旁路", "历次事件中气候、基本面、价格、CTA如何共同演化", "四次重点事件×六作物链；统一T0、价格、Medium/Slow CTA" if expanded_mode else "统一T0窗口、价格收益、Medium/Slow CTA代理", "研究理解", "仅描述，不进入配置或置信度修正"],
     ]
     _write_table(sheet, 4, headers, rows, formats)
     sheet.merge_range(13, 0, 14, 11, "主链：L1 → L2 → L3 → L4 → L5 → 当前配置结论\n旁路：H 历史复盘 → 先总结规律，待人工确认后再讨论是否设计置信度修正。", formats["note"])
@@ -370,6 +417,7 @@ def add_logic_sheet(workbook: xlsxwriter.Workbook, frames: dict[str, object], fo
     sheet.set_column("B:B", 20)
     sheet.set_column("C:F", 32)
     sheet.freeze_panes(5, 0)
+    sheet.print_area(0, 0, 14, 11)
 
 
 def _lookup_metric(frame: pd.DataFrame, **conditions: object) -> pd.Series | None:
@@ -690,7 +738,176 @@ def _write_history_pattern_table(
             )
 
 
+def _expanded_chain_path(
+    paths: pd.DataFrame,
+    event_id: str,
+    chain_id: str,
+    value_column: str,
+    speed: str | None = None,
+) -> list[float]:
+    if paths.empty:
+        return []
+    current = paths[
+        paths.get("event_id", pd.Series(dtype=str)).astype(str).eq(event_id)
+    ].copy()
+    if speed is not None and "speed" in current:
+        current = current[current["speed"].astype(str).eq(speed)]
+    current["chain_id"] = current.get("commodity", pd.Series(dtype=str)).map(PRICE_CHAIN_MAP)
+    current = current[current["chain_id"].eq(chain_id)]
+    if current.empty or value_column not in current or "relative_month" not in current:
+        return []
+    current[value_column] = pd.to_numeric(current[value_column], errors="coerce")
+    current["relative_month"] = pd.to_numeric(current["relative_month"], errors="coerce")
+    return current.groupby("relative_month")[value_column].mean().dropna().sort_index().tolist()
+
+
+def _expanded_row_takeaway(row: pd.Series) -> str:
+    weather = _safe_float(row.get("weather_precip_anomaly"))
+    crop_yield = _safe_float(row.get("yield_deviation"))
+    price = _safe_float(row.get("price_6m"))
+    cta = _safe_float(row.get("cta_medium_6m"))
+    full_chain = (
+        weather is not None and weather < 0
+        and crop_yield is not None and crop_yield < 0
+        and price is not None and price > 0
+        and cta is not None and cta > 0
+    )
+    if full_chain:
+        return "本次完整传导成立；仍需跨事件复核，不能单次外推。"
+    if cta is not None and cta > 0 and price is not None and price < 0:
+        return "CTA捕捉到下跌趋势；收益来自双向跟随，不是气候做多。"
+    if cta is not None and cta > 0:
+        return "CTA本次获利，但前端天气与单产没有形成完整一致链路。"
+    return "完整传导未成立，且CTA未稳定捕捉；作为反例保留。"
+
+
+def add_expanded_history_sheet(
+    workbook: xlsxwriter.Workbook,
+    frames: dict[str, object],
+    formats: dict[str, Any],
+) -> None:
+    sheet = workbook.add_worksheet(EXPECTED_SHEETS[2])
+    sheet.set_tab_color("#8064A2")
+    write_title(
+        sheet,
+        "02｜四次重点厄尔尼诺：六条中国可交易作物链复盘",
+        "每行同时看天气、单产、国际价格代理和CTA；大豆、菜籽链内先汇总，不重复增加证据",
+        formats,
+    )
+    matrix = frames["expanded_matrix"].copy()
+    patterns = frames["expanded_patterns"].copy()
+    stable = patterns[patterns.get("evidence_strength", pd.Series(dtype=str)).eq("STABLE_CONVERSION")]
+    cta_tendency = patterns[patterns.get("cta_tendency", pd.Series(dtype=str)).eq("CTA_TENDENCY")]
+    cta_names = "、".join(cta_tendency.get("chain_name_cn", pd.Series(dtype=str)).astype(str)) or "无"
+    sheet.merge_range(3, 0, 3, 11, "领导先看三个结论", formats["section"])
+    sheet.merge_range(
+        4, 0, 6, 3,
+        f"完整传导｜{len(stable)}/6条作物链达到稳定门槛。当前结论：历史不支持把厄尔尼诺直接翻译成商品做多。",
+        formats["summary_blue"],
+    )
+    sheet.merge_range(
+        4, 4, 6, 7,
+        f"CTA趋势机会倾向｜{cta_names}的Medium月频代理在四次重点事件中至少3次盈利。它只说明较常出现可跟随趋势，不决定多空。",
+        formats["summary_gold"],
+    )
+    sheet.merge_range(
+        4, 8, 6, 11,
+        "配置边界｜这是国际现货价格代理的小样本复盘；新增结果不自动修改当前配置，需等待国内期货与实时基本面确认。",
+        formats["summary_gray"],
+    )
+
+    headers = [
+        "重点事件", "作物链", "峰值ONI", "产区降雨异常", "单产偏离前5年",
+        "价格路径", "6M价格", "12M价格", "CTA净值路径", "Medium 6M", "Slow 6M", "领导怎么读",
+    ]
+    rows: list[list[object]] = []
+    visible_rows: list[tuple[int, str, str]] = []
+    for _, item in matrix.iterrows():
+        event_id = str(item.get("event_id"))
+        chain_id = str(item.get("chain_id"))
+        visible_rows.append((8 + len(rows), event_id, chain_id))
+        rows.append([
+            FOCUS_HISTORY_EVENTS.get(event_id, event_id),
+            item.get("chain_name_cn", COMMODITY_CN.get(chain_id, chain_id)),
+            item.get("peak_oni"), item.get("weather_precip_anomaly"), item.get("yield_deviation"),
+            "", item.get("price_6m"), item.get("price_12m"), "",
+            item.get("cta_medium_6m"), item.get("cta_slow_6m"), _expanded_row_takeaway(item),
+        ])
+    _write_table(
+        sheet, 7, headers, rows, formats,
+        column_formats={2: formats["number"], 3: formats["percent"], 4: formats["percent"],
+                        6: formats["percent"], 7: formats["percent"], 9: formats["percent"],
+                        10: formats["percent"]},
+    )
+    source_col = 40
+    source_row = 0
+    for visible_row, event_id, chain_id in visible_rows:
+        price_values = _expanded_chain_path(
+            frames["expanded_price_paths"], event_id, chain_id, "price_index"
+        )
+        cta_values = _expanded_chain_path(
+            frames["expanded_cta_paths"], event_id, chain_id, "event_equity", speed="medium"
+        )
+        for values, visible_col, color in (
+            (price_values, 5, "#4472C4"), (cta_values, 8, "#C55A11")
+        ):
+            if len(values) >= 2:
+                sheet.write_row(source_row, source_col, values)
+                sheet.add_sparkline(visible_row, visible_col, {
+                    "range": xlsxwriter.utility.xl_range(
+                        source_row, source_col, source_row, source_col + len(values) - 1
+                    ),
+                    "type": "line", "series_color": color, "show_hidden": True,
+                })
+            else:
+                sheet.write(visible_row, visible_col, "未覆盖", formats["center"])
+            source_row += 1
+        sheet.set_row(visible_row, 44)
+    sheet.set_column(source_col, source_col + 80, None, None, {"hidden": True})
+
+    pattern_row = 9 + len(rows)
+    sheet.merge_range(pattern_row, 0, pattern_row, 11, "跨事件结论：完整传导与CTA机会必须分开", formats["section"])
+    pattern_headers = ["作物链", "完整传导成功", "有效事件", "CTA盈利比例", "结论"]
+    pattern_rows = []
+    for _, item in patterns.iterrows():
+        conversion_count = int(item.get("conversion_valid_events", 0) or 0)
+        success_count = int(item.get("conversion_success_count", 0) or 0)
+        cta_share = item.get("cta_medium_positive_share", pd.NA)
+        verdict = (
+            "CTA趋势机会倾向；不支持气候直接定方向"
+            if item.get("cta_tendency") == "CTA_TENDENCY"
+            else "CTA结果混合；不支持气候直接定方向"
+        )
+        pattern_rows.append([
+            item.get("chain_name_cn", item.get("chain_id")),
+            f"{success_count}/{conversion_count}", item.get("valid_events"), cta_share, verdict,
+        ])
+    _write_table(sheet, pattern_row + 1, pattern_headers, pattern_rows, formats,
+                 column_formats={3: formats["percent"]})
+    boundary_row = pattern_row + len(pattern_rows) + 4
+    sheet.merge_range(
+        boundary_row, 0, boundary_row, 11,
+        "结论：没有稳定的气候→减产→上涨→CTA完整传导；棕榈油、白糖、棉花存在CTA趋势机会倾向。"
+        "该倾向可能来自上涨或下跌趋势，不能作为商品多头规则，也不自动修改当前配置。",
+        formats["note"],
+    )
+    sheet.set_row(boundary_row, 42)
+    sheet.set_column("A:B", 16)
+    sheet.set_column("C:E", 15)
+    sheet.set_column("F:F", 17)
+    sheet.set_column("G:H", 14)
+    sheet.set_column("I:I", 17)
+    sheet.set_column("J:K", 14)
+    sheet.set_column("L:L", 38)
+    sheet.freeze_panes(8, 0)
+    sheet.print_area(0, 0, boundary_row, 11)
+    sheet.fit_to_pages(1, 2)
+
+
 def add_history_sheet(workbook: xlsxwriter.Workbook, frames: dict[str, object], formats: dict[str, Any]) -> None:
+    if not frames.get("expanded_matrix", pd.DataFrame()).empty:
+        add_expanded_history_sheet(workbook, frames, formats)
+        return
     sheet = workbook.add_worksheet(EXPECTED_SHEETS[2])
     sheet.set_tab_color("#8064A2")
     write_title(
@@ -944,6 +1161,52 @@ def add_climate_sheet(workbook: xlsxwriter.Workbook, frames: dict[str, object], 
     sheet.set_column(source_col, source_col + 40, None, None, {"hidden": True})
     sheet.merge_range(10, 0, 10, 11, "三项持续外部观测", formats["section"])
     write_external_observation_rows(sheet, frames, 11, formats)
+    weather_snapshot = frames.get("current_weather_snapshot", pd.DataFrame())
+    visible_last_row = 14
+    if not weather_snapshot.empty:
+        weather_path = frames.get("current_weather_path", pd.DataFrame())
+        weather_start = 16
+        sheet.merge_range(weather_start, 0, weather_start, 11, "六条作物链当前主产区天气代理", formats["section"])
+        sheet.merge_range(
+            weather_start + 1, 0, weather_start + 1, 11,
+            "30日降雨距平=最近30日代表点累计降雨相对1991—2020同月常态的偏离；低于-10%称偏干，高于+10%称偏湿。它只回答主产区水分环境，尚未按作物生育期或种植区权重聚合，不能直接等同减产。",
+            formats["note"],
+        )
+        state_cn = {"DRY": "偏干", "WET": "偏湿", "NEAR_NORMAL": "接近常态"}
+        weather_rows = []
+        for item in weather_snapshot.itertuples(index=False):
+            chain_id = str(item.chain_id)
+            state = str(item.state)
+            weather_rows.append([
+                COMMODITY_CN.get(chain_id, getattr(item, "chain_name_cn", chain_id)),
+                getattr(item, "precip_anomaly_pct", ""),
+                getattr(item, "soil_wetness_anomaly", ""),
+                state_cn.get(state, state),
+                getattr(item, "coverage_pct", ""),
+                getattr(item, "date", ""),
+                getattr(item, "source", "NASA POWER"), "",
+                getattr(item, "limitation", "30日代表点代理；尚未按作物生育期或种植区权重聚合"),
+            ])
+        weather_header_row = weather_start + 2
+        _write_table(
+            sheet,
+            weather_header_row,
+            ["作物链", "30日降雨距平", "土壤湿度距平", "当前状态", "数据覆盖", "数据截至", "来源", "迷你趋势", "领导怎么读"],
+            weather_rows,
+            formats,
+            column_formats={1: formats["percent"], 4: formats["percent"]},
+        )
+        for offset, row in enumerate(weather_rows, start=1):
+            chain_id = next(key for key, label in COMMODITY_CN.items() if label == row[0])
+            values = pd.to_numeric(
+                weather_path.loc[weather_path.get("chain_id").eq(chain_id), "precip_anomaly_pct"]
+                if not weather_path.empty and "chain_id" in weather_path and "precip_anomaly_pct" in weather_path
+                else pd.Series(dtype=float),
+                errors="coerce",
+            ).dropna().tail(60).tolist()
+            if not _add_row_sparkline(sheet, weather_header_row + offset, 7, values, 100 + offset, source_col, "#00A6A6"):
+                sheet.write(weather_header_row + offset, 7, "少于2期", formats["center"])
+        visible_last_row = weather_header_row + len(weather_rows)
     sheet.set_column("A:A", 30)
     sheet.set_column("B:B", 28)
     sheet.set_column("C:D", 16)
@@ -951,6 +1214,7 @@ def add_climate_sheet(workbook: xlsxwriter.Workbook, frames: dict[str, object], 
     sheet.set_column("H:H", 16)
     sheet.set_column("I:K", 32)
     sheet.freeze_panes(5, 0)
+    sheet.print_area(0, 0, visible_last_row, 11)
 
 
 def write_l2_summary_rows(
@@ -1073,6 +1337,85 @@ def add_l2_sheet(workbook: xlsxwriter.Workbook, frames: dict[str, object], forma
     write_l2_summary_rows(sheet, frames["l2_summary"], frames["fundamentals"], 9, formats)
     sheet.merge_range(17, 0, 17, 11, "指标明细", formats["section"])
     write_l2_detail_rows(sheet, frames["l2_details"], frames["fundamentals"], 18, formats)
+    visible_last_row = 18 + len(frames["l2_details"])
+    faostat = frames.get("expanded_baselines", {}).get("faostat_crop_history", pd.DataFrame())
+    if not faostat.empty:
+        coverage_start = 20 + len(frames["l2_details"])
+        sheet.merge_range(coverage_start, 0, coverage_start, 12, "六条作物链基本面覆盖审计", formats["section"])
+        sheet.merge_range(
+            coverage_start + 1, 0, coverage_start + 1, 12,
+            "FAOSTAT产量历史基线用于识别长期敏感度，不代表当前产量预测；棉花、玉米、大豆和菜籽的USDA PSD需求/库存未取得，因此不能判断当前供需缺口。缺失项会保留在表内，不以价格上涨倒推基本面。",
+            formats["note"],
+        )
+        crop_items = {
+            "palm_oil": "Oil palm fruit", "sugar": "Sugar cane",
+            "cotton": "Seed cotton, unginned", "corn": "Maize (corn)",
+            "soybean": "Soya beans", "rapeseed": "Rape or colza seed",
+        }
+        coverage_rows: list[list[object]] = []
+        supply_series: dict[str, list[float]] = {}
+        for chain_id, item_name in crop_items.items():
+            crop = faostat[
+                (faostat["item"].astype(str) == item_name)
+                & (faostat["element"].astype(str) == "Production")
+            ].copy()
+            crop["year"] = pd.to_numeric(crop.get("year"), errors="coerce")
+            crop["value"] = pd.to_numeric(crop.get("value"), errors="coerce")
+            annual = crop.dropna(subset=["year", "value"]).groupby("year", as_index=False)["value"].sum().sort_values("year")
+            supply_series[chain_id] = annual["value"].tail(30).tolist()
+            latest = annual.iloc[-1] if not annual.empty else pd.Series()
+            latest_year = int(latest["year"]) if not latest.empty else ""
+            latest_value = latest.get("value", "")
+            unit = str(crop["unit"].dropna().iloc[-1]) if not crop.empty and "unit" in crop else ""
+            coverage_rows.append([
+                COMMODITY_CN[chain_id], "供给", "历史基线可用；当前判断缺失",
+                latest_value, "", f"{unit}；{latest_year}", "FAOSTAT",
+                "主产区合计产量历史，用于复盘长期敏感度",
+                "最新为年度历史实绩，不能替代当前作物年度预测",
+                "接入USDA PSD或各国月度/季度官方产量预测",
+                "当前供给方向仍不能确认",
+            ])
+            for category in ("需求", "库存"):
+                if chain_id in {"palm_oil", "sugar"}:
+                    coverage_rows.append([
+                        COMMODITY_CN[chain_id], category, "已覆盖（见上方六格）", "", "", "",
+                        "MPOB/USDA/Wind既有监测", "上方按同季节分位判断",
+                        "部分年度USDA指标含预测，已在明细中标注",
+                        "按发布频率持续刷新", "可与供给共同使用，但预测不单独确认",
+                    ])
+                else:
+                    coverage_rows.append([
+                        COMMODITY_CN[chain_id], category, "缺失", "", "", "", "USDA PSD（待接入）",
+                        "USDA PSD需求/库存未取得",
+                        "新API需有效API Key；官方bulk下载本次超时",
+                        "配置USDA PSD API Key或重试官方bulk文件",
+                        "不能判断当前供需缺口",
+                    ])
+        coverage_header_row = coverage_start + 2
+        _write_table(
+            sheet,
+            coverage_header_row,
+            ["作物链", "类别", "覆盖状态", "最新值", "迷你趋势", "单位/年份", "来源", "它衡量什么", "为什么没有/限制", "怎么补齐", "对结论影响"],
+            coverage_rows,
+            formats,
+        )
+        source_col = 360
+        for index, row in enumerate(coverage_rows, start=1):
+            if row[1] != "供给":
+                continue
+            chain_id = next(key for key, label in COMMODITY_CN.items() if label == row[0])
+            values = supply_series.get(chain_id, [])
+            if len(values) < 2:
+                sheet.write(coverage_header_row + index, 4, "少于2期", formats["center"])
+                continue
+            source_row = 250 + index
+            sheet.write_row(source_row, source_col, values)
+            sheet.add_sparkline(coverage_header_row + index, 4, {
+                "range": xlsxwriter.utility.xl_range(source_row, source_col, source_row, source_col + len(values) - 1),
+                "type": "line", "series_color": "#70AD47", "show_hidden": True,
+            })
+        sheet.set_column(source_col, source_col + 80, None, None, {"hidden": True})
+        visible_last_row = coverage_header_row + len(coverage_rows)
     sheet.set_column("A:B", 14)
     sheet.set_column("C:C", 26)
     sheet.set_column("D:E", 15)
@@ -1081,6 +1424,7 @@ def add_l2_sheet(workbook: xlsxwriter.Workbook, frames: dict[str, object], forma
     sheet.set_column("K:K", 15)
     sheet.set_column("L:M", 28)
     sheet.freeze_panes(10, 0)
+    sheet.print_area(0, 0, visible_last_row, 12)
 
 
 def _flatten(prefix: str, value: object, output: list[tuple[str, object]]) -> None:
@@ -1092,6 +1436,11 @@ def _flatten(prefix: str, value: object, output: list[tuple[str, object]]) -> No
 
 
 def _futures_history(frames: dict[str, object], symbol: str) -> pd.DataFrame:
+    expanded = frames.get("expanded_futures", {}).get(
+        f"{symbol}_continuous_exploratory", pd.DataFrame()
+    )
+    if not expanded.empty:
+        return expanded.copy()
     for name in (f"{symbol}_active_wind", f"{symbol}_dominant_tushare", f"{symbol}_continuous_exploratory"):
         frame = frames["futures"].get(name, pd.DataFrame())
         if not frame.empty:
@@ -1101,6 +1450,20 @@ def _futures_history(frames: dict[str, object], symbol: str) -> pd.DataFrame:
 
 def _research_signal(frames: dict[str, object], symbol: str, speed: str) -> pd.DataFrame:
     return frames["signals"].get(f"{symbol}_{speed}_proxy_research", pd.DataFrame()).copy()
+
+
+def _latest_cta_signal(
+    frames: dict[str, object], symbol: str, speed: str
+) -> tuple[pd.DataFrame, str]:
+    expanded = frames.get("expanded_signals", {}).get(
+        f"{symbol}_{speed}_proxy_exploratory", pd.DataFrame()
+    )
+    if not expanded.empty:
+        return expanded.copy(), "AkShare/Sina连续合约CTA代理（探索性）"
+    research = _research_signal(frames, symbol, speed)
+    if not research.empty:
+        return research, "Tushare主力映射CTA代理（正式研究口径）"
+    return pd.DataFrame(), "未取得"
 
 
 def _wind_exploratory_signal(
@@ -1139,15 +1502,24 @@ def _max_drawdown(frame: pd.DataFrame, rows: int = 60) -> object:
 def add_market_sheet(workbook: xlsxwriter.Workbook, frames: dict[str, object], formats: dict[str, Any]) -> None:
     sheet = workbook.add_worksheet(EXPECTED_SHEETS[5])
     sheet.set_tab_color("#ED7D31")
-    write_title(sheet, "05｜L3 市场定价", "本页回答：棕榈油和白糖价格是否已开始为供需变化定价；迷你图展示主力合约近段走势", formats)
-    sheet.merge_range(3, 0, 3, 11, "期货价格=市场对未来供需的交易结果；Contango表示远月贵于近月，通常不支持眼前紧缺。现货基差尚未正式接入，会作为缺口披露。", formats["note"])
+    expanded_mode = bool(frames.get("expanded_futures"))
+    symbols = UNIVERSE_SYMBOLS if expanded_mode else ("P", "SR")
+    write_title(
+        sheet,
+        "05｜L3 市场定价",
+        "本页回答：八个国内期货合约是否已开始为供需变化定价；每行迷你图展示最近60个交易日"
+        if expanded_mode else
+        "本页回答：棕榈油和白糖价格是否已开始为供需变化定价；迷你图展示主力合约近段走势",
+        formats,
+    )
+    sheet.merge_range(3, 0, 3, 11, "期货价格=市场对未来供需的交易结果；Contango表示远月贵于近月，通常不支持眼前紧缺。AkShare/Sina连续合约用于补齐最新方向，但换月与复权规则未公开，因此标为探索性；现货基差尚未正式接入。", formats["note"])
     headers = [
         "品种", "行情口径", "收盘价", "价格趋势", "20日涨跌", "60日涨跌",
         "20日年化波动", "60日最大回撤", "前后月结构", "前后月价差", "数据截至", "领导怎么读",
     ]
     market = frames["monitor"].get("layers", {}).get("market", {})
     rows: list[list[object]] = []
-    for symbol in ("P", "SR"):
+    for symbol in symbols:
         item = market.get(symbol, {})
         history = _futures_history(frames, symbol).sort_values("date")
         if not history.empty:
@@ -1156,12 +1528,15 @@ def add_market_sheet(workbook: xlsxwriter.Workbook, frames: dict[str, object], f
         latest = history.iloc[-1] if not history.empty else pd.Series()
         provider = str(latest.get("provider", ""))
         is_wind = provider == "Wind EDB"
-        if is_wind:
+        is_sina = provider == "akshare_sina_continuous"
+        if is_sina:
+            price_basis = "AkShare/Sina连续合约（探索性）"
+        elif is_wind:
             code = latest.get("indicator_code", "")
             price_basis = f"Wind活跃合约（{code}）" if code else "Wind活跃合约"
         else:
             price_basis = item.get("contract", latest.get("contract", ""))
-        term = {} if is_wind else item.get("term_structure", {})
+        term = {} if is_wind or is_sina else item.get("term_structure", {})
         latest_date = latest.get("date", item.get("date"))
         monitor_as_of = pd.to_datetime(frames["monitor"].get("as_of"), errors="coerce")
         parsed_latest_date = pd.to_datetime(latest_date, errors="coerce")
@@ -1171,6 +1546,8 @@ def add_market_sheet(workbook: xlsxwriter.Workbook, frames: dict[str, object], f
             else item.get("staleness_days")
         )
         source_text = (
+            "数据来源：AkShare/Sina；换月与复权规则未公开，仅作最新方向观察"
+            if is_sina else
             f"数据来源：Wind（{latest.get('source', '交易所')}）"
             if is_wind else f"数据来源：{provider or item.get('provider', '既有行情文件')}"
         )
@@ -1186,7 +1563,7 @@ def add_market_sheet(workbook: xlsxwriter.Workbook, frames: dict[str, object], f
             _return_over_rows(history, 60) if not history.empty else item.get("price_return_60d", ""),
             _annualized_volatility(history, 20) if not history.empty else item.get("realized_vol_20d", ""),
             _max_drawdown(history, 60) if not history.empty else item.get("max_price_drawdown_60d", ""),
-            term.get("curve", "未取得（活跃合约序列不含月差）" if is_wind else "未取得"),
+            term.get("curve", "未取得（连续/活跃合约序列不含月差）" if is_wind or is_sina else "未取得"),
             term.get("front_second_spread_pct", ""), latest_date or "", stale_text,
         ])
     _write_table(
@@ -1195,13 +1572,14 @@ def add_market_sheet(workbook: xlsxwriter.Workbook, frames: dict[str, object], f
                         7: formats["percent"], 9: formats["percent"]},
     )
     source_col = 30
-    for offset, symbol in enumerate(("P", "SR"), start=1):
+    for offset, symbol in enumerate(symbols, start=1):
         history = _futures_history(frames, symbol).sort_values("date")
         values = pd.to_numeric(history.get("close"), errors="coerce").dropna().tail(60).tolist()
         if not _add_row_sparkline(sheet, 4 + offset, 3, values, offset - 1, source_col, "#ED7D31"):
             sheet.write(4 + offset, 3, "少于2期", formats["center"])
     sheet.set_column(source_col, source_col + 80, None, None, {"hidden": True})
-    sheet.merge_range(9, 0, 9, 11, "尚缺数据：可审计的现货价格/基差序列尚未接入；在补齐前，L3只依据期货价格和期限结构，结论置信度受限。", formats["note"])
+    note_row = 5 + len(rows)
+    sheet.merge_range(note_row, 0, note_row, 11, "尚缺数据：新增六个合约尚无Tushare/Wind正式连续合约和可审计换月规则，八个品种均缺现货价格/基差序列；因此本页最新行情只回答价格方向，不能单独确认基本面传导或修改CTA配置。", formats["note"])
     sheet.set_column("A:B", 18)
     sheet.set_column("C:C", 13)
     sheet.set_column("D:D", 18)
@@ -1209,12 +1587,20 @@ def add_market_sheet(workbook: xlsxwriter.Workbook, frames: dict[str, object], f
     sheet.set_column("K:K", 15)
     sheet.set_column("L:L", 34)
     sheet.freeze_panes(5, 0)
+    sheet.print_area(0, 0, note_row, 11)
 
 
 def add_cta_sheet(workbook: xlsxwriter.Workbook, frames: dict[str, object], formats: dict[str, Any]) -> None:
     sheet = workbook.add_worksheet(EXPECTED_SHEETS[6])
     sheet.set_tab_color("#FFC000")
-    write_title(sheet, "06｜L4 本研究P/SR双品种CTA环境", "CTA是按价格规则做多或做空的趋势策略；三档速度统一20%年化目标波动，信号次日执行", formats)
+    expanded_mode = bool(frames.get("expanded_signals"))
+    symbols = UNIVERSE_SYMBOLS if expanded_mode else ("P", "SR")
+    write_title(
+        sheet,
+        "06｜L4 八个合约、六条作物链CTA环境" if expanded_mode else "06｜L4 本研究P/SR双品种CTA环境",
+        "CTA是按价格规则做多或做空的趋势策略；三档速度统一20%年化目标波动，信号次日执行",
+        formats,
+    )
     headers = ["速度", "方向回看", "波动率窗口", "用途", "确认边界"]
     rows = [
         ["Fast", "20/60交易日", "20交易日", "快速风险变化；噪声较高", "不单独触发主题配置"],
@@ -1222,18 +1608,25 @@ def add_cta_sheet(workbook: xlsxwriter.Workbook, frames: dict[str, object], form
         ["Slow", "120/250交易日", "120交易日", "长期趋势确认", "起效慢，但更接近配置视角"],
     ]
     _write_table(sheet, 4, headers, rows, formats)
-    sheet.merge_range(9, 0, 9, 11, "确认规则：同一品种Medium与Slow同号（均指执行仓位）且非零、两者近20日净收益均为正、Medium持续达到阈值，才算该品种确认；P与SR分别确认，P与SR方向不必相同。", formats["note"])
-    sheet.merge_range(10, 0, 10, 11, "当前P/SR趋势策略代理", formats["section"])
+    confirmation_note = (
+        "确认规则：先看每个合约Medium与Slow是否同号且非零；M+Y合并为大豆链、OI+RM合并为菜籽链，链内合约方向冲突则该链不确认，产业链内合约不重复计票。"
+        "至少两条独立作物链同向、且净收益与持续性通过，才称跨品种CTA环境确认。当前新增合约为探索性连续序列，只作方向观察，不自动修改当前CTA配置。"
+        if expanded_mode else
+        "确认规则：同一品种Medium与Slow同号（均指执行仓位）且非零、两者近20日净收益均为正、Medium持续达到阈值，才算该品种确认；P与SR分别确认，P与SR方向不必相同。"
+    )
+    sheet.merge_range(9, 0, 9, 11, confirmation_note, formats["note"])
+    sheet.merge_range(10, 0, 10, 11, "当前八合约趋势策略代理（探索性）" if expanded_mode else "当前P/SR趋势策略代理", formats["section"])
     signal_headers = [
         "品种", "速度", "今日目标信号", "代理净值趋势", "今日执行仓位", "20日净收益", "60日净收益",
         "60日最大回撤", "仓位持续天数", "数据截至", "当前含义", "确认角色",
     ]
     cta = frames["monitor"].get("layers", {}).get("cta", {})
     signal_rows: list[list[object]] = []
-    for symbol in ("P", "SR"):
+    for symbol in symbols:
         for speed in ("fast", "medium", "slow"):
-            item = cta.get(symbol, {}).get(speed, {})
-            frame = _research_signal(frames, symbol, speed).sort_values("date")
+            item = {} if expanded_mode else cta.get(symbol, {}).get(speed, {})
+            frame, signal_basis = _latest_cta_signal(frames, symbol, speed)
+            frame = frame.sort_values("date") if not frame.empty else frame
             latest = frame.iloc[-1] if not frame.empty else pd.Series()
             position = item.get("position", latest.get("position", ""))
             target_position = item.get("target_position", latest.get("target_position", ""))
@@ -1248,9 +1641,9 @@ def add_cta_sheet(workbook: xlsxwriter.Workbook, frames: dict[str, object], form
             execution_text = position_text(numeric_position)
             target_text = position_text(numeric_target)
             current_meaning = (
-                f"目标={target_text}；执行={execution_text}。执行仓位来自上一交易日目标，二者不同表示信号正在切换。"
+                f"目标={target_text}；执行={execution_text}。执行仓位来自上一交易日目标，二者不同表示信号正在切换。口径：{signal_basis}。"
             )
-            wind_frame = _wind_exploratory_signal(frames, symbol, speed)
+            wind_frame = _wind_exploratory_signal(frames, symbol, speed) if not expanded_mode else pd.DataFrame()
             if not wind_frame.empty:
                 wind_frame = wind_frame.sort_values("date")
                 wind_latest = wind_frame.iloc[-1]
@@ -1281,13 +1674,37 @@ def add_cta_sheet(workbook: xlsxwriter.Workbook, frames: dict[str, object], form
     )
     source_col = 30
     row_index = 0
-    for symbol in ("P", "SR"):
+    for symbol in symbols:
         for speed in ("fast", "medium", "slow"):
-            frame = _research_signal(frames, symbol, speed).sort_values("date")
+            frame, _ = _latest_cta_signal(frames, symbol, speed)
+            frame = frame.sort_values("date") if not frame.empty else frame
             values = pd.to_numeric(frame.get("equity"), errors="coerce").dropna().tail(60).tolist()
             if not _add_row_sparkline(sheet, 12 + row_index, 3, values, row_index, source_col, "#FFC000"):
                 sheet.write(12 + row_index, 3, "少于2期", formats["center"])
             row_index += 1
+    visible_last_row = 11 + len(signal_rows)
+    if expanded_mode:
+        summary_start = 13 + len(signal_rows)
+        sheet.merge_range(summary_start, 0, summary_start, 11, "六条作物链方向汇总（仅中慢速方向一致性，不等于正式配置确认）", formats["section"])
+        chain_frame = frames.get("expanded_signals", {}).get("chain_confirmations", pd.DataFrame())
+        chain_rows = []
+        if not chain_frame.empty:
+            for _, chain in chain_frame.iterrows():
+                status = str(chain.get("status", "UNCONFIRMED"))
+                chain_rows.append([
+                    chain.get("chain_name_cn", chain.get("chain_id", "")),
+                    chain.get("symbols", ""),
+                    CHAIN_STATUS_CN.get(status, status),
+                    "这是方向筛选第一关；还需净收益、持续性和至少两条独立作物链共同验证",
+                ])
+        _write_table(
+            sheet,
+            summary_start + 1,
+            ["作物链", "国内合约", "中慢速方向状态", "领导怎么读"],
+            chain_rows,
+            formats,
+        )
+        visible_last_row = summary_start + 1 + len(chain_rows)
     sheet.set_column(source_col, source_col + 80, None, None, {"hidden": True})
     sheet.set_column("A:B", 16)
     sheet.set_column("C:C", 22)
@@ -1296,6 +1713,9 @@ def add_cta_sheet(workbook: xlsxwriter.Workbook, frames: dict[str, object], form
     sheet.set_column("F:J", 16)
     sheet.set_column("K:L", 34)
     sheet.freeze_panes(5, 0)
+    sheet.print_area(0, 0, visible_last_row, 11)
+    if expanded_mode:
+        sheet.fit_to_pages(1, 2)
 
 
 def add_audit_sheet(workbook: xlsxwriter.Workbook, frames: dict[str, object], formats: dict[str, Any]) -> None:
@@ -1373,7 +1793,51 @@ def add_audit_sheet(workbook: xlsxwriter.Workbook, frames: dict[str, object], fo
     sheet.write(history_row + 1, 1, manifest.get("as_of", ""), formats["body"])
     sheet.write(history_row + 2, 0, "逻辑边界", formats["body"])
     sheet.merge_range(history_row + 2, 1, history_row + 2, 8, manifest.get("boundary", "仅描述，不进入当前配置"), formats["note"])
+    expanded_present = bool(
+        frames.get("expanded_baselines") or frames.get("expanded_futures")
+        or not frames.get("current_weather_snapshot", pd.DataFrame()).empty
+    )
     glossary_row = history_row + 5
+    if expanded_present:
+        expanded_row = history_row + 5
+        sheet.merge_range(expanded_row, 0, expanded_row, 11, "扩品种数据覆盖与结论权限", formats["section"])
+        baselines = frames.get("expanded_baselines", {})
+        faostat = baselines.get("faostat_crop_history", pd.DataFrame())
+        world_bank = baselines.get("world_bank_monthly_prices", pd.DataFrame())
+        weather = frames.get("current_weather_snapshot", pd.DataFrame())
+        expanded_futures = frames.get("expanded_futures", {})
+        futures_frames = [frame for name, frame in expanded_futures.items() if name.endswith("continuous_exploratory") and not frame.empty]
+        futures_rows = sum(len(frame) for frame in futures_frames)
+        futures_dates = [pd.to_datetime(frame.get("date"), errors="coerce").max() for frame in futures_frames]
+        latest_futures = max((date for date in futures_dates if pd.notna(date)), default=pd.NaT)
+        formal_frames = [frame for name, frame in expanded_futures.items() if "dominant_tushare" in name and not frame.empty]
+        coverage_rows = [
+            ["主产区天气", "可用（代表点代理）" if not weather.empty else "缺失", len(weather),
+             pd.to_datetime(weather.get("date"), errors="coerce").max() if not weather.empty else "",
+             "NASA POWER官方点位；30日距平", "尚未按种植面积和生育期加权", "进入L1观察，不直接等同减产"],
+            ["年度产量/单产", "可用（历史描述）" if not faostat.empty else "缺失", len(faostat),
+             int(pd.to_numeric(faostat.get("year"), errors="coerce").max()) if not faostat.empty else "",
+             "FAOSTAT年度修订库", "无历史发布版本，不能做无未来函数实时因子", "进入历史复盘，不确认当前供给"],
+            ["国际历史价格代理", "可用（历史描述）" if not world_bank.empty else "缺失", len(world_bank),
+             pd.to_datetime(world_bank.get("date"), errors="coerce").max() if not world_bank.empty else "",
+             "World Bank Pink Sheet", "不是国内可交易连续合约", "只用于四次事件价格/CTA复盘"],
+            ["八合约最新价格与CTA", "可用（探索性）" if futures_frames else "缺失", futures_rows,
+             latest_futures if pd.notna(latest_futures) else "", "AkShare/Sina连续合约",
+             "换月与复权规则未公开", "进入L3/L4方向观察，不进入正式配置确认"],
+            ["新增六合约正式行情", "可用" if formal_frames else "缺失", sum(len(frame) for frame in formal_frames), "",
+             "Tushare合约行情+主力映射", "当前环境/GitHub未配置TUSHARE_TOKEN，无法正式刷新" if not formal_frames else "正式口径已落盘",
+             "缺失时新增合约不能进入正式CTA结论"],
+            ["新增作物需求与库存", "缺失", 0, "", "USDA PSD",
+             "新API需要有效API Key；官方bulk下载本次超时", "棉花、玉米、大豆和菜籽不能判断当前供需缺口"],
+        ]
+        _write_table(
+            sheet,
+            expanded_row + 1,
+            ["数据模块", "状态", "行数", "数据截至", "来源/口径", "为什么没有或有什么限制", "对结论影响"],
+            coverage_rows,
+            formats,
+        )
+        glossary_row = expanded_row + 10
     sheet.merge_range(glossary_row, 0, glossary_row, 11, "状态词怎么理解", formats["section"])
     glossary = [
         ["可用（OK）", "已取得并通过基本校验，可进入对应层判断"],
@@ -1389,6 +1853,8 @@ def add_audit_sheet(workbook: xlsxwriter.Workbook, frames: dict[str, object], fo
     sheet.set_column("H:H", 36)
     sheet.set_column("I:K", 34)
     sheet.freeze_panes(6, 0)
+    sheet.print_area(0, 0, glossary_row + 1 + len(glossary), 10)
+    sheet.fit_to_pages(1, 1)
 
 
 def validate_workbook(path: Path) -> None:

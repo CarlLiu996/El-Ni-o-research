@@ -7,6 +7,7 @@ from pathlib import Path
 import pandas as pd
 import requests
 
+from .commodity_universe import load_commodity_universe, summarize_chain_confirmations
 from .quality import audit_timeseries
 from .signals import LOOKBACKS, build_cta_proxy, build_roll_adjusted_dominant
 from .historical_review import (
@@ -110,6 +111,96 @@ def refresh_historical_climate(
 
 def read_optional_csv(path: Path, columns: list[str]) -> pd.DataFrame:
     return pd.read_csv(path) if path.exists() else pd.DataFrame(columns=columns)
+
+
+def refresh_futures_universe(
+    output_dir: Path,
+    start: str,
+    end: str,
+    universe_path: Path,
+    provider: str = "tushare",
+) -> dict[str, object]:
+    if provider not in {"tushare", "sina"}:
+        raise ValueError("provider must be tushare or sina")
+    futures_dir = output_dir / "futures"
+    signals_dir = output_dir / "signals"
+    futures_dir.mkdir(parents=True, exist_ok=True)
+    signals_dir.mkdir(parents=True, exist_ok=True)
+
+    contracts = load_commodity_universe(universe_path)
+    datasets: dict[str, object] = {}
+    warnings: list[str] = []
+    latest_rows: list[dict[str, object]] = []
+    for contract in contracts:
+        symbol = contract.symbol
+        if provider == "tushare":
+            monthly, mapping, metadata = fetch_tushare_research_data(
+                symbol, start, end, universe_path=universe_path
+            )
+            monthly.to_csv(futures_dir / f"{symbol}_contracts_tushare.csv", index=False)
+            mapping.to_csv(
+                futures_dir / f"{symbol}_dominant_mapping_tushare.csv", index=False
+            )
+            metadata.to_csv(
+                futures_dir / f"{symbol}_contract_metadata_tushare.csv", index=False
+            )
+            futures = build_roll_adjusted_dominant(mapping, monthly)
+            provider_label = "Tushare contract + dominant mapping"
+            filename_label = "dominant_tushare"
+            suffix = "research"
+        else:
+            futures = fetch_sina_continuous(symbol, universe_path=universe_path)
+            futures = futures[
+                (futures["date"] >= pd.Timestamp(start))
+                & (futures["date"] <= pd.Timestamp(end))
+            ]
+            provider_label = "AkShare/Sina continuous"
+            filename_label = "continuous_exploratory"
+            suffix = "exploratory"
+            warnings.append(
+                f"{symbol}: AkShare/Sina continuous data are exploratory because "
+                "roll/back-adjustment rules are not exposed."
+            )
+
+        futures.to_csv(futures_dir / f"{symbol}_{filename_label}.csv", index=False)
+        speed_directions: dict[str, int] = {}
+        for speed in LOOKBACKS:
+            signal = build_cta_proxy(futures, speed)
+            signal.to_csv(
+                signals_dir / f"{symbol}_{speed}_proxy_{suffix}.csv", index=False
+            )
+            valid = signal.dropna(subset=["signal"])
+            latest_signal = float(valid.iloc[-1]["signal"]) if not valid.empty else 0.0
+            speed_directions[speed] = 1 if latest_signal > 0 else -1 if latest_signal < 0 else 0
+
+        latest_rows.append(
+            {
+                "symbol": symbol,
+                "fast_direction": speed_directions["fast"],
+                "medium_direction": speed_directions["medium"],
+                "slow_direction": speed_directions["slow"],
+            }
+        )
+        datasets[symbol] = {
+            "rows": len(futures),
+            "provider": provider_label,
+            "quality": audit_timeseries(futures),
+        }
+
+    contract_confirmations = pd.DataFrame(latest_rows)
+    contract_confirmations.to_csv(
+        signals_dir / "contract_confirmations.csv", index=False
+    )
+    chain_confirmations = summarize_chain_confirmations(
+        contract_confirmations, contracts
+    )
+    chain_confirmations.to_csv(signals_dir / "chain_confirmations.csv", index=False)
+    return {
+        "datasets": datasets,
+        "warnings": warnings,
+        "contract_confirmation_rows": len(contract_confirmations),
+        "chain_confirmation_rows": len(chain_confirmations),
+    }
 
 
 def _history_source_bundle(
@@ -254,6 +345,7 @@ def refresh(
     end: str,
     regions_path: Path,
     futures_provider: str = "auto",
+    universe_path: Path = Path("config/commodity_universe.json"),
 ) -> dict:
     output_dir.mkdir(parents=True, exist_ok=True)
     (output_dir / "climate").mkdir(exist_ok=True)
@@ -307,33 +399,20 @@ def refresh(
 
         use_tushare = bool(os.getenv("TUSHARE_TOKEN"))
 
-    for symbol in ["P", "SR"]:
-        if use_tushare:
-            contracts, mapping, metadata = fetch_tushare_research_data(symbol, start, end)
-            contracts.to_csv(output_dir / "futures" / f"{symbol}_contracts_tushare.csv", index=False)
-            mapping.to_csv(output_dir / "futures" / f"{symbol}_dominant_mapping_tushare.csv", index=False)
-            metadata.to_csv(output_dir / "futures" / f"{symbol}_contract_metadata_tushare.csv", index=False)
-            futures = build_roll_adjusted_dominant(mapping, contracts)
-            provider_label = "Tushare contract + dominant mapping"
-            filename_label = "dominant_tushare"
-        else:
-            futures = fetch_sina_continuous(symbol)
-            futures = futures[(futures["date"] >= pd.Timestamp(start)) & (futures["date"] <= pd.Timestamp(end))]
-            provider_label = "AkShare/Sina continuous"
-            filename_label = "continuous_exploratory"
-            manifest["warnings"].append(
-                "AkShare/Sina continuous futures are exploratory because roll/back-adjustment rules are not exposed."
-            )
-        futures.to_csv(output_dir / "futures" / f"{symbol}_{filename_label}.csv", index=False)
-        manifest["datasets"][symbol] = {
-            "rows": len(futures),
-            "provider": provider_label,
-            "quality": audit_timeseries(futures),
-        }
-        for speed in LOOKBACKS:
-            signal = build_cta_proxy(futures, speed)
-            suffix = "research" if use_tushare else "exploratory"
-            signal.to_csv(output_dir / "signals" / f"{symbol}_{speed}_proxy_{suffix}.csv", index=False)
+    futures_manifest = refresh_futures_universe(
+        output_dir=output_dir,
+        start=start,
+        end=end,
+        universe_path=universe_path,
+        provider="tushare" if use_tushare else "sina",
+    )
+    manifest["datasets"].update(futures_manifest["datasets"])
+    manifest["warnings"].extend(futures_manifest["warnings"])
+    manifest["futures_universe"] = {
+        "contract_confirmation_rows": futures_manifest["contract_confirmation_rows"],
+        "chain_confirmation_rows": futures_manifest["chain_confirmation_rows"],
+        "config": str(universe_path),
+    }
 
     (output_dir / "manifest.json").write_text(
         json.dumps(manifest, ensure_ascii=False, indent=2, default=str), encoding="utf-8"

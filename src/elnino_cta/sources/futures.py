@@ -4,8 +4,11 @@ import os
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
+from pathlib import Path
 
 import pandas as pd
+
+from ..commodity_universe import load_commodity_universe
 
 
 @dataclass(frozen=True)
@@ -16,10 +19,23 @@ class FuturesSpec:
     sina_code: str
 
 
-SPECS = {
-    "P": FuturesSpec("P", "DCE", "P.DCE", "P0"),
-    "SR": FuturesSpec("SR", "CZCE", "SR.ZCE", "SR0"),
-}
+DEFAULT_UNIVERSE_PATH = Path("config/commodity_universe.json")
+
+
+def _resolve_spec(
+    symbol: str,
+    universe_path: Path = DEFAULT_UNIVERSE_PATH,
+) -> FuturesSpec:
+    requested = symbol.upper()
+    for contract in load_commodity_universe(universe_path):
+        if contract.symbol == requested:
+            return FuturesSpec(
+                contract.symbol,
+                contract.exchange,
+                contract.continuous_code,
+                contract.sina_code,
+            )
+    raise KeyError(f"Unknown futures symbol: {requested}")
 
 
 def _normalize(frame: pd.DataFrame, symbol: str, provider: str) -> pd.DataFrame:
@@ -44,7 +60,10 @@ def _normalize(frame: pd.DataFrame, symbol: str, provider: str) -> pd.DataFrame:
     return frame[columns].sort_values("date")
 
 
-def fetch_sina_continuous(symbol: str) -> pd.DataFrame:
+def fetch_sina_continuous(
+    symbol: str,
+    universe_path: Path = DEFAULT_UNIVERSE_PATH,
+) -> pd.DataFrame:
     """Fetch a keyless continuous series via AkShare's Sina adapter.
 
     This source is suitable for pipeline smoke tests only: the vendor's roll and
@@ -52,7 +71,7 @@ def fetch_sina_continuous(symbol: str) -> pd.DataFrame:
     """
     import akshare as ak
 
-    spec = SPECS[symbol.upper()]
+    spec = _resolve_spec(symbol, universe_path)
     return _normalize(ak.futures_zh_daily_sina(symbol=spec.sina_code), spec.symbol, "akshare_sina_continuous")
 
 
@@ -97,7 +116,11 @@ def _fetch_contract_daily(code: str, start_date: str, end_date: str) -> pd.DataF
 
 
 def fetch_tushare_research_data(
-    symbol: str, start: str, end: str, max_workers: int = 1
+    symbol: str,
+    start: str,
+    end: str,
+    max_workers: int = 1,
+    universe_path: Path = DEFAULT_UNIVERSE_PATH,
 ) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """Fetch all listed monthly contracts, dominant mapping, and contract metadata.
 
@@ -105,7 +128,7 @@ def fetch_tushare_research_data(
     Contract daily data is downloaded for every contract whose listed life overlaps
     the requested period, not only contracts that became dominant.
     """
-    spec = SPECS[symbol.upper()]
+    spec = _resolve_spec(symbol, universe_path)
     pro = _tushare_client()
     start_date, end_date = start.replace("-", ""), end.replace("-", "")
 

@@ -19,6 +19,20 @@ def make_faostat_zip(*, duplicate: bool = False) -> bytes:
         ("Brazil", "Sugar cane"),
         ("Indonesia", "Oil palm fruit"),
         ("Malaysia", "Oil palm fruit"),
+        ("United States of America", "Seed cotton, unginned"),
+        ("India", "Seed cotton, unginned"),
+        ("Pakistan", "Seed cotton, unginned"),
+        ("China, mainland", "Seed cotton, unginned"),
+        ("United States of America", "Maize (corn)"),
+        ("China, mainland", "Maize (corn)"),
+        ("Brazil", "Maize (corn)"),
+        ("Argentina", "Maize (corn)"),
+        ("United States of America", "Soya beans"),
+        ("Brazil", "Soya beans"),
+        ("Argentina", "Soya beans"),
+        ("Canada", "Rape or colza seed"),
+        ("Australia", "Rape or colza seed"),
+        ("China, mainland", "Rape or colza seed"),
     )
     for area, item in targets:
         for element, unit, value in (
@@ -47,13 +61,35 @@ def make_faostat_zip(*, duplicate: bool = False) -> bytes:
     return buffer.getvalue()
 
 
-def test_parse_faostat_crop_history_filters_required_series() -> None:
+def test_parse_faostat_crop_history_filters_six_crop_chain_inputs() -> None:
     frame = parse_faostat_crop_history(
         make_faostat_zip(), downloaded_at="2026-08-25T00:00:00Z"
     )
 
-    assert set(frame["area"]) == {"India", "Brazil", "Indonesia", "Malaysia"}
-    assert set(frame["item"]) == {"Sugar cane", "Oil palm fruit"}
+    assert set(frame[["area", "item"]].itertuples(index=False, name=None)) == {
+        ("India", "Sugar cane"),
+        ("Brazil", "Sugar cane"),
+        ("Indonesia", "Oil palm fruit"),
+        ("Malaysia", "Oil palm fruit"),
+        ("United States of America", "Seed cotton, unginned"),
+        ("India", "Seed cotton, unginned"),
+        ("Pakistan", "Seed cotton, unginned"),
+        ("China, mainland", "Seed cotton, unginned"),
+        ("United States of America", "Maize (corn)"),
+        ("China, mainland", "Maize (corn)"),
+        ("Brazil", "Maize (corn)"),
+        ("Argentina", "Maize (corn)"),
+        ("United States of America", "Soya beans"),
+        ("Brazil", "Soya beans"),
+        ("Argentina", "Soya beans"),
+        ("Canada", "Rape or colza seed"),
+        ("Australia", "Rape or colza seed"),
+        ("China, mainland", "Rape or colza seed"),
+    }
+    assert set(frame["item"]) == {
+        "Sugar cane", "Oil palm fruit", "Seed cotton, unginned",
+        "Maize (corn)", "Soya beans", "Rape or colza seed",
+    }
     assert set(frame["element"]) == {"Production", "Area harvested", "Yield"}
     assert not frame.duplicated(["area", "item", "element", "year"]).any()
     assert {"unit", "value", "flag", "source", "downloaded_at"}.issubset(frame.columns)

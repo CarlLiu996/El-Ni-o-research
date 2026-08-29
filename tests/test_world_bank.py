@@ -15,23 +15,34 @@ def make_pink_sheet_xlsx(*, include_sugar: bool = True) -> bytes:
     sheet.title = "Monthly Prices"
     sheet.append(["World Bank Commodity Price Data (The Pink Sheet)"])
     sheet.append(["Updated monthly"])
-    headers = ["Date", "Palm oil"]
+    headers = [
+        "Date", "Palm oil", "Cotton, A Index", "Maize", "Soybeans",
+        "Soybean meal", "Soybean oil", "Rapeseed oil",
+    ]
     if include_sugar:
-        headers.append("Sugar, world")
+        headers.insert(2, "Sugar, world")
     sheet.append(headers)
-    sheet.append(["2020M01", 800.0] + ([0.30] if include_sugar else []))
-    sheet.append([pd.Timestamp("2020-02-01"), 820.0] + ([0.31] if include_sugar else []))
+    first = [800.0, 1.70, 170.0, 380.0, 340.0, 760.0, 820.0]
+    second = [820.0, 1.75, 175.0, 385.0, 345.0, 770.0, 830.0]
+    if include_sugar:
+        first.insert(1, 0.30)
+        second.insert(1, 0.31)
+    sheet.append(["2020M01", *first])
+    sheet.append([pd.Timestamp("2020-02-01"), *second])
     buffer = BytesIO()
     workbook.save(buffer)
     return buffer.getvalue()
 
 
-def test_parse_world_bank_prices_returns_palm_and_sugar_monthly() -> None:
+def test_parse_world_bank_prices_returns_eight_contract_proxies_monthly() -> None:
     frame = parse_world_bank_prices(
         make_pink_sheet_xlsx(), downloaded_at="2026-08-25T00:00:00Z"
     )
 
-    assert set(frame["commodity"]) == {"palm_oil", "sugar"}
+    assert set(frame["commodity"]) == {
+        "palm_oil", "sugar", "cotton", "corn", "soybeans",
+        "soybean_meal", "soybean_oil", "rapeseed_oil",
+    }
     assert list(frame.columns) == [
         "date", "commodity", "price", "unit", "source", "downloaded_at"
     ]
@@ -52,13 +63,16 @@ def test_parse_world_bank_prices_accepts_current_sheet_without_date_header() -> 
     sheet = workbook.active
     sheet.title = "Monthly Prices"
     sheet.append(["World Bank Commodity Price Data (The Pink Sheet)"])
-    sheet.append([None, "Palm oil", "Sugar, world"])
-    sheet.append([None, "$/mt", "$/kg"])
-    sheet.append(["2024M01", 900.0, 0.40])
+    sheet.append([
+        None, "Palm oil", "Sugar, world", "Cotton, A Index", "Maize",
+        "Soybeans", "Soybean meal", "Soybean oil", "Rapeseed oil",
+    ])
+    sheet.append([None, "$/mt", "$/kg", "$/kg", "$/mt", "$/mt", "$/mt", "$/mt", "$/mt"])
+    sheet.append(["2024M01", 900.0, 0.40, 1.80, 180.0, 400.0, 350.0, 800.0, 850.0])
     buffer = BytesIO()
     workbook.save(buffer)
 
     result = parse_world_bank_prices(buffer.getvalue())
 
-    assert set(result["commodity"]) == {"palm_oil", "sugar"}
+    assert len(set(result["commodity"])) == 8
     assert result["date"].eq(pd.Timestamp("2024-01-31")).all()

@@ -1,0 +1,7 @@
+chain_id,chain_name_cn,date,precip_anomaly_pct,soil_wetness_anomaly,coverage_pct,state,source,limitation
+corn,玉米,2026-08-29,0.2573217370120595,0.015441656710473936,0.9,WET,NASA POWER representative points,30日代表点代理；尚未按作物生育期或种植区权重聚合
+cotton,棉花,2026-08-29,-0.10460256356831699,-0.0511266427718041,0.9,DRY,NASA POWER representative points,30日代表点代理；尚未按作物生育期或种植区权重聚合
+palm_oil,棕榈油,2026-08-29,-0.3278589184299666,-0.07379596442320452,0.9,DRY,NASA POWER representative points,30日代表点代理；尚未按作物生育期或种植区权重聚合
+rapeseed,菜籽产业链,2026-08-29,-0.0020406622106281525,-0.07205655117483073,0.9,NEAR_NORMAL,NASA POWER representative points,30日代表点代理；尚未按作物生育期或种植区权重聚合
+soybean,大豆产业链,2026-08-29,0.306981354928489,-0.02064261250497807,0.9,WET,NASA POWER representative points,30日代表点代理；尚未按作物生育期或种植区权重聚合
+sugar,白糖,2026-08-29,0.24609569890752447,-0.0565252223549715,0.9,WET,NASA POWER representative points,30日代表点代理；尚未按作物生育期或种植区权重聚合

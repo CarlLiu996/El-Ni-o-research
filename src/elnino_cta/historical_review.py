@@ -30,6 +30,117 @@ EVIDENCE_COLUMNS = [
     "source_flag",
     "limitation",
 ]
+CHAIN_IDS = ("palm_oil", "sugar", "cotton", "corn", "soybean", "rapeseed")
+CROP_CHAIN_MAP = {
+    "Oil palm fruit": "palm_oil",
+    "Sugar cane": "sugar",
+    "Seed cotton, unginned": "cotton",
+    "Maize (corn)": "corn",
+    "Soya beans": "soybean",
+    "Rape or colza seed": "rapeseed",
+}
+REGION_CHAIN_MAP = {
+    "malaysia_palm": "palm_oil",
+    "indonesia_palm": "palm_oil",
+    "india_sugar": "sugar",
+    "brazil_cs_sugar": "sugar",
+    "us_cotton": "cotton",
+    "india_cotton": "cotton",
+    "china_cotton": "cotton",
+    "us_corn": "corn",
+    "brazil_corn": "corn",
+    "argentina_corn": "corn",
+    "china_corn": "corn",
+    "us_soybean": "soybean",
+    "brazil_soybean": "soybean",
+    "argentina_soybean": "soybean",
+    "canada_rapeseed": "rapeseed",
+    "australia_rapeseed": "rapeseed",
+    "china_rapeseed": "rapeseed",
+}
+
+CHAIN_NAMES_CN = {
+    "palm_oil": "棕榈油", "sugar": "白糖", "cotton": "棉花",
+    "corn": "玉米", "soybean": "大豆产业链", "rapeseed": "菜籽产业链",
+}
+
+
+def build_current_weather_monitor(
+    weather: pd.DataFrame,
+    as_of: str | pd.Timestamp,
+    climatology_start: int = 1991,
+    climatology_end: int = 2020,
+    window_days: int = 30,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Build a representative-point 30-day weather monitor by crop chain.
+
+    Monthly normals keep the calculation stable across leap years.  The output is
+    an observation proxy, not a crop-mask or phenology-specific yield model.
+    """
+    required = {"date", "region", "precip_mm", "root_zone_soil_wetness"}
+    missing = required - set(weather.columns)
+    if missing:
+        raise ValueError(f"Missing current-weather columns: {sorted(missing)}")
+    daily = weather.copy()
+    daily["date"] = pd.to_datetime(daily["date"], errors="coerce")
+    daily["precip_mm"] = pd.to_numeric(daily["precip_mm"], errors="coerce")
+    daily["root_zone_soil_wetness"] = pd.to_numeric(
+        daily["root_zone_soil_wetness"], errors="coerce"
+    )
+    daily = daily.dropna(subset=["date"])
+    daily = daily[daily["region"].isin(REGION_CHAIN_MAP)].copy()
+    daily["month"] = daily["date"].dt.month
+    climatology = daily[daily["date"].dt.year.between(climatology_start, climatology_end)]
+    normals = climatology.groupby(["region", "month"], as_index=False).agg(
+        precip_normal=("precip_mm", "mean"),
+        soil_normal=("root_zone_soil_wetness", "mean"),
+    )
+    joined = daily.merge(normals, on=["region", "month"], how="left")
+    joined["chain_id"] = joined["region"].map(REGION_CHAIN_MAP)
+    joined["soil_delta"] = joined["root_zone_soil_wetness"] - joined["soil_normal"]
+    joined["valid"] = joined["precip_mm"].notna().astype(float)
+    chain_day = joined.groupby(["chain_id", "date"], as_index=False).agg(
+        actual_precip=("precip_mm", "sum"),
+        normal_precip=("precip_normal", "sum"),
+        soil_wetness_anomaly=("soil_delta", "mean"),
+        coverage_pct=("valid", "mean"),
+    )
+    paths: list[pd.DataFrame] = []
+    for chain_id, group in chain_day.groupby("chain_id"):
+        group = group.sort_values("date").copy()
+        group["segment"] = group["date"].diff().dt.days.ne(1).cumsum()
+        group["actual_30d"] = group.groupby("segment")["actual_precip"].transform(
+            lambda values: values.rolling(window_days, min_periods=1).sum()
+        )
+        group["normal_30d"] = group.groupby("segment")["normal_precip"].transform(
+            lambda values: values.rolling(window_days, min_periods=1).sum()
+        )
+        group["precip_anomaly_pct"] = group["actual_30d"] / group["normal_30d"] - 1
+        group["soil_wetness_anomaly"] = group.groupby("segment")["soil_wetness_anomaly"].transform(
+            lambda values: values.rolling(window_days, min_periods=1).mean()
+        )
+        group["coverage_pct"] = group.groupby("segment")["coverage_pct"].transform(
+            lambda values: values.rolling(window_days, min_periods=1).mean()
+        )
+        paths.append(group)
+    path = pd.concat(paths, ignore_index=True) if paths else pd.DataFrame()
+    if path.empty:
+        return pd.DataFrame(), path
+    cutoff = pd.Timestamp(as_of)
+    latest = path[path["date"] <= cutoff].sort_values("date").groupby(
+        "chain_id", as_index=False
+    ).tail(1).copy()
+    latest["chain_name_cn"] = latest["chain_id"].map(CHAIN_NAMES_CN)
+    latest["state"] = latest["precip_anomaly_pct"].map(
+        lambda value: "DRY" if value <= -0.10 else "WET" if value >= 0.10 else "NEAR_NORMAL"
+    )
+    latest["source"] = "NASA POWER representative points"
+    latest["limitation"] = "30日代表点代理；尚未按作物生育期或种植区权重聚合"
+    columns = [
+        "chain_id", "chain_name_cn", "date", "precip_anomaly_pct",
+        "soil_wetness_anomaly", "coverage_pct", "state", "source", "limitation",
+    ]
+    return latest[columns].sort_values("chain_id").reset_index(drop=True), path
 
 
 def identify_enso_events(
@@ -156,12 +267,6 @@ def build_weather_evidence(
     climatology_start: int = 1991,
     climatology_end: int = 2020,
 ) -> pd.DataFrame:
-    region_commodity = {
-        "malaysia_palm": "palm_oil",
-        "indonesia_palm": "palm_oil",
-        "india_sugar": "sugar",
-        "brazil_cs_sugar": "sugar",
-    }
     daily = weather.copy()
     daily["date"] = pd.to_datetime(daily["date"], errors="coerce")
     for column in ("precip_mm", "root_zone_soil_wetness"):
@@ -180,14 +285,14 @@ def build_weather_evidence(
         window["month"] = window["date"].dt.month
         joined = window.merge(normals, on=["region", "month"], how="left")
         for region, group in joined.groupby("region"):
-            if region not in region_commodity:
+            if region not in REGION_CHAIN_MAP:
                 continue
             actual_rain = group["precip_mm"].sum(min_count=1)
             normal_rain = group["precip_normal"].sum(min_count=1)
             rows.append({
                 "event_id": event.event_id,
                 "status": event.status,
-                "commodity": region_commodity[region],
+                "commodity": REGION_CHAIN_MAP[region],
                 "region": region,
                 "precip_anomaly_pct": actual_rain / normal_rain - 1 if normal_rain > 0 else pd.NA,
                 "soil_wetness_anomaly": (group["root_zone_soil_wetness"] - group["soil_normal"]).mean(),
@@ -199,7 +304,6 @@ def build_weather_evidence(
 
 
 def build_yield_evidence(events: pd.DataFrame, crops: pd.DataFrame) -> pd.DataFrame:
-    item_commodity = {"Oil palm fruit": "palm_oil", "Sugar cane": "sugar"}
     crop_frame = crops.copy()
     crop_frame["year"] = pd.to_numeric(crop_frame["year"], errors="coerce")
     crop_frame["value"] = pd.to_numeric(crop_frame["value"], errors="coerce")
@@ -209,7 +313,7 @@ def build_yield_evidence(events: pd.DataFrame, crops: pd.DataFrame) -> pd.DataFr
         for year_offset in (0, 1):
             year = start_year + year_offset
             for keys, group in crop_frame.groupby(["area", "item", "element"]):
-                if keys[1] not in item_commodity:
+                if keys[1] not in CROP_CHAIN_MAP:
                     continue
                 values = group.set_index("year")["value"].sort_index()
                 if year not in values.index:
@@ -222,7 +326,7 @@ def build_yield_evidence(events: pd.DataFrame, crops: pd.DataFrame) -> pd.DataFr
                 rows.append({
                     "event_id": event.event_id,
                     "status": event.status,
-                    "commodity": item_commodity[keys[1]],
+                    "commodity": CROP_CHAIN_MAP[keys[1]],
                     "year_offset": year_offset,
                     "year": year,
                     "area": keys[0],
@@ -310,7 +414,7 @@ def build_event_evidence_panel(
 ) -> pd.DataFrame:
     rows: list[dict[str, Any]] = []
     for item in index_evidence.itertuples(index=False):
-        for commodity in ("palm_oil", "sugar"):
+        for commodity in CHAIN_IDS:
             rows.append({
                 "event_id": item.event_id, "status": item.status, "commodity": commodity,
                 "layer": "L1", "metric_id": item.metric_id, "value": item.value,

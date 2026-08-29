@@ -33,6 +33,8 @@ def fetch_daily_agroclimate(
         "format": "JSON",
     }
     client = session or requests.Session()
+    if session is None:
+        client.trust_env = False
     response = client.get(POWER_DAILY_URL, params=params, timeout=timeout)
     response.raise_for_status()
     payload = response.json()

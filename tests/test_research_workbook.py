@@ -208,6 +208,13 @@ def test_workbook_has_eight_ordered_sheets_and_l2_six_rows(tmp_path) -> None:
     assert categories == ["供给", "需求", "库存", "供给", "需求", "库存"]
 
 
+def test_all_sheets_define_visible_print_areas(tmp_path) -> None:
+    path = build_research_workbook(fixture_repo(tmp_path), tmp_path / "out", "2026-08-25")
+    workbook = openpyxl.load_workbook(path, data_only=False, read_only=False)
+
+    assert all(sheet.print_area for sheet in workbook.worksheets)
+
+
 def test_l3_prefers_newer_wind_active_contract_over_stale_monitor_values(tmp_path) -> None:
     repo = fixture_repo(tmp_path)
     _write_csv(repo / "data" / "processed" / "futures" / "P_active_wind.csv", [
@@ -296,6 +303,64 @@ def test_history_sheet_is_answer_first_and_limits_display_to_report_focus_events
     assert "不修改当前CTA配置" in text
 
 
+def test_expanded_history_sheet_shows_six_chains_and_separates_conversion_from_cta(tmp_path) -> None:
+    repo = fixture_repo(tmp_path)
+    research = repo / "research" / "expanded_universe"
+    chains = [
+        ("palm_oil", "棕榈油"), ("sugar", "白糖"), ("cotton", "棉花"),
+        ("corn", "玉米"), ("soybean", "大豆产业链"), ("rapeseed", "菜籽产业链"),
+    ]
+    _write_csv(research / "focal_event_matrix.csv", [
+        {
+            "event_id": "2014-2016", "chain_id": chain_id, "chain_name_cn": name,
+            "peak_oni": 2.59, "weather_precip_anomaly": -0.10,
+            "yield_deviation": -0.05, "price_6m": 0.10, "price_12m": 0.15,
+            "cta_medium_6m": 0.08, "cta_slow_6m": 0.06,
+            "price_proxy_count": 1, "cta_proxy_count": 1,
+        }
+        for chain_id, name in chains
+    ])
+    _write_csv(research / "focal_pattern_summary.csv", [
+        {
+            "chain_id": chain_id, "chain_name_cn": name, "valid_events": 4,
+            "conversion_success_count": 0, "conversion_valid_events": 4,
+            "cta_medium_positive_share": 0.75, "cta_valid_events": 4,
+            "cta_tendency": "CTA_TENDENCY", "evidence_strength": "NO_STABLE_CONVERSION",
+        }
+        for chain_id, name in chains
+    ])
+    expanded_history = repo / "data" / "processed" / "expanded_universe" / "history"
+    price_proxy = {
+        "palm_oil": "palm_oil", "sugar": "sugar", "cotton": "cotton",
+        "corn": "corn", "soybean": "soybeans", "rapeseed": "rapeseed_oil",
+    }
+    _write_csv(expanded_history / "event_price_paths.csv", [
+        {
+            "event_id": "2014-2016", "status": "COMPLETED",
+            "commodity": proxy, "relative_month": month, "price_index": 100 + month,
+        }
+        for proxy in price_proxy.values() for month in (0, 3, 6, 12)
+    ])
+    _write_csv(expanded_history / "event_cta_paths.csv", [
+        {
+            "event_id": "2014-2016", "status": "COMPLETED",
+            "commodity": proxy, "speed": "medium", "relative_month": month,
+            "event_equity": 1 + month / 100,
+        }
+        for proxy in price_proxy.values() for month in (0, 3, 6, 12)
+    ])
+
+    path = build_research_workbook(repo, tmp_path / "out", "2026-08-29")
+    workbook = openpyxl.load_workbook(path, data_only=False, read_only=False)
+    text = sheet_text(workbook["02_H_历次厄尔尼诺复盘"])
+
+    for _, name in chains:
+        assert name in text
+    assert "完整传导" in text
+    assert "CTA趋势机会倾向" in text
+    assert "不自动修改当前配置" in text
+
+
 def test_leadership_workbook_explains_climate_metrics_and_withholds_incomplete_conclusion(tmp_path) -> None:
     path = build_research_workbook(fixture_repo(tmp_path), tmp_path / "out", "2026-08-25")
     workbook = openpyxl.load_workbook(path, data_only=False, read_only=False)
@@ -381,6 +446,114 @@ def test_l4_labels_wind_cta_cross_check_as_exploratory_and_newer(tmp_path) -> No
     assert "Wind 2026-08-26仅方向复核" in text
     assert "活跃合约换月规则未公开" in text
     assert "SR最新复核已转中性" in text
+
+
+def test_l3_l4_expand_to_eight_domestic_contracts_with_latest_exploratory_data(tmp_path) -> None:
+    repo = fixture_repo(tmp_path)
+    expanded = repo / "data" / "processed" / "expanded_universe"
+    symbols = {
+        "P": 8000, "SR": 5000, "CF": 17000, "C": 2500,
+        "M": 3200, "Y": 8500, "OI": 9500, "RM": 2800,
+    }
+    dates = pd.bdate_range("2026-05-01", periods=80)
+    for symbol, base in symbols.items():
+        _write_csv(expanded / "futures" / f"{symbol}_continuous_exploratory.csv", [
+            {
+                "date": date, "symbol": symbol, "contract": "",
+                "close": base + index, "provider": "akshare_sina_continuous",
+            }
+            for index, date in enumerate(dates)
+        ])
+        for speed in ("fast", "medium", "slow"):
+            _write_csv(expanded / "signals" / f"{symbol}_{speed}_proxy_exploratory.csv", [
+                {
+                    "date": date, "close": base + index, "position": 1.0,
+                    "target_position": 1.0, "net_return": 0.001,
+                    "equity": 1 + index * 0.001, "speed": speed,
+                }
+                for index, date in enumerate(dates)
+            ])
+
+    path = build_research_workbook(repo, tmp_path / "out", "2026-08-29")
+    workbook = openpyxl.load_workbook(path, data_only=False, read_only=False)
+    market_text = sheet_text(workbook["05_L3市场定价"])
+    cta_text = sheet_text(workbook["06_L4_CTA环境"])
+
+    for name in ("棕榈油 P", "白糖 SR", "棉花 CF", "玉米 C", "豆粕 M", "豆油 Y", "菜籽油 OI", "菜籽粕 RM"):
+        assert name in market_text
+        assert name in cta_text
+    assert "AkShare/Sina连续合约（探索性）" in market_text
+    assert "换月与复权规则未公开" in market_text
+    assert "八个合约、六条作物链" in cta_text
+    assert "产业链内合约不重复计票" in cta_text
+    assert "不自动修改当前CTA配置" in cta_text
+    assert {f"D{row}" for row in range(6, 14)} <= set(_sparkline_targets(path, 6))
+    assert {f"D{row}" for row in range(13, 37)} <= set(_sparkline_targets(path, 7))
+
+
+def test_l2_discloses_six_chain_fundamental_coverage_and_usda_gaps(tmp_path) -> None:
+    repo = fixture_repo(tmp_path)
+    expanded = repo / "data" / "processed" / "expanded_universe"
+    crop_items = {
+        "Oil palm fruit": "palm_oil", "Sugar cane": "sugar",
+        "Seed cotton, unginned": "cotton", "Maize (corn)": "corn",
+        "Soya beans": "soybean", "Rape or colza seed": "rapeseed",
+    }
+    _write_csv(expanded / "faostat_crop_history.csv", [
+        {
+            "area": "Representative producer", "item": item,
+            "element": "Production", "year": year, "unit": "t",
+            "value": 100 + year - 2020, "flag": "A", "source": "FAOSTAT",
+        }
+        for item in crop_items for year in range(2020, 2025)
+    ])
+
+    path = build_research_workbook(repo, tmp_path / "out", "2026-08-29")
+    workbook = openpyxl.load_workbook(path, data_only=False, read_only=False)
+    text = sheet_text(workbook["04_L2供给基本面"])
+    audit_text = sheet_text(workbook["07_L5数据审计"])
+
+    assert "六条作物链基本面覆盖审计" in text
+    for name in ("棕榈油", "白糖", "棉花", "玉米", "大豆产业链", "菜籽产业链"):
+        assert name in text
+    assert "FAOSTAT产量历史基线" in text
+    assert "USDA PSD需求/库存未取得" in text
+    assert "不能判断当前供需缺口" in text
+    assert "扩品种数据覆盖与结论权限" in audit_text
+    assert "新增作物需求与库存" in audit_text
+
+
+def test_l1_shows_six_chain_current_weather_proxy_with_sparklines(tmp_path) -> None:
+    repo = fixture_repo(tmp_path)
+    climate = repo / "data" / "processed" / "expanded_universe" / "climate"
+    chains = [
+        ("palm_oil", "棕榈油"), ("sugar", "白糖"), ("cotton", "棉花"),
+        ("corn", "玉米"), ("soybean", "大豆产业链"), ("rapeseed", "菜籽产业链"),
+    ]
+    _write_csv(climate / "current_weather_snapshot.csv", [
+        {
+            "chain_id": chain_id, "chain_name_cn": name, "date": "2026-08-29",
+            "precip_anomaly_pct": -0.2, "soil_wetness_anomaly": -0.05,
+            "coverage_pct": 0.9, "state": "DRY", "source": "NASA POWER representative points",
+            "limitation": "30日代表点代理；尚未按作物生育期或种植区权重聚合",
+        }
+        for chain_id, name in chains
+    ])
+    _write_csv(climate / "current_weather_30d_path.csv", [
+        {"chain_id": chain_id, "date": date, "precip_anomaly_pct": -0.01 * index}
+        for chain_id, _ in chains
+        for index, date in enumerate(pd.date_range("2026-07-01", periods=60, freq="D"))
+    ])
+
+    path = build_research_workbook(repo, tmp_path / "out", "2026-08-29")
+    workbook = openpyxl.load_workbook(path, data_only=False, read_only=False)
+    text = sheet_text(workbook["03_L1气候天气"])
+
+    assert "六条作物链当前主产区天气代理" in text
+    for _, name in chains:
+        assert name in text
+    assert "30日降雨距平" in text
+    assert "尚未按作物生育期" in text
 
 
 def test_sparklines_plot_values_from_hidden_source_columns(tmp_path) -> None:
