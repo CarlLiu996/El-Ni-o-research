@@ -215,6 +215,83 @@ def test_all_sheets_define_visible_print_areas(tmp_path) -> None:
     assert all(sheet.print_area for sheet in workbook.worksheets)
 
 
+def add_domestic_fixture(repo: Path) -> None:
+    rows = []
+    for date, published, production, sales, inventory, rate in (
+        ("2026-05-31", "2026-06-03", 769.74, 449.02, 320.72, 58.33),
+        ("2026-06-30", "2026-07-06", 769.74, 502.8, 266.94, 65.32),
+        ("2026-07-31", "2026-08-06", 769.74, 548.4, 221.34, 71.24),
+        ("2026-08-31", "2026-09-06", 9999, 9999, 9999, 99),
+    ):
+        for metric, label, value, prior, category in (
+            ("production", "累计产糖", production, 646.5, "供给"),
+            ("sales", "累计销糖", sales, 549.61, "销售代理"),
+            ("inventory", "工业库存", inventory, 96.89, "库存"),
+            ("sales_rate", "累计销糖率", rate, 85.01, "销售进度"),
+        ):
+            rows.append({"region": "广西", "metric": metric, "label": label, "category": category,
+                         "date": date, "published_at": published, "value": value, "prior_value": prior,
+                         "change": value - prior, "yoy": value / prior - 1, "crop_year": "2025/26",
+                         "unit": "%" if metric == "sales_rate" else "万吨", "value_type": "actual",
+                         "source": "公开省级产销", "source_url": "https://example.com/gx"})
+    _write_csv(repo / "data/processed/china_sugar/province_history.csv", rows)
+    _write_csv(repo / "data/processed/china_sugar/casde_history.csv", [
+        {"metric": metric, "label": label, "crop_year": crop, "vintage_label": f"{crop}（8月{kind}）",
+         "published_at": "2026-08-12", "date": end, "value": value,
+         "value_type": "estimate" if kind == "估计" else "forecast", "source_url": "https://example.com/casde"}
+        for metric, label, values in (("production", "食糖产量", (1295, 1293)), ("consumption", "消费", (1570, 1573)))
+        for crop, end, kind, value in zip(("2025/26", "2026/27"), ("2026-09-30", "2027-09-30"), ("估计", "预测"), values)
+    ])
+    _write_csv(repo / "data/processed/china_sugar/price_history.csv", [
+        {"date": "2026-08-27", "spot_price": 5300, "raw_sugar_price": 17, "composite_price": 5400},
+        {"date": "2026-08-28", "spot_price": 5310, "raw_sugar_price": 18, "composite_price": 5410},
+    ])
+
+
+def test_domestic_sugar_is_visible_without_claiming_national_completeness(tmp_path):
+    repo = fixture_repo(tmp_path)
+    add_domestic_fixture(repo)
+    path = build_research_workbook(repo, tmp_path / "out", "2026-08-31")
+    workbook = openpyxl.load_workbook(path)
+    sheet = workbook[EXPECTED_SHEETS[4]]
+    matches = [row for row in sheet.iter_rows() if row[0].value == "广西" and row[2].value == "工业库存"]
+    assert len(matches) == 1
+    assert matches[0][3].value == 221.34
+    assert f"E{matches[0][0].row}" in _sparkline_targets(path, 5)
+    text = sheet_text(sheet)
+    assert "库存高于去年同期" in text
+    assert "季节分位不计算" in text
+    assert "全国实际产销库存未补齐" in text
+    assert "9999" not in text
+    assert "海外样本" in text
+    assert "1295" in text and "1293" in text and "预测" in text
+    assert "白糖国内" in sheet_text(workbook[EXPECTED_SHEETS[0]])
+    assert "暂不形成CTA增配结论" in sheet_text(workbook[EXPECTED_SHEETS[0]])
+    home = workbook[EXPECTED_SHEETS[0]]
+    assert home["B8"].alignment.wrap_text
+    assert "C8:F8" in {str(item) for item in home.merged_cells.ranges}
+    assert "全国实际产销库存未补齐" in sheet_text(workbook[EXPECTED_SHEETS[7]])
+    audit = workbook[EXPECTED_SHEETS[7]]
+    gap_row = next(row[0].row for row in audit.iter_rows() if row[0].value == "全国实际产销库存未补齐")
+    merged = {str(item) for item in audit.merged_cells.ranges}
+    assert f"F{gap_row}:H{gap_row}" in merged
+    assert f"I{gap_row}:K{gap_row}" in merged
+    assert workbook.sheetnames == EXPECTED_SHEETS
+
+
+def test_sugar_spot_is_separate_from_futures_and_has_sparkline(tmp_path):
+    repo = fixture_repo(tmp_path)
+    add_domestic_fixture(repo)
+    path = build_research_workbook(repo, tmp_path / "out", "2026-08-31")
+    workbook = openpyxl.load_workbook(path)
+    sheet = workbook[EXPECTED_SHEETS[5]]
+    rows = [row for row in sheet.iter_rows() if row[0].value == "中国食糖现货价格指标"]
+    assert len(rows) == 1
+    assert rows[0][2].value == 5310
+    assert f"D{rows[0][0].row}" in _sparkline_targets(path, 6)
+    assert "不计算基差" in sheet_text(sheet)
+
+
 def test_l3_prefers_newer_wind_active_contract_over_stale_monitor_values(tmp_path) -> None:
     repo = fixture_repo(tmp_path)
     _write_csv(repo / "data" / "processed" / "futures" / "P_active_wind.csv", [

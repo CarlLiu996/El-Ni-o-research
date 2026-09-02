@@ -13,6 +13,7 @@ import xlsxwriter
 from elnino_cta.fundamental_summary import build_l2_details, build_l2_summary
 from elnino_cta.expanded_review import PRICE_CHAIN_MAP
 from elnino_cta.signals import build_cta_proxy
+from elnino_cta.sources.china_sugar import current_province_rows
 
 
 EXPECTED_SHEETS = [
@@ -204,6 +205,8 @@ def load_workbook_inputs(repo_dir: Path) -> dict[str, object]:
         "expanded_signals": expanded_signals,
         "current_weather_snapshot": current_weather_snapshot,
         "current_weather_path": current_weather_path,
+        "china_sugar": load_csv_directory(processed / "china_sugar"),
+        "china_sugar_manifest": _read_json(processed / "china_sugar" / "manifest.json"),
     }
 
 
@@ -250,9 +253,9 @@ def create_formats(workbook: xlsxwriter.Workbook) -> dict[str, Any]:
             "text_wrap": True, "valign": "vcenter", "align": "left",
             "border": 1, "border_color": "#BFBFBF",
         }),
-        "good": workbook.add_format({**border, "font_color": "#006100", "bg_color": "#C6EFCE", "bold": True}),
-        "warn": workbook.add_format({**border, "font_color": "#9C6500", "bg_color": "#FFEB9C", "bold": True}),
-        "bad": workbook.add_format({**border, "font_color": "#9C0006", "bg_color": "#FFC7CE", "bold": True}),
+        "good": workbook.add_format({**border, "font_color": "#006100", "bg_color": "#C6EFCE", "bold": True, "text_wrap": True}),
+        "warn": workbook.add_format({**border, "font_color": "#9C6500", "bg_color": "#FFEB9C", "bold": True, "text_wrap": True}),
+        "bad": workbook.add_format({**border, "font_color": "#9C0006", "bg_color": "#FFC7CE", "bold": True, "text_wrap": True}),
         "link": workbook.add_format({**border, "font_color": "#0563C1", "underline": True, "text_wrap": True}),
     }
 
@@ -325,7 +328,7 @@ def add_current_conclusion_sheet(
     write_title(
         sheet,
         "00｜领导摘要：现在能否据此增配 CTA？",
-        f"数据评估日：{as_of}｜CTA是按规则跟随趋势的期货策略，不等于直接押注农产品上涨",
+        f"工作簿补充日：{frames.get('workbook_as_of', as_of)}；原监控快照：{as_of}｜CTA是按规则跟随趋势的期货策略，不等于直接押注农产品上涨",
         formats,
     )
     gate = monitor.get("research_gate", {})
@@ -363,7 +366,14 @@ def add_current_conclusion_sheet(
             question,
             "本层已通过" if status == "CONFIRMED" else "本层未通过，不能升级配置",
         ])
-    _write_table(sheet, 6, headers, rows, formats)
+    for offset, row in enumerate([headers, *rows]):
+        output_row = 6 + offset
+        style = formats["body"] if offset else formats["header"]
+        sheet.write(output_row, 0, row[0], style)
+        sheet.write(output_row, 1, row[1], style)
+        sheet.merge_range(output_row, 2, output_row, 5, row[2], style)
+        sheet.merge_range(output_row, 6, output_row, 11, row[3], style)
+        sheet.set_row(output_row, 42 if offset else 24)
     for offset, key in enumerate(questions, start=1):
         raw = gate.get(key, "UNKNOWN")
         sheet.write(6 + offset, 1, _status_text(raw), _status_format(raw, formats))
@@ -390,11 +400,18 @@ def add_current_conclusion_sheet(
     else:
         sheet.merge_range(13, 0, 13, 11, "当前快照未列出额外告警。", formats["body"])
     sheet.set_column("A:A", 20)
-    sheet.set_column("B:B", 18)
+    sheet.set_column("B:B", 28)
     sheet.set_column("C:D", 34)
     sheet.set_column("E:L", 12)
     sheet.freeze_panes(6, 0)
-    sheet.print_area(0, 0, max(13, 12 + min(len(alerts), 8)), 11)
+    last_row = max(13, 12 + min(len(alerts), 8))
+    if frames.get("china_sugar"):
+        last_row += 2
+        sheet.merge_range(last_row, 0, last_row + 1, 11, _domestic_sugar_headline(frames), formats["summary_gold"])
+        sheet.set_row(last_row, 28)
+        sheet.set_row(last_row + 1, 28)
+        last_row += 1
+    sheet.print_area(0, 0, last_row, 11)
 
 
 def add_logic_sheet(workbook: xlsxwriter.Workbook, frames: dict[str, object], formats: dict[str, Any]) -> None:
@@ -405,7 +422,7 @@ def add_logic_sheet(workbook: xlsxwriter.Workbook, frames: dict[str, object], fo
     expanded_mode = bool(frames.get("expanded_futures") or frames.get("expanded_baselines"))
     rows = [
         [1, "L1 气候天气", "厄尔尼诺是否真实且影响主产区", "海温、大气、印度洋修正、产区降雨/土壤/长势", "L2", "气候异常不等于一定减产"],
-        [2, "L2 供给基本面", "天气是否已经转化成减产、需求或库存变化", "六条作物链分别看供给、需求、库存" if expanded_mode else "棕榈油/白糖各看供给、需求、库存", "L3", "预测值只作背景，实际数据不足就不下结论"],
+        [2, "L2 供给基本面", "天气是否已经转化成减产、需求或库存变化", "白糖：国内产销库存→进口传导→印度/巴西；其他作物链分别验证供需", "L3", "省级≠全国；糖厂销售≠消费；年度估计/预测只作背景"],
         [3, "L3 市场定价", "市场是否已经开始为紧缺或宽松定价", "八合约价格趋势；正式与探索性口径分列" if expanded_mode else "P/SR价格趋势、前后月结构；现货基差缺失会披露", "L4", "行情过期或换月不透明则不确认"],
         [4, "L4 CTA环境", "规则化趋势策略是否能抓住这段行情", "Fast/Medium/Slow；统一20%目标波动", "L5", "次日执行、成本后，并要求中慢速与跨品种确认"],
         [5, "L5 数据审计", "来源、时效、覆盖与方法是否可信", "发布日期、缺失、哈希、限制", "配置结论", "关键数据不完整则保持观察"],
@@ -417,7 +434,11 @@ def add_logic_sheet(workbook: xlsxwriter.Workbook, frames: dict[str, object], fo
     sheet.set_column("B:B", 20)
     sheet.set_column("C:F", 32)
     sheet.freeze_panes(5, 0)
-    sheet.print_area(0, 0, 14, 11)
+    if frames.get("china_sugar"):
+        sheet.merge_range(16, 0, 17, 11,
+                          "白糖新增三段逻辑：①国内现实看广西/云南产糖、销量、销糖率和工业库存；②进口连接国际与国内市场；③CASDE全国年度估计/预测只作背景。海外减产与国内高库存可能同时存在，不将印度产量直接当作郑糖供给。",
+                          formats["note"])
+    sheet.print_area(0, 0, 17 if frames.get("china_sugar") else 14, 11)
 
 
 def _lookup_metric(frame: pd.DataFrame, **conditions: object) -> pd.Series | None:
@@ -1326,21 +1347,125 @@ def _l2_history_values(
     return pd.to_numeric(frame.sort_values("date")["value"], errors="coerce").dropna().tolist()
 
 
+def _sugar_visible(frames: dict[str, object], name: str) -> pd.DataFrame:
+    data = frames.get("china_sugar", {}).get(name, pd.DataFrame()).copy()
+    if data.empty:
+        return data
+    cutoff = pd.Timestamp(frames.get("workbook_as_of", frames["monitor"].get("as_of")))
+    column = "published_at" if "published_at" in data else "date"
+    return data[pd.to_datetime(data[column], errors="coerce").le(cutoff)].copy()
+
+
+def _domestic_sugar_headline(frames: dict[str, object]) -> str:
+    history = _sugar_visible(frames, "province_history")
+    current = current_province_rows(history, frames.get("workbook_as_of", frames["monitor"].get("as_of")))
+    if current.empty:
+        evidence = "尚无可用省级实际产销，不能用年度预测填补实际数据"
+    else:
+        stocks = current[current.metric.eq("inventory")]
+        evidence = "；".join(f"{r.region}：{r.direction}" for r in stocks.itertuples(index=False))
+    return "白糖国内｜" + evidence + "。全国实际产销库存未补齐；海外偏紧不等于国内郑糖偏紧。本次仅补充研究证据，不自动调整CTA配置或历史置信度。"
+
+
+def write_domestic_sugar_rows(sheet: Any, frames: dict[str, object], start: int, formats: dict[str, Any]) -> int:
+    history = _sugar_visible(frames, "province_history")
+    current = current_province_rows(history, frames["workbook_as_of"])
+    sheet.merge_range(start, 0, start, 12, "L2-1｜白糖国内实际：先看自己生产多少、卖得多快、剩多少", formats["section"])
+    sheet.merge_range(start + 1, 0, start + 1, 12,
+                      "读图提示：迷你图只展示同一榨季已取得月份；库存月度下降不等于库存偏低，还要看同比。历史同月样本不足，季节分位不计算；下列方向是同比描述，不是买卖信号。", formats["note"])
+    sheet.set_row(start + 1, 32)
+    headers = ["地区", "环节", "实际指标", "当前值", "迷你趋势", "单位", "上年同期", "同比变化", "方向（描述）", "方向怎么算", "观测截至", "发布/来源", "指标含义与限制"]
+    rows = []
+    for item in current.itertuples(index=False):
+        change = f"{item.change:+.2f}个百分点" if item.metric == "sales_rate" else _format_percent(item.yoy) if pd.notna(item.yoy) else "缺基准"
+        rows.append([item.region, item.category, item.label, item.value, "", item.unit,
+                     item.prior_value, change, item.direction, item.direction_reason, item.date,
+                     f"{item.published_at}\n沐甜公开产销（点击原文）", item.limitation])
+    header = start + 2
+    _write_table(sheet, header, headers, rows, formats, column_formats={3: formats["number"], 6: formats["number"]})
+    for offset, item in enumerate(current.itertuples(index=False), start=1):
+        row = header + offset
+        path = history[(history.region == item.region) & (history.metric == item.metric) & (history.crop_year == item.crop_year)].sort_values(["date", "published_at"]).drop_duplicates("date", keep="last")
+        values = pd.to_numeric(path.value, errors="coerce").tolist()
+        if not _add_row_sparkline(sheet, row, 4, values, 40 + offset, 52, "#4472C4"):
+            sheet.write(row, 4, "少于2期", formats["center"])
+        sheet.write_url(row, 11, item.source_url, formats["link"], f"{item.published_at}\n沐甜：原文")
+        sheet.set_row(row, 56)
+    cursor = header + len(rows) + 2
+    if current.empty:
+        sheet.merge_range(cursor, 0, cursor, 12, "未取得可用省级实际数据，不能用海外或年度预测替代。", formats["note"])
+        cursor += 2
+    sheet.merge_range(cursor, 0, cursor, 12, "L2-2｜全国年度背景：国产糖含甘蔗糖和甜菜糖，估计/预测单列", formats["section"])
+    annual = _sugar_visible(frames, "casde_history")
+    table_rows = []
+    base_year = pd.Timestamp(frames["workbook_as_of"]).year - (pd.Timestamp(frames["workbook_as_of"]).month < 10)
+    crops = [f"{year}/{str(year + 1)[-2:]}" for year in (base_year, base_year + 1)]
+    selected = annual[annual.published_at.eq(annual.published_at.max())].drop_duplicates(["crop_year", "metric"], keep="last") if not annual.empty else annual
+    definitions = [
+        ("production", "食糖产量", "全国生产的食糖；不是印度产量，也不是甘蔗原料吨数"),
+        ("cane_sugar", "其中：甘蔗糖", "食糖产量的组成部分，不能再与总产量相加"),
+        ("beet_sugar", "其中：甜菜糖", "北方甜菜制糖；同样属于国产食糖供给"),
+        ("consumption", "消费", "全国年度消费估计，不是糖厂当月销量"),
+        ("imports", "进口", "年度进口估计/预测，不是当月实际到港"),
+        ("exports", "出口", "全国年度出口估计/预测"),
+        ("balance_change", "结余变化", "产量+进口−消费−出口；正值为年度结余增加，不是期末库存"),
+    ]
+    for metric, label, meaning in definitions:
+        values, kinds = [], []
+        for crop in crops:
+            part = selected[(selected.crop_year == crop) & (selected.metric == metric)] if not selected.empty else pd.DataFrame()
+            item = part.iloc[-1] if not part.empty else pd.Series(dtype=object)
+            values.append(item.get("value", ""))
+            kinds.append({"estimate": "估计", "forecast": "预测", "historical_estimate": "历史估计"}.get(item.get("value_type"), "未取得"))
+        table_rows.append(["全国", "年度背景", label, values[0], "", "万吨", values[1], kinds[0] + " / " + kinds[1],
+                           "不计实际方向", meaning, selected.published_at.max() if not selected.empty else "", "农业农村部CASDE", "非逐月实际；保留每次发布版本"])
+    _write_table(sheet, cursor + 1, ["范围", "用途", "指标", crops[0], "估计修订", "单位", crops[1], "两列类型", "评分边界", "它衡量什么", "报告发布日期", "来源", "限制"], table_rows, formats)
+    for offset, (metric, _, _) in enumerate(definitions, start=1):
+        row = cursor + 1 + offset
+        series = annual[(annual.crop_year == crops[0]) & (annual.metric == metric)].sort_values("published_at").drop_duplicates("published_at", keep="last") if not annual.empty else pd.DataFrame()
+        if not series.empty:
+            values = series.value.tolist()
+            if not _add_row_sparkline(sheet, row, 4, values, 60 + offset, 52, "#A5A5A5"):
+                sheet.write(row, 4, "仅1个版本", formats["center"])
+            sheet.write_url(row, 11, str(series.iloc[-1].source_url), formats["link"], "农业农村部：原表")
+        sheet.set_row(row, 42)
+    cursor += len(table_rows) + 3
+    sheet.merge_range(cursor, 0, cursor, 12,
+                      "年度迷你图表示同一榨季估计值的版本修订，不是每月生产曲线；全国实际产销库存未补齐，不能用“结余变化”补成期末库存。", formats["note"])
+    sheet.set_row(cursor, 32)
+    cursor += 2
+    imports = _sugar_visible(frames, "imports")
+    import_text = "进口当月实际数据未取得。"
+    if not imports.empty:
+        item = imports.sort_values("date").iloc[-1]
+        import_text = f"{item.date}当月进口约{item.value:g}万吨（{item.published_at}公开转载）；该数仍需海关原始明细核验，不纳入评分。"
+    sheet.merge_range(cursor, 0, cursor, 12, "L2-3｜进口传导与尚缺证据", formats["section"])
+    sources = frames.get("china_sugar_manifest", {}).get("sources", {})
+    cost_dates = "；".join(f"{label}接口截至{sources[key].get('data_as_of', '未知')}" for key, label in (("import_inquota", "配额内"), ("import_outquota", "配额外")) if key in sources)
+    sheet.merge_range(cursor + 1, 0, cursor + 2, 12, import_text + (cost_dates or "未取得当前进口成本序列") + "。历史值不冒充当前成本；缺进口成本、政策约束和全国实际库存时，无法判断海外减产能传导多少到郑糖。", formats["note"])
+    sheet.set_row(cursor + 1, 26)
+    sheet.set_row(cursor + 2, 26)
+    sheet.set_column(40, 440, None, None, {"hidden": True})
+    return cursor + 4
+
+
 def add_l2_sheet(workbook: xlsxwriter.Workbook, frames: dict[str, object], formats: dict[str, Any]) -> None:
     sheet = workbook.add_worksheet(EXPECTED_SHEETS[4])
     sheet.set_tab_color("#70AD47")
     write_title(sheet, "04｜L2 供给基本面", "本页回答：天气是否已经转化成产量、需求和库存变化；迷你图紧邻当前值", formats)
-    sheet.merge_range(3, 0, 3, 12, "判断顺序：实际主指标 → 同季节分位 → 方向；预测只作背景，白糖供给需印度产量与巴西制糖甘蔗代理共同验证。", formats["note"])
-    sheet.merge_range(4, 0, 4, 12, "季节分位怎么算：月度指标与历史同月比较；UNICA与历史同榨季月份比较；年度USDA指标在历史年度中排名。分位=不高于当前值的有效历史样本数÷有效样本总数。", formats["note"])
-    sheet.merge_range(5, 0, 5, 12, "方向怎么算：供给/库存低位→偏紧，高位→偏松；需求低位→偏松，高位→偏紧。低位≤33%，高位≥67%；评分指标冲突→中性，含预测或缺失→证据不足。", formats["note"])
-    sheet.merge_range(8, 0, 8, 11, "六格结论", formats["section"])
-    write_l2_summary_rows(sheet, frames["l2_summary"], frames["fundamentals"], 9, formats)
-    sheet.merge_range(17, 0, 17, 11, "指标明细", formats["section"])
-    write_l2_detail_rows(sheet, frames["l2_details"], frames["fundamentals"], 18, formats)
-    visible_last_row = 18 + len(frames["l2_details"])
+    sheet.merge_range(3, 0, 3, 12, "判断顺序：白糖先看国内实际产销库存，再看进口如何传导海外影响；印度/巴西只是海外样本，不能直接代表国内郑糖供需。年度估计/预测只作背景。", formats["note"])
+    sheet.merge_range(4, 0, 4, 12, "海外六格的季节分位怎么算：月度指标与历史同月比较；UNICA与历史同榨季月份比较；年度USDA指标在历史年度中排名。分位=不高于当前值的有效历史样本数÷有效样本总数。", formats["note"])
+    sheet.merge_range(5, 0, 5, 12, "海外六格的方向怎么算：供给/库存低位→偏紧，高位→偏松；需求低位→偏松，高位→偏紧。低位≤33%，高位≥67%；评分指标冲突→中性，含预测或缺失→证据不足。", formats["note"])
+    start = write_domestic_sugar_rows(sheet, frames, 8, formats) if frames.get("china_sugar") else 8
+    sheet.merge_range(start, 0, start, 11, "海外样本六格｜马来棕榈油 / 印度巴西与全球食糖（非国内郑糖结论）", formats["section"])
+    write_l2_summary_rows(sheet, frames["l2_summary"], frames["fundamentals"], start + 1, formats)
+    sheet.merge_range(start + 9, 0, start + 9, 11, "海外指标明细", formats["section"])
+    detail_start = start + 10
+    write_l2_detail_rows(sheet, frames["l2_details"], frames["fundamentals"], detail_start, formats)
+    visible_last_row = detail_start + len(frames["l2_details"])
     faostat = frames.get("expanded_baselines", {}).get("faostat_crop_history", pd.DataFrame())
     if not faostat.empty:
-        coverage_start = 20 + len(frames["l2_details"])
+        coverage_start = visible_last_row + 2
         sheet.merge_range(coverage_start, 0, coverage_start, 12, "六条作物链基本面覆盖审计", formats["section"])
         sheet.merge_range(
             coverage_start + 1, 0, coverage_start + 1, 12,
@@ -1378,7 +1503,7 @@ def add_l2_sheet(workbook: xlsxwriter.Workbook, frames: dict[str, object], forma
             for category in ("需求", "库存"):
                 if chain_id in {"palm_oil", "sugar"}:
                     coverage_rows.append([
-                        COMMODITY_CN[chain_id], category, "已覆盖（见上方六格）", "", "", "",
+                        COMMODITY_CN[chain_id], category, "海外/全球样本；非国内完整覆盖", "", "", "",
                         "MPOB/USDA/Wind既有监测", "上方按同季节分位判断",
                         "部分年度USDA指标含预测，已在明细中标注",
                         "按发布频率持续刷新", "可与供给共同使用，但预测不单独确认",
@@ -1538,7 +1663,7 @@ def add_market_sheet(workbook: xlsxwriter.Workbook, frames: dict[str, object], f
             price_basis = item.get("contract", latest.get("contract", ""))
         term = {} if is_wind or is_sina else item.get("term_structure", {})
         latest_date = latest.get("date", item.get("date"))
-        monitor_as_of = pd.to_datetime(frames["monitor"].get("as_of"), errors="coerce")
+        monitor_as_of = pd.to_datetime(frames.get("workbook_as_of", frames["monitor"].get("as_of")), errors="coerce")
         parsed_latest_date = pd.to_datetime(latest_date, errors="coerce")
         staleness = (
             max(0, int((monitor_as_of - parsed_latest_date).days))
@@ -1579,7 +1704,30 @@ def add_market_sheet(workbook: xlsxwriter.Workbook, frames: dict[str, object], f
             sheet.write(4 + offset, 3, "少于2期", formats["center"])
     sheet.set_column(source_col, source_col + 80, None, None, {"hidden": True})
     note_row = 5 + len(rows)
-    sheet.merge_range(note_row, 0, note_row, 11, "尚缺数据：新增六个合约尚无Tushare/Wind正式连续合约和可审计换月规则，八个品种均缺现货价格/基差序列；因此本页最新行情只回答价格方向，不能单独确认基本面传导或修改CTA配置。", formats["note"])
+    sheet.merge_range(note_row, 0, note_row, 11, "尚缺数据：新增六个合约尚无Tushare/Wind正式连续合约和可审计换月规则；匹配交割地区、等级与合约的现货基差仍缺失，不能单独确认基本面传导或修改CTA配置。", formats["note"])
+    prices = _sugar_visible(frames, "price_history")
+    if not prices.empty:
+        note_row += 2
+        sheet.merge_range(note_row, 0, note_row, 11, "白糖现货与国际原糖价格补充｜独立观察，不替换上方期货行情", formats["section"])
+        extra_rows = []
+        price_paths = []
+        for label, column, unit in (("中国食糖现货价格指标", "spot_price", "元/吨"), ("国际原糖价格指标", "raw_sugar_price", "美分/磅")):
+            valid = prices.dropna(subset=[column]).sort_values("date")
+            if valid.empty:
+                continue
+            latest = valid.iloc[-1]
+            lag = (pd.Timestamp(frames["workbook_as_of"]) - pd.Timestamp(latest.date)).days
+            extra_rows.append([label, "沐甜公开价格接口", latest[column], "", unit,
+                               _return_over_rows(valid, 20, column), _return_over_rows(valid, 60, column),
+                               latest.date, "过期" if lag > 4 else "时效合格", "只作价格旁证", "不计算基差", "地区、等级与合约未匹配；不用于计算CTA代理"])
+            price_paths.append(valid[column].tail(60).tolist())
+        _write_table(sheet, note_row + 1, ["指标", "来源", "最新值", "60日趋势", "单位", "20日涨跌", "60日涨跌", "观测截至", "时效", "用途", "边界", "为什么"], extra_rows, formats, column_formats={5: formats["percent"], 6: formats["percent"]})
+        for offset, path in enumerate(price_paths, start=1):
+            _add_row_sparkline(sheet, note_row + 1 + offset, 3, path, 30 + offset, 30, "#ED7D31")
+            sheet.set_row(note_row + 1 + offset, 42)
+        note_row += len(extra_rows) + 3
+        sheet.merge_range(note_row, 0, note_row, 11, "进口成本说明：可下载的配额内/外历史接口已经滞后，未放入当前价格比较；现货指标与连续期货直接相减可能产生伪基差，所以不计算基差。", formats["note"])
+        sheet.set_row(note_row, 32)
     sheet.set_column("A:B", 18)
     sheet.set_column("C:C", 13)
     sheet.set_column("D:D", 18)
@@ -1755,6 +1903,29 @@ def add_audit_sheet(workbook: xlsxwriter.Workbook, frames: dict[str, object], fo
         sheet.write(5 + offset, 1, _status_text(raw_status), _status_format(raw_status, formats))
     monitor = frames["monitor"]
     blocker_row = 8 + len(rows)
+    if frames.get("china_sugar"):
+        sheet.merge_range(blocker_row, 0, blocker_row, 10, "国内白糖新增数据：覆盖、版本与剩余缺口", formats["section"])
+        domestic_rows = []
+        labels = {"province": "省级实际产销", "casde": "全国年度供需背景", "price": "糖价/现货指标", "import": "当月进口（转载）", "import_cost": "进口成本历史"}
+        for key, item in frames.get("china_sugar_manifest", {}).get("sources", {}).items():
+            domestic_rows.append([labels.get(item.get("kind"), key) + " / " + key,
+                                  _status_text(item.get("status")), item.get("rows", 0),
+                                  item.get("data_as_of", ""), item.get("published_at", ""),
+                                  item.get("reason", ""), "保留原文、发布日期及SHA256；新公告需登记来源后重跑"])
+        domestic_rows.extend([
+            ["全国实际产销库存未补齐", "缺失", "", "", "", "两省数据不代表全国；糖厂销售不等于终端消费；CASDE结余变化不等于期末库存", "补全国协会同口径月度原表，不拼接不同范围"],
+            ["长期季节分位", "样本不足", "", "", "", "省级序列本次覆盖近月；同月长期历史不足，季节分位不计算", "补足多年同月原文，保留真实发布日期"],
+        ])
+        domestic_headers = ["数据集", "状态", "行数", "观察期/年度结束", "发布日期", "限制与影响", "补齐方式"]
+        for offset, row in enumerate([domestic_headers, *domestic_rows]):
+            output_row = blocker_row + 1 + offset
+            style = formats["body"] if offset else formats["header"]
+            for column, value in enumerate(row[:5]):
+                sheet.write(output_row, column, value, style)
+            sheet.merge_range(output_row, 5, output_row, 7, row[5], style)
+            sheet.merge_range(output_row, 8, output_row, 10, row[6], style)
+            sheet.set_row(output_row, 44 if offset else 30)
+        blocker_row += len(domestic_rows) + 4
     sheet.merge_range(blocker_row, 0, blocker_row, 11, "当前阻断结论的数据缺口", formats["section"])
     blocker_rows = []
     for alert in monitor.get("alerts", []):
@@ -1854,7 +2025,7 @@ def add_audit_sheet(workbook: xlsxwriter.Workbook, frames: dict[str, object], fo
     sheet.set_column("I:K", 34)
     sheet.freeze_panes(6, 0)
     sheet.print_area(0, 0, glossary_row + 1 + len(glossary), 10)
-    sheet.fit_to_pages(1, 1)
+    sheet.fit_to_pages(1, 0 if frames.get("china_sugar") else 1)
 
 
 def validate_workbook(path: Path) -> None:
@@ -1875,6 +2046,7 @@ def build_research_workbook(repo_dir: Path, output_dir: Path, as_of: str) -> Pat
     output_dir.mkdir(parents=True, exist_ok=True)
     output_path = output_dir / f"厄尔尼诺农产品CTA研究框架_八页领导汇报版_{as_of.replace('-', '')}.xlsx"
     frames = load_workbook_inputs(repo_dir)
+    frames["workbook_as_of"] = as_of
     with xlsxwriter.Workbook(str(output_path)) as workbook:
         workbook.set_properties({
             "title": "厄尔尼诺农产品CTA研究框架",

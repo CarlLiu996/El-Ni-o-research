@@ -1,0 +1,14 @@
+[
+  {"id":"gx_202605","kind":"province","region":"广西","date":"2026-05-31","url":"https://www.msweet.com.cn/eportal/ui?pageId=2590581&articleKey=3201487&columnId=2590685"},
+  {"id":"gx_202606","kind":"province","region":"广西","date":"2026-06-30","url":"https://www.msweet.com.cn/eportal/ui?pageId=2590581&articleKey=3205545&columnId=2590685"},
+  {"id":"gx_202607","kind":"province","region":"广西","date":"2026-07-31","url":"https://www.msweet.com.cn/eportal/ui?pageId=2590581&articleKey=3209647&columnId=2590685"},
+  {"id":"yn_202605","kind":"province","region":"云南","date":"2026-05-31","url":"https://www.msweet.com.cn/eportal/ui?pageId=2590581&articleKey=3201899&columnId=2590685"},
+  {"id":"yn_202606","kind":"province","region":"云南","date":"2026-06-30","url":"https://www.msweet.com.cn/eportal/ui?pageId=2590581&articleKey=3205051&columnId=2590685"},
+  {"id":"yn_202607","kind":"province","region":"云南","date":"2026-07-31","url":"https://www.msweet.com.cn/mtkjwap/2590627/2590683/2590685/3209418/index.html"},
+  {"id":"casde_20260611","kind":"casde","url":"https://scs.moa.gov.cn/jcyj/202606/t20260611_6484941.htm"},
+  {"id":"casde_20260812","kind":"casde","url":"https://scs.moa.gov.cn/jcyj/202608/t20260812_6486619.htm"},
+  {"id":"imports_202607","kind":"import","date":"2026-07-31","url":"https://www.msweet.com.cn/mtkjwap/2590627/2590683/2590697/3211415/index.html"},
+  {"id":"msweet_price","kind":"price","url":"https://www.msweet.com.cn/eportal/ui?struts.portlet.action=%2Fportlet%2Fprice%21getSTZSJson.action&moduleId=cb752447cfe24b44b18c7a7e9abab048"},
+  {"id":"import_inquota","kind":"import_cost","url":"https://www.msweet.com.cn/datacenterapply/datacenter/json/JinKongTang.json"},
+  {"id":"import_outquota","kind":"import_cost","url":"https://www.msweet.com.cn/datacenterapply/datacenter/json/Jkpewlr.json"}
+]

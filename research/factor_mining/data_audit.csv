@@ -1,0 +1,9 @@
+﻿check,result,detail
+formal_futures_coverage,PASS,"P/SR Tushare roll-adjusted CTA paths, 2015-01 to 2026-08"
+futures_roll_policy,PASS,same-contract daily return chained across dominant-contract rolls
+target_alignment,PASS,forward targets start at t+1 month; current month excluded
+weather_coverage,PASS_WITH_DISCLOSURE,NASA POWER daily; monthly location requires >=20 valid days
+dmi_parser,PASS_WITH_FIX,duplicate date rows dropped after detecting malformed header-like row
+fundamental_vintage,FAIL_FOR_DEPLOYMENT,historical releases bulk-downloaded in 2026; one-month lag is only an exploratory proxy
+global_stock_use,EXCLUDED,historical and forecast vintages unavailable point-in-time
+strategy_readiness,EXPLORATORY_ONLY,small single-instrument sample and multiple testing; no live recommendation
