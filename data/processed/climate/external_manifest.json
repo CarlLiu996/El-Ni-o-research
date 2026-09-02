@@ -1,0 +1,46 @@
+{
+  "overall": "PARTIAL",
+  "as_of": "2026-08-26",
+  "refreshed_at": "2026-08-26T14:30:08.022269+00:00",
+  "datasets": {
+    "monsoon_cumulative": {
+      "status": "OK",
+      "path": "data/processed/climate/india_monsoon_cumulative.csv",
+      "rows": 4354,
+      "data_as_of": "2026-08-23",
+      "published_at": null,
+      "coverage_pct": 1.0,
+      "source": "https://power.larc.nasa.gov/api/temporal/daily/point",
+      "reason": "",
+      "sha256": "d8f120ee10b8c1dcda35c7f137199bf936222855d9addb595de3d0fe9d7c1231"
+    },
+    "imd_events": {
+      "status": "OK",
+      "path": "data/processed/climate/india_monsoon_events.csv",
+      "rows": 2,
+      "data_as_of": "2026-06-04",
+      "published_at": "2026-06-04T08:30:40+00:00",
+      "coverage_pct": null,
+      "source": "https://internal.imd.gov.in/press_release/20260604_pr_5051.pdf; https://mausam.imd.gov.in/imd_latest/contents/press_release.php; https://mausam.imd.gov.in/responsive/monsooninformation.php; https://internal.imd.gov.in/pages/press_release_mausam.php",
+      "reason": "",
+      "sha256": "c32230ed90b849c6cf76a1d79b3c8a6e98ee94c3a2cf253371a7945ba208f3db"
+    },
+    "ndvi": {
+      "status": "LOW_COVERAGE",
+      "path": "data/processed/climate/india_sugar_ndvi.csv",
+      "rows": 106,
+      "data_as_of": "2026-08-05",
+      "published_at": null,
+      "coverage_pct": 0.0,
+      "source": "https://doi.org/10.5067/MODIS/MYD13Q1.061 via Microsoft Planetary Computer modis-13Q1-061 point gateway",
+      "reason": "LOW_COVERAGE",
+      "sha256": "bf9ab36785f00c36abe55a6e1a631f84e8b0dbd82e5f49d0d4c157e6d618ea21",
+      "valid_pixels": 0,
+      "total_pixels": 15,
+      "region_count": 0,
+      "reason_cn": "最新合成期受季风云层/质量位影响，高质量采样点不足",
+      "next_action": "等待下一期16日合成发布后增量重试；保留原始低覆盖记录",
+      "conclusion_impact": "当前印度糖蔗长势暂不可判，不作为L1方向证据"
+    }
+  }
+}

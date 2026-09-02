@@ -1,0 +1,12 @@
+date,value,unit,source,published_at,vintage,indicator_code,indicator_name,ending_stocks_1000t,total_use_1000t
+2015-12-31,0.2575707605507721,ratio,U.S. Department of Agriculture via Wind EDB,2026-06-02,2026-08-17,S5010514/S5010513,全球糖库销比（期末库存/总消费量）,43735,169798
+2016-12-31,0.24320284362420846,ratio,U.S. Department of Agriculture via Wind EDB,2026-06-02,2026-08-17,S5010514/S5010513,全球糖库销比（期末库存/总消费量）,41326,169924
+2017-12-31,0.292042450964091,ratio,U.S. Department of Agriculture via Wind EDB,2026-06-02,2026-08-17,S5010514/S5010513,全球糖库销比（期末库存/总消费量）,50936,174413
+2018-12-31,0.30207199907396687,ratio,U.S. Department of Agriculture via Wind EDB,2026-06-02,2026-08-17,S5010514/S5010513,全球糖库销比（期末库存/总消费量）,52192,172780
+2019-12-31,0.27410144245571844,ratio,U.S. Department of Agriculture via Wind EDB,2026-06-02,2026-08-17,S5010514/S5010513,全球糖库销比（期末库存/总消费量）,47183,172137
+2020-12-31,0.2882079581760093,ratio,U.S. Department of Agriculture via Wind EDB,2026-06-02,2026-08-17,S5010514/S5010513,全球糖库销比（期末库存/总消费量）,49615,172150
+2021-12-31,0.26852543736060647,ratio,U.S. Department of Agriculture via Wind EDB,2026-06-02,2026-08-17,S5010514/S5010513,全球糖库销比（期末库存/总消费量）,47076,175313
+2022-12-31,0.2566045175463302,ratio,U.S. Department of Agriculture via Wind EDB,2026-06-02,2026-08-17,S5010514/S5010513,全球糖库销比（期末库存/总消费量）,45555,177530
+2023-12-31,0.2523348176337137,ratio,U.S. Department of Agriculture via Wind EDB,2026-06-02,2026-08-17,S5010514/S5010513,全球糖库销比（期末库存/总消费量）,44824,177637
+2024-12-31,0.24006272584713984,ratio,U.S. Department of Agriculture via Wind EDB,2026-06-02,2026-08-17,S5010514/S5010513,全球糖库销比（期末库存/总消费量）,42252,176004
+2025-12-31,0.24116607284353545,ratio,U.S. Department of Agriculture via Wind EDB,2026-06-02,2026-08-17,S5010514/S5010513,全球糖库销比（期末库存/总消费量）,43523,180469

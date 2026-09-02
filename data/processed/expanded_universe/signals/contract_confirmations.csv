@@ -1,0 +1,9 @@
+symbol,fast_direction,medium_direction,slow_direction
+P,1,1,1
+SR,1,1,0
+CF,1,1,1
+C,0,-1,0
+M,1,1,1
+Y,1,1,1
+OI,1,1,1
+RM,1,0,-1

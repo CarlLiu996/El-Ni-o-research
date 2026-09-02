@@ -1,0 +1,70 @@
+{
+  "malaysia_palm": [
+    {"name": "Johor", "latitude": 1.86, "longitude": 103.11},
+    {"name": "Sabah", "latitude": 5.98, "longitude": 116.07},
+    {"name": "Sarawak", "latitude": 1.55, "longitude": 110.36}
+  ],
+  "indonesia_palm": [
+    {"name": "Riau", "latitude": 0.29, "longitude": 101.71},
+    {"name": "North Sumatra", "latitude": 2.12, "longitude": 99.55},
+    {"name": "Central Kalimantan", "latitude": -1.68, "longitude": 113.38}
+  ],
+  "india_sugar": [
+    {"name": "Maharashtra", "latitude": 19.75, "longitude": 75.71},
+    {"name": "Uttar Pradesh", "latitude": 26.85, "longitude": 80.91},
+    {"name": "Karnataka", "latitude": 15.32, "longitude": 75.71}
+  ],
+  "brazil_cs_sugar": [
+    {"name": "Sao Paulo", "latitude": -22.19, "longitude": -48.79},
+    {"name": "Goias", "latitude": -16.64, "longitude": -49.31},
+    {"name": "Minas Gerais", "latitude": -18.51, "longitude": -44.56}
+  ],
+  "us_cotton": [
+    {"name": "Texas", "latitude": 31.0, "longitude": -100.0}
+  ],
+  "india_cotton": [
+    {"name": "Gujarat", "latitude": 22.3, "longitude": 71.2},
+    {"name": "Maharashtra Cotton", "latitude": 19.75, "longitude": 75.71}
+  ],
+  "china_cotton": [
+    {"name": "Xinjiang", "latitude": 41.1, "longitude": 85.2}
+  ],
+  "us_corn": [
+    {"name": "Iowa", "latitude": 42.0, "longitude": -93.5},
+    {"name": "Illinois", "latitude": 40.0, "longitude": -89.0}
+  ],
+  "brazil_corn": [
+    {"name": "Mato Grosso Corn", "latitude": -12.7, "longitude": -55.8},
+    {"name": "Parana Corn", "latitude": -24.5, "longitude": -51.3}
+  ],
+  "argentina_corn": [
+    {"name": "Cordoba Corn", "latitude": -31.4, "longitude": -64.2}
+  ],
+  "china_corn": [
+    {"name": "Heilongjiang", "latitude": 47.5, "longitude": 127.5},
+    {"name": "Jilin", "latitude": 43.8, "longitude": 126.5}
+  ],
+  "us_soybean": [
+    {"name": "Iowa Soybean", "latitude": 42.0, "longitude": -93.5},
+    {"name": "Illinois Soybean", "latitude": 40.0, "longitude": -89.0}
+  ],
+  "brazil_soybean": [
+    {"name": "Mato Grosso Soybean", "latitude": -12.7, "longitude": -55.8},
+    {"name": "Parana Soybean", "latitude": -24.5, "longitude": -51.3}
+  ],
+  "argentina_soybean": [
+    {"name": "Cordoba Soybean", "latitude": -31.4, "longitude": -64.2}
+  ],
+  "canada_rapeseed": [
+    {"name": "Saskatchewan", "latitude": 52.0, "longitude": -106.0},
+    {"name": "Alberta", "latitude": 53.0, "longitude": -113.0}
+  ],
+  "australia_rapeseed": [
+    {"name": "Western Australia", "latitude": -31.9, "longitude": 116.0},
+    {"name": "New South Wales", "latitude": -34.5, "longitude": 147.0}
+  ],
+  "china_rapeseed": [
+    {"name": "Hubei", "latitude": 30.9, "longitude": 112.2},
+    {"name": "Hunan", "latitude": 27.6, "longitude": 111.7}
+  ]
+}

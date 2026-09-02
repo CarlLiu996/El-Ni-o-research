@@ -1,0 +1,54 @@
+{
+  "period": {
+    "start": "2015-01-01",
+    "end": "2026-08-22"
+  },
+  "datasets": {
+    "oni": {
+      "rows": 138,
+      "provider": "NOAA CPC"
+    },
+    "roni": {
+      "rows": 138,
+      "provider": "NOAA CPC"
+    },
+    "soi": {
+      "rows": 138,
+      "provider": "NOAA CPC"
+    },
+    "dmi": {
+      "rows": 137,
+      "provider": "NOAA PSL"
+    },
+    "agroclimate": {
+      "rows": 51024,
+      "provider": "NASA POWER",
+      "points": 12,
+      "regions": 4,
+      "parameters": ["PRECTOTCORR", "GWETROOT"]
+    },
+    "P": {
+      "rows": 2823,
+      "provider": "Tushare contract + dominant mapping",
+      "quality": {
+        "rows": 2823,
+        "invalid_dates": 0,
+        "duplicate_dates": 0,
+        "missing_price": 0,
+        "nonpositive_price": 0
+      }
+    },
+    "SR": {
+      "rows": 2823,
+      "provider": "Tushare contract + dominant mapping",
+      "quality": {
+        "rows": 2823,
+        "invalid_dates": 0,
+        "duplicate_dates": 0,
+        "missing_price": 0,
+        "nonpositive_price": 0
+      }
+    }
+  },
+  "warnings": []
+}

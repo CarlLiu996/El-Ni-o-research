@@ -1,0 +1,29 @@
+{
+  "status": "OK",
+  "refreshed_at": "2026-08-26T12:26:05.101984+00:00",
+  "boundary": "活跃合约连续行情用于L3定价展示；不等同于可审计换月的CTA回测序列",
+  "artifacts": {
+    "P": {
+      "file": "P_active_wind.csv",
+      "rows": 1612,
+      "min_date": "2020-01-02",
+      "max_date": "2026-08-26",
+      "indicator_code": "M0066353",
+      "indicator_name": "期货收盘价(活跃合约):棕榈油",
+      "source": "大连商品交易所",
+      "provider": "Wind EDB",
+      "sha256": "cd8757a024f42d3f2954077c79829653a33a3daf6cbebacce58178583ceefb97"
+    },
+    "SR": {
+      "file": "SR_active_wind.csv",
+      "rows": 1612,
+      "min_date": "2020-01-02",
+      "max_date": "2026-08-26",
+      "indicator_code": "M0066364",
+      "indicator_name": "期货收盘价(活跃合约):白砂糖",
+      "source": "郑州商品交易所",
+      "provider": "Wind EDB",
+      "sha256": "192a5c1182f4470772587fbd0e07bcfbdcf6e84e780d9e197026b58bb5479bc8"
+    }
+  }
+}

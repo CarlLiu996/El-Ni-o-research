@@ -1,0 +1,6 @@
+date,value,unit,source,published_at,vintage,indicator_code,indicator_name,ending_stocks_1000t,total_use_1000t,crop_year,note
+2022-12-31,0.229989306,ratio,USDA FAS Oilseeds: World Markets and Trade,2026-08-23,2026-08-23,USDA_TABLE_11,全球棕榈油库销比（期末库存/国内消费量）,16990,73873,2022/23,August 2026 report historical estimate
+2023-12-31,0.212346533,ratio,USDA FAS Oilseeds: World Markets and Trade,2026-08-23,2026-08-23,USDA_TABLE_11,全球棕榈油库销比（期末库存/国内消费量）,15964,75179,2023/24,August 2026 report historical estimate
+2024-12-31,0.196964728,ratio,USDA FAS Oilseeds: World Markets and Trade,2026-08-23,2026-08-23,USDA_TABLE_11,全球棕榈油库销比（期末库存/国内消费量）,15016,76237,2024/25,August 2026 report historical estimate
+2025-12-31,0.197572410,ratio,USDA FAS Oilseeds: World Markets and Trade,2026-08-23,2026-08-23,USDA_TABLE_11,全球棕榈油库销比（期末库存/国内消费量）,15382,77855,2025/26,August 2026 estimate
+2026-12-31,0.183003428,ratio,USDA FAS Oilseeds: World Markets and Trade,2026-08-23,2026-08-23,USDA_TABLE_11,全球棕榈油库销比（期末库存/国内消费量）,14626,79922,2026/27,August 2026 forecast

@@ -1,0 +1,57 @@
+{
+  "version": 1,
+  "chains": [
+    {
+      "chain_id": "palm_oil",
+      "name_cn": "棕榈油",
+      "research_role": "高敏感度主研究对象",
+      "primary_regions": ["印度尼西亚", "马来西亚"],
+      "fundamentals": ["产量", "单产", "出口", "消费", "期末库存", "库销比"]
+    },
+    {
+      "chain_id": "sugar",
+      "name_cn": "白糖",
+      "research_role": "高敏感度主研究对象",
+      "primary_regions": ["巴西", "印度", "中国"],
+      "fundamentals": ["甘蔗或食糖产量", "单产", "制糖比例", "消费", "期末库存", "库销比"]
+    },
+    {
+      "chain_id": "cotton",
+      "name_cn": "棉花",
+      "research_role": "扩展研究对象",
+      "primary_regions": ["美国南部和得州", "印度Gujarat和Maharashtra", "中国新疆"],
+      "fundamentals": ["产量", "单产", "消费", "出口", "期末库存", "库销比"]
+    },
+    {
+      "chain_id": "corn",
+      "name_cn": "玉米",
+      "research_role": "低敏感度对照与条件性机会",
+      "primary_regions": ["美国Corn Belt", "巴西Mato Grosso和Parana", "阿根廷Pampas", "中国东北"],
+      "fundamentals": ["产量", "单产", "饲用消费", "工业消费", "出口", "期末库存", "库销比"]
+    },
+    {
+      "chain_id": "soybean",
+      "name_cn": "大豆产业链",
+      "research_role": "原料冲击的油粕两端",
+      "primary_regions": ["美国中西部", "巴西中西部和南部", "阿根廷Pampas", "中国进口压榨"],
+      "fundamentals": ["大豆产量", "大豆单产", "压榨", "出口", "消费", "期末库存", "库销比"]
+    },
+    {
+      "chain_id": "rapeseed",
+      "name_cn": "菜籽产业链",
+      "research_role": "原料冲击的油粕两端",
+      "primary_regions": ["加拿大Prairies", "澳大利亚西部和新南威尔士", "欧洲", "中国长江流域"],
+      "fundamentals": ["菜籽产量", "菜籽单产", "压榨", "进口", "出口", "消费", "期末库存", "库销比"]
+    }
+  ],
+  "contracts": [
+    {"symbol": "P", "name_cn": "棕榈油", "chain_id": "palm_oil", "exchange": "DCE", "continuous_code": "P.DCE", "sina_code": "P0"},
+    {"symbol": "SR", "name_cn": "白糖", "chain_id": "sugar", "exchange": "CZCE", "continuous_code": "SR.ZCE", "sina_code": "SR0"},
+    {"symbol": "CF", "name_cn": "棉花", "chain_id": "cotton", "exchange": "CZCE", "continuous_code": "CF.ZCE", "sina_code": "CF0"},
+    {"symbol": "C", "name_cn": "玉米", "chain_id": "corn", "exchange": "DCE", "continuous_code": "C.DCE", "sina_code": "C0"},
+    {"symbol": "M", "name_cn": "豆粕", "chain_id": "soybean", "exchange": "DCE", "continuous_code": "M.DCE", "sina_code": "M0"},
+    {"symbol": "Y", "name_cn": "豆油", "chain_id": "soybean", "exchange": "DCE", "continuous_code": "Y.DCE", "sina_code": "Y0"},
+    {"symbol": "OI", "name_cn": "菜籽油", "chain_id": "rapeseed", "exchange": "CZCE", "continuous_code": "OI.ZCE", "sina_code": "OI0"},
+    {"symbol": "RM", "name_cn": "菜籽粕", "chain_id": "rapeseed", "exchange": "CZCE", "continuous_code": "RM.ZCE", "sina_code": "RM0"}
+  ]
+}

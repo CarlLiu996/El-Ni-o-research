@@ -1,0 +1,102 @@
+{
+  "as_of": "2026-08-29",
+  "downloaded_at": "2026-08-29T09:11:16.680980+00:00",
+  "files": {
+    "events": "data\\processed\\expanded_universe\\history\\enso_events.csv",
+    "evidence": "data\\processed\\expanded_universe\\history\\event_evidence_panel.csv",
+    "price_paths": "data\\processed\\expanded_universe\\history\\event_price_paths.csv",
+    "cta_paths": "data\\processed\\expanded_universe\\history\\event_cta_paths.csv",
+    "cta_summary": "data\\processed\\expanded_universe\\history\\event_cta_summary.csv",
+    "daily_cta_summary": "data\\processed\\expanded_universe\\history\\existing_daily_cta_summary.csv",
+    "patterns": "data\\processed\\expanded_universe\\history\\historical_patterns.csv",
+    "current_context": "data\\processed\\expanded_universe\\history\\current_event_context.csv"
+  },
+  "rows": {
+    "events": 22,
+    "evidence": 5090,
+    "price_paths": 3524,
+    "cta_paths": 7048,
+    "cta_summary": 1128,
+    "daily_cta_summary": 132,
+    "patterns": 389,
+    "current_context": 0
+  },
+  "artifacts": {
+    "events": {
+      "path": "data\\processed\\expanded_universe\\history\\enso_events.csv",
+      "rows": 22,
+      "sources": [
+        "https://www.cpc.ncep.noaa.gov/data/indices/oni.ascii.txt"
+      ],
+      "min_date": "1951-06-01",
+      "max_date": "2023-12-01",
+      "sha256": "27ff1d8e547255b43a0747c5867e19720f3f5dd7372b3a4d27bd82fc9c87fa64"
+    },
+    "evidence": {
+      "path": "data\\processed\\expanded_universe\\history\\event_evidence_panel.csv",
+      "rows": 5090,
+      "sources": [
+        "https://data.fao.org/catalog/iso/d24a448b-3b62-4c09-8c1d-4a39bb599876",
+        "https://doi.org/10.5067/MODIS/MYD13Q1.061 via Microsoft Planetary Computer modis-13Q1-061 point gateway",
+        "https://power.larc.nasa.gov/api/temporal/daily/point",
+        "https://psl.noaa.gov/gcos_wgsp/Timeseries/Data/dmi.had.long.data",
+        "https://www.cpc.ncep.noaa.gov/data/indices/oni.ascii.txt",
+        "https://www.cpc.ncep.noaa.gov/data/indices/soi"
+      ],
+      "min_date": "1951-10-01",
+      "max_date": "2024-12-31",
+      "sha256": "18cffb51862c09e31711875ede00ad61021dcd68531a19ca4b1460f89da304c1"
+    },
+    "price_paths": {
+      "path": "data\\processed\\expanded_universe\\history\\event_price_paths.csv",
+      "rows": 3524,
+      "sources": [
+        "https://thedocs.worldbank.org/en/doc/18675f1d1639c7a34d463f59263ba0a2-0050012025/related/CMO-Historical-Data-Monthly.xlsx"
+      ],
+      "min_date": "1963-01-31",
+      "max_date": "2024-12-31",
+      "sha256": "ffacb0e9fa9f4b5c28bbb185bebb152022507cb2dc0f6933ff236578fb482784"
+    },
+    "cta_paths": {
+      "path": "data\\processed\\expanded_universe\\history\\event_cta_paths.csv",
+      "rows": 7048,
+      "sources": [],
+      "min_date": "1963-01-31",
+      "max_date": "2024-12-31",
+      "sha256": "ca8ab8ef58d162aec9e694b80b9bbebde8bc53661f27334828f0dd10a706ea01"
+    },
+    "cta_summary": {
+      "path": "data\\processed\\expanded_universe\\history\\event_cta_summary.csv",
+      "rows": 1128,
+      "sources": [],
+      "min_date": null,
+      "max_date": null,
+      "sha256": "3747d584b52665f1958861af6927df28e5c83b7c8f9061adaa91e06c77ca7bbb"
+    },
+    "daily_cta_summary": {
+      "path": "data\\processed\\expanded_universe\\history\\existing_daily_cta_summary.csv",
+      "rows": 132,
+      "sources": [],
+      "min_date": "2015-01-05",
+      "max_date": "2023-06-01",
+      "sha256": "7258e098cefaeb09a5e2bb87862cd0912520ca845cc2aafb6dd1383ed64a5841"
+    },
+    "patterns": {
+      "path": "data\\processed\\expanded_universe\\history\\historical_patterns.csv",
+      "rows": 389,
+      "sources": [],
+      "min_date": null,
+      "max_date": null,
+      "sha256": "552472a27cacf5652985ffd644f55b2fc4b38c6384e8c060497a35ecafde9970"
+    },
+    "current_context": {
+      "path": "data\\processed\\expanded_universe\\history\\current_event_context.csv",
+      "rows": 0,
+      "sources": [],
+      "min_date": null,
+      "max_date": null,
+      "sha256": "9ee167f60c30d1f49da61288c5867b41a50602de1e9f76a90b9ecd6605437d81"
+    }
+  },
+  "boundary": "历史复盘为描述性旁路，不导入当前CTA门槛、仓位或置信度修正"
+}
