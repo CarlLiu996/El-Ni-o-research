@@ -1,0 +1,15 @@
+{
+  "freeze_at": "2026-11-13T01:16:29.882966+00:00",
+  "previous_freeze": "2026-11-12T23:50:00+00:00",
+  "purpose": "independent_validation",
+  "database": "daily_agri_cta/data/history.duckdb",
+  "rows": 37161,
+  "publication_status": "unknown unless recorded",
+  "unchanged_existing_0800_task": true,
+  "m1_complete": false,
+  "m2_complete": false,
+  "public_evidence_ledger": "NOAA-only three-row sample; full ledger retained privately",
+  "public_data_rights": "No raw MPOB/exchange files or complete market database redistributed",
+  "private_persistence": "local workspace disk verified; external S3 not configured or exercised",
+  "acceptance": "partial M1; M2/M4/M5 not complete"
+}

@@ -2,7 +2,7 @@
 
 > **本目录是一个新的、独立的“九品种日报数据工程”项目**，不是将本仓库已有的厄尔尼诺/CTA Proxy 研究改写或取代。现有 `CODEX_CONTEXT_ElNino_Agri_CTA.md` 继续保留。
 >
-> **现状：工程交接与实施规范已提交；历史库/爬虫/调度尚未部署成功，不能据此称已经自动取数。** Codex 应按 `docs/CODEX_TASK.md` 开发并留下可复验的运行证据。
+> **现状：已实施并实跑MPOB、NOAA及RU/NR年度逐合约历史管道；M1/M2仍有明确缺口，尚未部署定时运行。** 运行方法见 [docs/IMPLEMENTATION.md](docs/IMPLEMENTATION.md)，实际覆盖与失败见 reports/ 和 [缺口清单](docs/GAP_REGISTER.md)。
 
 ## 目标与不变约束
 

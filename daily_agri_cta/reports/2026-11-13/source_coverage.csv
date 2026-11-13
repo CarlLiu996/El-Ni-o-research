@@ -1,0 +1,11 @@
+symbol,status,checked_metrics,latest_observation,latest_published_at,missing
+SR,unverified,,,,"spot, basis, industrial P0, company risk; see GAP_REGISTER.md"
+CF,unverified,,,,"spot, basis, industrial P0, company risk; see GAP_REGISTER.md"
+RU,partial,"futures_close,futures_high,futures_low,futures_open,futures_open_interest,futures_settlement,futures_volume,warehouse_receipts_warehouse",2026-11-12 00:00:00,,"spot, basis, industrial P0, company risk; see GAP_REGISTER.md"
+NR,partial,"futures_close,futures_high,futures_low,futures_open,futures_open_interest,futures_settlement,futures_volume,warehouse_receipts_factory,warehouse_receipts_warehouse",2026-11-12 00:00:00,,"spot, basis, industrial P0, company risk; see GAP_REGISTER.md"
+M,unverified,,,,"spot, basis, industrial P0, company risk; see GAP_REGISTER.md"
+C,unverified,,,,"spot, basis, industrial P0, company risk; see GAP_REGISTER.md"
+P,partial,"mpob_exports,mpob_production,mpob_stock",2026-10-31 00:00:00,,"spot, basis, industrial P0, company risk; see GAP_REGISTER.md"
+Y,unverified,,,,"spot, basis, industrial P0, company risk; see GAP_REGISTER.md"
+OI,unverified,,,,"spot, basis, industrial P0, company risk; see GAP_REGISTER.md"
+RM,unverified,,,,"spot, basis, industrial P0, company risk; see GAP_REGISTER.md"

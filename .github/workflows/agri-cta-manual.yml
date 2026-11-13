@@ -1,0 +1,49 @@
+name: Independent agri CTA validation
+on:
+  workflow_dispatch:
+    inputs:
+      collect:
+        description: 'Run real collectors (requires private S3 persistence)'
+        type: boolean
+        default: false
+permissions:
+  contents: read
+concurrency:
+  group: agri-cta-private-store
+  cancel-in-progress: false
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: daily_agri_cta
+    env:
+      PYTHONPATH: src
+      CTA_BUCKET: ${{ secrets.CTA_S3_BUCKET }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.CTA_AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.CTA_AWS_SECRET_ACCESS_KEY }}
+      AWS_DEFAULT_REGION: ${{ secrets.CTA_AWS_REGION }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -e '.[test]' boto3
+      - run: python -m pytest -q
+      - name: Require durable private storage and restore last snapshot
+        id: restore
+        if: ${{ inputs.collect }}
+        run: |
+          test -n "$CTA_BUCKET" || { echo 'Private persistence is unconfigured; refusing transient-only collection'; exit 1; }
+          python -c "import os; from agri_cta.persistence import sync; sync('data',os.environ['CTA_BUCKET'],'agri-cta',restore=True)"
+      - name: Backfill and validate independently
+        if: ${{ inputs.collect }}
+        run: |
+          python -m agri_cta.cli backfill --source all --start 2025-01-01 --end 2025-12-31
+          python -m agri_cta.cli validate > data/qa.json
+      - name: Persist successful data and all failed-source snapshots
+        if: ${{ inputs.collect && always() && steps.restore.outcome == 'success' }}
+        run: |
+          test -n "$CTA_BUCKET" && test -d data || exit 1
+          python -c "import os; from agri_cta.persistence import sync; sync('data',os.environ['CTA_BUCKET'],'agri-cta')"
