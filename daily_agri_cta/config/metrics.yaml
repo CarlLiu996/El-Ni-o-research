@@ -1,0 +1,89 @@
+version: 1
+timezone: Asia/Shanghai
+report_time: "08:00"
+freeze_time: "07:50"
+trade_day_calendar: CN_futures_exchanges_and_holidays
+# 指标是待建设目标，不是声明数据已实际接通。
+universal:
+  - contract_day_close_settlement_volume_oi
+  - spot_same_day_location_quality
+  - basis_spot_minus_named_contract
+  - spread_near_minus_far_same_price_type
+  - warehouse_receipt_total_change
+  - inventory_level_change_seasonality
+  - import_or_production_cost_profit
+  - historical_percentile_if_complete
+  - source_release_timestamp_revision
+products:
+  SR:
+    account: self
+    stage: 基本面验证
+    baseline_rating: "多★★"
+    safety_margin: low
+    p0: [SR2701_SR2705_spread, SR_warehouse_receipts, Guangxi_spot, ICE_no11_daily]
+    p1: [Guangxi_production_sales_stock, import_out_of_quota_margin, India_cane_ethanol_export, UNICA_crush_ATR_sugar_mix, EU27_beet_weather_yield_Ukraine, Brazil_sugar_ethanol_parity]
+  CF:
+    account: self
+    stage: 逻辑证伪观察
+    baseline_rating: "空★"
+    safety_margin: low
+    p0: [CF2701_CF2705_spread, CF_warehouse_receipts, cotton_official_daily_inspection, seed_cotton_cost, cotton_3128B_spot]
+    p1: [mill_actual_new_cotton_transaction_price, yarn_fabric_inventory_orders, US_Brazil_India_production, ICE_cotton, commercial_industrial_cotton_stocks]
+  RU:
+    account: cta
+    secondary_contract_symbol: NR
+    stage: 基本面验证
+    baseline_rating: "观察★"
+    safety_margin: low
+    p0: [RU_NR_same_date_relative_price, RU_NR_receipts, Qingdao_warehouse_stock, Thailand_cup_lump_latex_price, tire_plant_utilization]
+    p1: [Thailand_Indonesia_Vietnam_tapping_weather_age, SICOM_OSE_prices, truck_sales, import_parity, synthetic_rubber_substitution]
+  M:
+    account: cta
+    stage: 基本面验证
+    baseline_rating: "空★"
+    safety_margin: low
+    p0: [M2701_M2705_spread, M_warehouse_receipts, China_soymeal_stock, soybean_arrivals_rolling_1to3m, soybean_crush_profit]
+    p1: [USDA_CONAB_US_Brazil_Argentina_soy, CBOT_ZS_ZM_ZL, CNF_import_parity, soybean_stock_crush_run, hog_poultry_aquaculture_feed_demand, oil_meal_ratio]
+  C:
+    account: self
+    stage: 基本面验证
+    baseline_rating: "空★"
+    safety_margin: low
+    p0: [C2701_C2705_spread, Northeast_new_crop_purchase, North_South_port_inventory, corn_starch_spread, deep_processing_profit]
+    p1: [feed_demand, wheat_sorghum_rice_substitutes, policy_reserve_purchases, USDA_CONAB_corn_production, import_parity_CBOT]
+  P:
+    account: cta
+    stage: 价格确认观察
+    baseline_rating: "空★★"
+    safety_margin: medium
+    p0: [MPOB_monthly_production, MPOB_monthly_exports, MPOB_month_end_stock, P2701_P2705_spread, Y2701_minus_P2701, palm_24deg_spot_basis, China_palm_port_inventory]
+    p1: [Indonesia_B40_B50_real_implementation, Indonesia_export_policy, ITS_AmSpec_SGS_shipments, Malaysia_Indonesia_weather, Brent_diesel_biodiesel_economics, import_profit, BMD_FCPO_spread]
+  Y:
+    account: cta
+    stage: 基本面验证
+    baseline_rating: "多★"
+    safety_margin: low
+    p0: [China_soy_oil_inventory, Y2701_Y2705_spread, Y2701_minus_P2701, China_soy_oil_spot_basis, soybean_crush_profit]
+    p1: [US_Brazil_Argentina_soy_outlook, CBOT_soy_oil_ZL, US_biodiesel_policy, OI_Y_spread, oil_meal_ratio, food_demand]
+  OI:
+    account: cta
+    stage: 价格确认观察
+    baseline_rating: "多★★"
+    safety_margin: medium
+    p0: [China_rapeseed_oil_stock, OI2701_OI2705_spread, OI2701_minus_Y2701, OI2701_minus_P2701, OI_spot_basis, OI_receipts]
+    p1: [Canadian_ICE_RS, Australia_EU_supply, China_Canada_tariffs_inspection, rapeseed_arrivals_crush, rapeseed_oil_import_profit]
+  RM:
+    account: self
+    stage: 基本面验证
+    baseline_rating: "空★★"
+    safety_margin: low
+    p0: [RM2701_RM2705_spread, RM_receipts, rapeseed_meal_stock, M2701_minus_RM2701, RM_spot_basis]
+    p1: [rapeseed_arrivals_crush, direct_rapeseed_meal_imports, Canada_Australia_supply, aquaculture_demand_season, DDGS_cottonseed_meal_substitution]
+risk:
+  company: Guotou_Futures
+  source_notice: SDIC_NOTICE
+  source_rate_reference: SDIC_MARGIN
+  contracts: [main, "2701", expiry_special]
+  distinguish: [company_speculative, company_hedge, exchange_speculative, exchange_hedge, daily_price_limit]
+  detect_only_official_changes: true
+  baseline_missing_state: unknown
