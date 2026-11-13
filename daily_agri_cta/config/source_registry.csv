@@ -1,0 +1,15 @@
+source_id,source_name,commodities,metrics,frequency,official_url,priority,access_status,automatic_parser_status,history_target,rights_and_caveats
+CZCE,郑州商品交易所,"SR CF OI RM","逐合约日行情 仓单 期权日行情",daily,https://www.czce.com.cn,P0,official_site_verified,endpoint_to_validate,2015-present,遵守交易所数据使用声明 不等于已验证自动接口
+DCE,大连商品交易所,"M C P Y","逐合约日行情 仓单 期权日行情",daily,https://www.dce.com.cn,P0,official_site_verified,endpoint_to_validate,2015-present,逐年/逐日入口及文件许可需核查
+SHFE,上海期货交易所,RU,"逐合约日行情 仓单 库存周报",daily,https://www.shfe.cn/reports/tradedata/dailyandweeklydata/,P0,official_page_verified,endpoint_to_validate,2015-present,页面动态选择日期 下载端点须合法验证
+INE,上海国际能源交易中心,NR,"逐合约日行情 仓单",daily,https://www.ine.cn,P0,official_site_known,endpoint_to_validate,listing-present,NR为能源中心品种 不与RU混列
+MPOB,马来西亚棕榈油局,P,"月度产量 出口 库存 进口",monthly,https://bepi.mpob.gov.my/stat/web_report1.php?val=202684,P0,official_yearly_html_verified,parser_not_yet_tested,2000-present where available,URL参数年份映射需校验 年份页面存在修订值
+MPOB_HISTORY,马来西亚棕榈油局,P,"历史月度产量 库存 出口",monthly,https://bepi.mpob.gov.my/,P0,official_site_verified,source_discovery_needed,3-5y min,部分历史报告需注册或订阅 不绕过权限
+NOAA_ENSO,NOAA CPC/PSL,"SR CF P M C","Niño3.4 ONI RONI",monthly,https://www.cpc.ncep.noaa.gov/data/indices/ersst5.nino.mth.91-20.ascii,P0,official_ascii_reference_verified,parser_to_build,1950-present,同名称指数需保留版本与基期
+USDA_NASS,USDA NASS Quick Stats,"M C Y SR CF","面积 产量 单产",monthly_or_annual,https://www.nass.usda.gov/Quick_Stats/,P0,official_portal_verified,api_key_or_bulk_to_setup,10y min,API密钥走环境变量 注意发布日和最新修订
+USDA_WASDE,USDA WASDE,"SR M C Y RM OI","国际供需及库存预估",monthly,https://www.usda.gov/oce/commodity/wasde,P1,official_portal_known,release_archives_to_validate,5y revisions,预测值不得与实现库存混同 保留各期vintage
+UNICA,巴西UNICA,SR,"中南部压榨 ATR 糖醇比",biweekly,https://unica.com.br,P1,official_site_known,files_and_access_to_validate,3-5y,历史报表链接/许可需确认
+NCC,中国棉花协会/公检信息,CF,"公检 新棉籽棉 现货",daily,https://www.china-cotton.org/,P1,official_or_industry_site_known,source_discovery_needed,3y,公检与成交价格是不同口径 需明确地区和来源
+SDIC_NOTICE,国投期货,"SR CF RU NR M C P Y OI RM","交易提示 保证金 涨跌停及交割风控",daily,https://www.sdicfutures.com.cn/annc/business/11098.html,P0,official_list_verified,article_discovery_to_build,notice_archive,以官方公告有效交易日和公司费率为准
+SDIC_MARGIN,国投期货,"SR CF RU NR M C P Y OI RM","公司客户投机/套保保证金 交易所保证金 涨跌幅",daily,https://www.sdicfutures.com.cn/service/publicity/11247.html,P0,header_only_dynamic_table,needs_browser_or_authorized_export,point_in_time_snapshots,空表头不等于无变化 旧值缺失不推算
+VENDOR_IMPORT,Wind/iFind或合规数据商,"SR CF RU NR M C P Y OI RM","现货 库存 压榨利润 外盘 进口利润 基差 月差",daily_or_weekly,MANUAL_AUTHORIZED_IMPORT,P1,requires_user_license,CSV_XLSX_import_adapter,3-5y,禁止抓取付费绕过授权 禁止将受限原始数据公开提交
