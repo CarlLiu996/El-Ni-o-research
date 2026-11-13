@@ -7,7 +7,7 @@
 1. 阅读 README.md、docs/CODEX_TASK.md、docs/DATA_CONTRACT.md、docs/REPORT_CONTRACT.md、config/metrics.yaml、config/source_registry.csv。
 2. 检查项目根目录 CODEX_CONTEXT_ElNino_Agri_CTA.md 以理解已有研究；不要修改已存在的 ENSO CTA Proxy 研究数据、自动化或文档。
 3. 先做 P0 历史回填与真实可重跑采集，再做产业资讯扩展，最后做报告引擎。每阶段提交可审阅的 PR 或明确的 commit。
-4. **每个采集器必须“失败关闭（fail closed）”**：官网不可读/字段结构变化/被反爬阻止/访问需要授权时，记录 \`unverified\` 和错误，不写0值或沿用旧值装作新值。
+4. **每个采集器必须“失败关闭（fail closed）”**：官网不可读/字段结构变化/被反爬阻止/访问需要授权时，记录 `unverified` 和错误，不写0值或沿用旧值装作新值。
 5. 禁止推测源码 API。动态网页可通过合法浏览器网络面板、公开文档和许可范围内的网络调用研究；严禁规避付费/认证或绕过反爬机制。
 6. 风控数据源首选国投期货 https://www.sdicfutures.com.cn/annc/business/11098.html；若该站迁移，可从官方站内链接追踪至新版。https://www.sdicfutures.com.cn/service/publicity/11247.html 有动态表头但不一定返回行；不得宣称“全站不可访问”或“没有变化”。
 7. 一项指标同时存在来源发布时间与数据所属时间时，必须分别保存；同月修订后的 MPOB 数值保存新版本（vintage）；发布时间不明确的研究报告不能作为官方 release_time。
@@ -20,14 +20,14 @@
 
 ## 工作质量验收（必须自查）
 
-- [ ] 每个序列有 \`source_url\`、\`observed_at\`、\`published_at\`（或 \`unknown\`）、\`fetched_at\`、\`unit\`、\`commodity\` 和 \`metric_id\`。
+- [ ] 每个序列有 `source_url`、`observed_at`、`published_at`（或 `unknown`）、`fetched_at`、`unit`、`commodity` 和 `metric_id`。
 - [ ] 每次运行保存独立原始快照及哈希；可追溯回哪个网页/官方附件。
 - [ ] 同一时间范围回填两次，记录数目不增长；若官方修订才新增 vintage。
 - [ ] 数据缺口与新公告自动输出，**每个品种应有查找覆盖日志**（有数据/无变化/未取得/需授权，不可消失）。
 - [ ] 日报绝不把已在昨天日报说过的本周旧消息作为今天新变化。
 - [ ] 交易所与期货公司保证金分开字段，投机与套保分开，不对缺失旧值做虚假计算。
 - [ ] 图表来自仓库中的真实长历史，注明观测期、采样频率、来源、缺失、版本、样本量；不足则不画/标注无效。
-- [ ] 形成可读的 \`reports/YYYY-MM-DD/{report_manifest.json, evidence_ledger.csv, qa.json, report.md, charts/}\`。
+- [ ] 形成可读的 `reports/YYYY-MM-DD/{report_manifest.json, evidence_ledger.csv, qa.json, report.md, charts/}`。
 - [ ] 在 PR 中贴出实际执行命令、测试结果、样本行、失败源列表、许可证限制和运行成本预估。
 
 ## 优先修补的漏报
@@ -36,4 +36,4 @@
 
 ## 报告时间
 
-以北京时间 \`Asia/Shanghai\` 07:50 作为日报数据冻结时点（可以配置）；08:00 由原有 ChatGPT 任务推送。Codex 不能在没有实际连接或验证前声称已接管推送或已在云端持续工作。
+以北京时间 `Asia/Shanghai` 07:50 作为日报数据冻结时点（可以配置）；08:00 由原有 ChatGPT 任务推送。Codex 不能在没有实际连接或验证前声称已接管推送或已在云端持续工作。
