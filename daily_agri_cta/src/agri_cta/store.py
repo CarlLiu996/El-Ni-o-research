@@ -37,11 +37,13 @@ class Store:
           price_type VARCHAR, frequency VARCHAR, value DOUBLE, unit VARCHAR,
           document_id VARCHAR, published_at TIMESTAMPTZ, collected_at TIMESTAMPTZ,
           revision_status VARCHAR, data_status VARCHAR, vintage INTEGER, source_flag VARCHAR);
+        ALTER TABLE observation ADD COLUMN IF NOT EXISTS fetch_attempt_id VARCHAR;
         CREATE TABLE IF NOT EXISTS reported_evidence (
           report_date DATE, observation_id VARCHAR, evidence_tag VARCHAR,
           PRIMARY KEY(report_date, observation_id));
         CREATE OR REPLACE VIEW history AS SELECT o.*, d.source_id,d.source_url,d.sha256,
-          d.fetched_at FROM observation o JOIN source_document d USING(document_id);
+          coalesce(a.fetched_at,d.fetched_at) AS fetched_at FROM observation o JOIN source_document d USING(document_id)
+          LEFT JOIN fetch_attempt a ON o.fetch_attempt_id=a.attempt_id;
         CREATE OR REPLACE VIEW latest AS SELECT * FROM history WHERE data_status IN ('verified','provisional')
           QUALIFY row_number() OVER(PARTITION BY series_key ORDER BY vintage DESC)=1;''')
 
@@ -97,7 +99,7 @@ class Store:
     def reject(self, doc, error):
         self.db.execute("UPDATE source_document SET parse_status='unverified',error_message=? WHERE document_id=?", [str(error),doc])
 
-    def ingest(self, doc, rows):
+    def ingest(self, doc, rows, *, replay=False, fetch_attempt_id=None):
         if not rows:
             raise ValueError('empty/header-only source')
         if not self.db.execute("SELECT 1 FROM source_document WHERE document_id=?",[doc]).fetchone():
@@ -114,34 +116,55 @@ class Store:
                 raise ValueError('nonfinite value')
             if r['observation_date'] > datetime.now(timezone.utc).date().isoformat():
                 raise ValueError('future observation')
-            if r['metric_id'] != 'nino34_anomaly' and r['value'] < 0:
+            if r['metric_id'] not in {'nino34_anomaly','nino34_ersstv6_anomaly_1981_2010','nino34_hadisst_anomaly_1981_2010'} and r['value'] < 0:
                 raise ValueError('negative market quantity/price')
             if not r['unit'] or not r['frequency']:
                 raise ValueError('unknown unit/frequency')
-        added = 0
-        self.db.execute("BEGIN TRANSACTION")
+        latest = {key:(value,vintage,flag) for key,value,vintage,flag in self.db.execute(
+            'SELECT series_key,value,vintage,source_flag FROM observation QUALIFY row_number() OVER(PARTITION BY series_key ORDER BY vintage DESC)=1').fetchall()}
+        seen = set()
+        if replay:
+            seen = {(key,value,flag) for key,value,flag in self.db.execute(
+                'SELECT series_key,value,source_flag FROM observation WHERE document_id=?',[doc]).fetchall()}
+        pending=[]
+        collected=now()
+        for r in rows:
+            key=json.dumps([r[k] for k in ['metric_id','commodity','observation_date','contract_code','price_type','frequency','unit']],ensure_ascii=False)
+            flag=r.get('source_flag','')
+            # Offline replay must not turn an older document into a fresh revision.
+            if replay and (key,r['value'],flag) in seen:
+                continue
+            old=latest.get(key)
+            if old and old[0]==r['value'] and old[2]==flag:
+                continue
+            vintage=old[1]+1 if old else 1
+            pending.append([digest((key+str(vintage)).encode()),key,r['metric_id'],r['commodity'],
+                r['observation_date'],r['contract_code'],r['price_type'],r['frequency'],r['value'],r['unit'],
+                doc,r.get('published_at'),collected,'revision_detected' if old else 'first_seen',
+                r.get('data_status','verified'),vintage,flag,fetch_attempt_id])
+            latest[key]=(r['value'],vintage,flag)
+        self.db.execute('BEGIN TRANSACTION')
         try:
-            for r in rows:
-                key = json.dumps([r[k] for k in ['metric_id','commodity','observation_date','contract_code','price_type','frequency','unit']],ensure_ascii=False)
-                old = self.db.execute('SELECT value,vintage,source_flag FROM observation WHERE series_key=? ORDER BY vintage DESC LIMIT 1',[key]).fetchone()
-                if old and old[0] == r['value'] and old[2] == r.get('source_flag',''):
-                    continue
-                vintage = old[1]+1 if old else 1
-                oid = digest((key+str(vintage)).encode())
-                self.db.execute('INSERT INTO observation VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
-                  [oid,key,r['metric_id'],r['commodity'],r['observation_date'],r['contract_code'],
-                   r['price_type'],r['frequency'],r['value'],r['unit'],doc,r.get('published_at'),now(),
-                   'revision_detected' if old else 'first_seen',r.get('data_status','verified'),vintage,r.get('source_flag','')])
-                added += 1
+            if pending:
+                import pandas as pd
+                columns=[x[1] for x in self.db.execute("PRAGMA table_info('observation')").fetchall()]
+                frame=pd.DataFrame(pending,columns=columns)
+                self.db.register('_pending_observations',frame)
+                try:
+                    self.db.execute('INSERT INTO observation SELECT * FROM _pending_observations')
+                finally:
+                    self.db.unregister('_pending_observations')
             self.db.execute("UPDATE source_document SET parse_status='parsed',error_message=NULL WHERE document_id=?",[doc])
-            self.db.execute("COMMIT")
+            self.db.execute('COMMIT')
         except Exception:
-            self.db.execute("ROLLBACK")
+            self.db.execute('ROLLBACK')
             raise
-        return added
+        return len(pending)
 
     def export(self):
-        for table in ['source_document','fetch_attempt','observation','reported_evidence']:
+        for table in ['source_document','fetch_attempt','observation','reported_evidence','notice_seen','risk_fact']:
+            if not self.db.execute('SELECT 1 FROM information_schema.tables WHERE table_name=?',[table]).fetchone():
+                continue
             path = str((self.root / (table+'.parquet')).resolve()).replace("'", "''")
             self.db.execute(f"COPY {table} TO '{path}' (FORMAT PARQUET)")
 

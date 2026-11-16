@@ -1,0 +1,63 @@
+{
+  "canonical_observations": 41263,
+  "tests": "42 passed; 6 DuckDB/Pandas deprecation warnings",
+  "raw_documents": 429,
+  "fetch_attempts": 447,
+  "all_attempt_hash_checks_passed": true,
+  "checked_raw_snapshots": 447,
+  "receipt_replay": {
+    "replayed": 242,
+    "added": 0
+  },
+  "psl_replay": {
+    "replayed": 2,
+    "added": 0
+  },
+  "psl_online_repeat": [
+    {
+      "source": "NOAA_PSL",
+      "url": "https://psl.noaa.gov/data/correlation/nina34.anom.data",
+      "status": "parsed",
+      "document_id": "682f73c6d7249c17c7389d17377d5df205e6f47816f71385f25328a22aa15232",
+      "rows": 946,
+      "added": 0
+    },
+    {
+      "source": "NOAA_PSL",
+      "url": "https://psl.noaa.gov/data/timeseries/month/data/nino34.long.anom.data",
+      "status": "parsed",
+      "document_id": "428afa037c548d090888ea8c9cb6f052f979b41d1024b8852af13baf4f6f3b2d",
+      "rows": 1881,
+      "added": 0
+    }
+  ],
+  "mpob_incremental": [
+    {
+      "source": "MPOB",
+      "url": "https://bepi.mpob.gov.my/stat/web_report1.php?val=202684",
+      "status": "parsed",
+      "document_id": "020de84ca2dfcbf6c6507018ff03f379c5fc7c7f89f58087fc66316b370879b8",
+      "rows": 30,
+      "added": 0
+    }
+  ],
+  "cpc_v5_incremental": [
+    {
+      "source": "NOAA_ENSO",
+      "url": "https://www.cpc.ncep.noaa.gov/data/indices/ersst5.nino.mth.91-20.ascii",
+      "status": "parsed",
+      "document_id": "5739878e6fec1056325d1a837ff574fb6efe85c494db1e4e5c259c2aee1d4c07",
+      "rows": 918,
+      "added": 0
+    }
+  ],
+  "warehouse_sequence_complete": true,
+  "risk_articles_checked": 12,
+  "risk_fact_count": 23,
+  "risk_repeat_new_fact_count": 0,
+  "risk_complete_company_rate_baseline": false,
+  "external_persistence_verified": false,
+  "actions_real_collection_executed": false,
+  "five_trading_days_parallel_validation_complete": false,
+  "existing_0800_task_modified": false
+}

@@ -127,7 +127,7 @@ def shfe_receipts(body, date):
                 totals.append(cells)
         if not totals and symbol=='NR' and '厂库' in t:
             candidates = [[c.get_text(' ',strip=True) for c in tr.select('td')] for tr in table.select('tr')]
-            candidates = [c for c in candidates if len(c)>=3 and re.fullmatch(r'[0-9,]+',c[-2]) and re.fullmatch(r'-?[0-9,]+',c[-1])]
+            candidates = [c for c in candidates if len(c)>=3 and re.fullmatch(r'[0-9,]+(?:\.[0-9]+)?',c[-2]) and re.fullmatch(r'-?[0-9,]+(?:\.[0-9]+)?',c[-1])]
             if len(candidates)==1:
                 totals = candidates
         if len(totals)!=1:
@@ -143,12 +143,14 @@ def collect_one(store, source, url, parser, *args):
     try:
         doc, body = store.fetch(source,url)
         rows = parser(body,*args)
-        n = store.ingest(doc,rows)
-        return dict(source=source,url=url,status='parsed',rows=len(rows),added=n)
+        attempt_id=store.db.execute('SELECT attempt_id FROM fetch_attempt WHERE document_id=? ORDER BY fetched_at DESC LIMIT 1',[doc]).fetchone()[0]
+        n = store.ingest(doc,rows,fetch_attempt_id=attempt_id)
+        return dict(source=source,url=url,status='parsed',document_id=doc,rows=len(rows),added=n)
     except Exception as e:
         if doc:
             store.reject(doc,e)
-        return dict(source=source,url=url,status='unverified',error=str(e))
+        attempt=store.db.execute('SELECT http_status,document_id FROM fetch_attempt WHERE source_url=? ORDER BY fetched_at DESC LIMIT 1',[url]).fetchone()
+        return dict(source=source,url=url,status='unverified',document_id=doc or (attempt[1] if attempt else None),http_status=attempt[0] if attempt else None,error=str(e))
 
 
 def shfe_archive(body, year):
@@ -184,4 +186,48 @@ def shfe_archive(body, year):
                         result.append(row('futures_'+metric,contract[:2],date,value,unit,'daily',contract,
                                           metric if i<9 else ('volume' if i==11 else 'openinterest')))
             book.close()
+    return result
+
+
+PSL_SERIES = {
+    'ersstv6': ('https://psl.noaa.gov/data/timeseries/month/Nino34_CPC/',
+                'https://psl.noaa.gov/data/correlation/nina34.anom.data',
+                'ERSST V6', 'nino34_ersstv6_anomaly_1981_2010'),
+    'hadisst': ('https://psl.noaa.gov/data/timeseries/month/Nino34/',
+                'https://psl.noaa.gov/data/timeseries/month/data/nino34.long.anom.data',
+                'HadISST', 'nino34_hadisst_anomaly_1981_2010'),
+}
+
+
+def noaa_psl(body, dataset):
+    """Read self-describing PSL year x 12 grids, retaining dataset/baseline identity."""
+    if dataset not in PSL_SERIES:
+        raise ValueError('unknown PSL dataset')
+    _,_,version,metric=PSL_SERIES[dataset]
+    lines=body.decode('ascii').splitlines()
+    first=lines[0].split()
+    if len(first)!=2 or not all(re.fullmatch(r'\d{4}',x) for x in first):
+        raise ValueError('PSL year-range schema changed')
+    start,end=map(int,first)
+    if not 1800<=start<=end<=2100:
+        raise ValueError('PSL year range invalid')
+    count=end-start+1
+    footer='\n'.join(lines[count+1:])
+    if version not in [x.strip() for x in footer.splitlines()] or 'Anomaly from 1981-2010' not in footer or '5N-5S 170W-120W' not in footer or 'units=degC' not in footer:
+        raise ValueError('PSL version/baseline/region/unit mismatch; no splicing')
+    if lines[count+1].strip()!='-99.99':
+        raise ValueError('PSL missing-value sentinel changed')
+    result=[]
+    for year,line in zip(range(start,end+1),lines[1:count+1],strict=True):
+        values=line.split()
+        if len(values)!=13 or int(values[0])!=year:
+            raise ValueError('PSL incomplete/nonsequential monthly grid')
+        for month,cell in enumerate(values[1:],1):
+            value=float(cell)
+            if value==-99.99:
+                continue
+            if not -20<value<20:
+                raise ValueError('PSL invalid anomaly')
+            result.append(row(metric,'ENSO',month_end(year,month),value,'degC',
+                source_flag=version+';1981-2010;5N-5S 170W-120W'))
     return result

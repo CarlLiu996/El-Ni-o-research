@@ -7,15 +7,22 @@ from pathlib import Path
 from agri_cta.store import Store
 from agri_cta import sources as s
 
-p=argparse.ArgumentParser();p.add_argument('--data',default='data');p.add_argument('--year',type=int,default=2025);args=p.parse_args()
+p=argparse.ArgumentParser();p.add_argument('--data',default='data');p.add_argument('--year',type=int,default=2025);p.add_argument('--source',choices=['all','receipts','noaa_psl'],default='all');args=p.parse_args()
 st=Store(args.data)
 results=[]
 for doc,source,url,path in st.db.execute("SELECT document_id,source_id,source_url,raw_path FROM source_document WHERE parse_status='parsed' ORDER BY fetched_at").fetchall():
+    if args.source=='receipts' and source!='SHFE_RECEIPTS':
+        continue
+    if args.source=='noaa_psl' and source!='NOAA_PSL':
+        continue
     body=(Path(path) if Path(path).is_file() else st.root/path).read_bytes()
     if source=='MPOB':
         rows=s.mpob(body,int(url.split('val=')[1][:4]))
     elif source=='NOAA_ENSO':
         rows=s.noaa(body)
+    elif source=='NOAA_PSL':
+        dataset=next(k for k,v in s.PSL_SERIES.items() if v[1]==url)
+        rows=s.noaa_psl(body,dataset)
     elif source=='SHFE_ARCHIVE':
         rows=s.shfe_archive(body,args.year)
     elif source=='SHFE_RECEIPTS':
@@ -26,7 +33,7 @@ for doc,source,url,path in st.db.execute("SELECT document_id,source_id,source_ur
         rows=s.shfe_day(body,f'{d[:4]}-{d[4:6]}-{d[6:8]}')
     else:
         continue
-    added=st.ingest(doc,rows)
+    added=st.ingest(doc,rows,replay=True)
     results.append(dict(source=source,document_id=doc,rows=len(rows),added=added))
     print(json.dumps(results[-1]),flush=True)
     if added:

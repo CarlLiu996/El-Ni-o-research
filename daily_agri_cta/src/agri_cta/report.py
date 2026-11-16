@@ -86,7 +86,7 @@ def report(store, output, freeze, previous):
     import matplotlib
     matplotlib.use('Agg')
     import matplotlib.pyplot as plt
-    for metric in ['nino34_anomaly','mpob_stock']:
+    for metric in ['nino34_anomaly','nino34_ersstv6_anomaly_1981_2010','nino34_hadisst_anomaly_1981_2010','mpob_stock']:
         f=df[(df.metric_id==metric)&(df.data_status.isin(['verified','provisional']))].sort_values('observation_date')
         if len(f)<30:
             continue
@@ -95,10 +95,26 @@ def report(store, output, freeze, previous):
         series=f.set_index(pd.to_datetime(f.observation_date)).value
         series=series.reindex(pd.date_range(series.index.min(),series.index.max(),freq='ME'))
         ax.plot(series.index,series.values,lw=1)
+        ax.margins(y=.12)
+        ax.scatter(series.index[-1],series.iloc[-1],s=18,zorder=3)
+        ax.annotate(f'{series.iloc[-1]:,.2f}',(series.index[-1],series.iloc[-1]),xytext=(-8,8),textcoords='offset points',ha='right',fontsize=8)
         ax.set_title(f'{metric} | monthly | n={len(f)} | missing months={series.isna().sum()}')
         ax.set_ylabel(f.unit.iloc[0]);ax.grid(alpha=.2)
         fig.text(.01,.01,f'{f.source_url.iloc[-1]} | {f.source_flag.iloc[-1]}\n{f.observation_date.min().date()} to {f.observation_date.max().date()} | latest stored vintage | release time unknown',fontsize=7)
         fig.tight_layout(rect=(0,.09,1,1));fig.savefig(out/'charts'/f'{metric}.png',dpi=140);plt.close(fig)
+    for symbol in ['RU','NR']:
+        f=df[(df.metric_id=='warehouse_receipts_warehouse')&(df.commodity==symbol)].sort_values('observation_date')
+        if f.observation_date.nunique()<180:
+            continue
+        fig,ax=plt.subplots(figsize=(10,4))
+        ax.plot(f.observation_date,f.value,lw=1)
+        ax.margins(y=.12)
+        ax.scatter(f.observation_date.iloc[-1],f.value.iloc[-1],s=18,zorder=3)
+        ax.annotate(f'{f.value.iloc[-1]:,.0f}',(f.observation_date.iloc[-1],f.value.iloc[-1]),xytext=(-8,8),textcoords='offset points',ha='right',fontsize=8)
+        ax.set_title(f'{symbol} warehouse receipts | daily | n={len(f)} | trading calendar completeness unverified')
+        ax.set_ylabel('tonnes');ax.grid(alpha=.2)
+        fig.text(.01,.01,f'{f.source_url.iloc[-1]}\n{f.observation_date.min().date()} to {f.observation_date.max().date()} | actual official records, no filling | release time unknown',fontsize=7)
+        fig.tight_layout(rect=(0,.09,1,1));fig.savefig(out/'charts'/f'{symbol.lower()}_warehouse_receipts.png',dpi=140);plt.close(fig)
     manifest=dict(freeze_at=freeze.isoformat(),previous_freeze=previous.isoformat(),purpose='independent_validation',
       database=str(store.root/'history.duckdb'),rows=len(df),publication_status='unknown unless recorded',
       unchanged_existing_0800_task=True,m1_complete=False,m2_complete=False)
@@ -108,12 +124,11 @@ def report(store, output, freeze, previous):
       '九品种覆盖及失败源见 source_coverage.csv / qa.json。图为历史库诊断图，不代表今日新增披露或评级变化。\n\n'
       '国投期货：尚未完成公告与费率基线核验，未能核实变动。\n\n'
       '原08:00任务保持不变；尚未完成5个境内交易日并行验证。\n')
-    store.db.execute('BEGIN TRANSACTION')
-    try:
-        for r in records:
-            store.db.execute('INSERT OR IGNORE INTO reported_evidence VALUES (?,?,?)',[freeze.date(),r['observation_id'],r['evidence_tag']])
-        store.db.execute('COMMIT')
-    except Exception:
-        store.db.execute('ROLLBACK')
-        raise
+    if records:
+        evidence=pd.DataFrame([(freeze.date(),r['observation_id'],r['evidence_tag']) for r in records],columns=['report_date','observation_id','evidence_tag'])
+        store.db.register('_report_evidence',evidence)
+        try:
+            store.db.execute('INSERT OR IGNORE INTO reported_evidence SELECT * FROM _report_evidence')
+        finally:
+            store.db.unregister('_report_evidence')
     return manifest

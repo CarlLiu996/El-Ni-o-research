@@ -164,3 +164,43 @@ def test_fetch_failure_stores_snapshot_no_observations(tmp_path,monkeypatch):
     assert st.db.execute('SELECT parse_status FROM source_document').fetchone()[0]=='unverified'
     assert len(list(tmp_path.glob('raw/TEST/*/metadata.json')))==1
     assert st.db.execute('SELECT count(*) FROM observation').fetchone()[0]==0
+
+
+def test_old_snapshot_replay_does_not_revert_latest(tmp_path):
+    st=Store(tmp_path);seed(st)
+    st.db.execute("INSERT INTO source_document SELECT 'synthetic-new',source_id,source_url,fetched_at,sha256,raw_path,http_status,content_type,rights_class,parse_status,error_message FROM source_document")
+    r=row('mpob_stock','P','2025-10-31',100,'tonnes')
+    st.ingest('synthetic',[r])
+    st.ingest('synthetic-new',[dict(r,value=110)])
+    assert st.ingest('synthetic',[r],replay=True)==0
+    assert st.db.execute('SELECT value,vintage FROM latest').fetchone()==(110,2)
+    # A newly fetched official reversion remains a real new vintage.
+    assert st.ingest('synthetic',[r])==1
+    assert st.db.execute('SELECT value,vintage FROM latest').fetchone()==(100,3)
+
+
+def test_factory_receipt_decimal_quantities_and_explicit_zero():
+    body=b'<p>2026-07-29</p><table><tr><td>20\xe5\x8f\xb7\xe8\x83\xb6(\xe5\x8e\x82\xe5\xba\x93)</td><td>\xe5\x8d\x95\xe4\xbd\x8d\xef\xbc\x9a\xe5\x90\xa8</td></tr><tr><td>synthetic factory</td><td>0.0000</td><td>-1.0000</td></tr></table>'
+    rows=shfe_receipts(body,'2026-07-29')
+    assert len(rows)==1 and rows[0]['value']==0
+    assert rows[0]['metric_id']=='warehouse_receipts_factory'
+
+
+def test_live_reversion_keeps_actual_fetch_attempt_lineage(tmp_path,monkeypatch):
+    import json,requests
+    from agri_cta.sources import collect_one
+    values=iter([100,110,100])
+    class Response:
+        status_code=200
+        headers={'Content-Type':'application/json'}
+        def __init__(self):self.content=json.dumps({'value':next(values)}).encode()
+        def raise_for_status(self):pass
+    monkeypatch.setattr(requests,'get',lambda *a,**kw:Response())
+    st=Store(tmp_path)
+    def parse(b):return [row('mpob_stock','P','2025-01-31',json.loads(b)['value'],'tonnes')]
+    for _ in range(3):
+        assert collect_one(st,'TEST','https://example.invalid/data',parse)['added']==1
+    rows=st.db.execute('SELECT document_id,fetch_attempt_id,fetched_at FROM history ORDER BY vintage').fetchall()
+    assert rows[0][0]==rows[2][0]  # Content reverted, but the HTTP occurrence is different.
+    assert len({x[1] for x in rows})==3
+    assert rows[2][2]>rows[0][2]

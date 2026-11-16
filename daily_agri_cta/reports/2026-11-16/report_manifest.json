@@ -1,0 +1,16 @@
+{
+  "freeze_at": "2026-11-16T01:09:22.521887+00:00",
+  "previous_freeze": "2026-11-15T23:50:00+00:00",
+  "purpose": "independent_validation",
+  "database": "daily_agri_cta/data/history.duckdb",
+  "rows": 41263,
+  "publication_status": "unknown unless recorded",
+  "unchanged_existing_0800_task": true,
+  "m1_complete": false,
+  "m2_complete": false,
+  "public_evidence": "NOAA-only small sample; complete ledger retained privately",
+  "warehouse_sequence_verified": true,
+  "external_storage_verified": false,
+  "complete_nine_commodities": false,
+  "existing_0800_task_modified": false
+}
