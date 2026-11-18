@@ -1,0 +1,31 @@
+name: CTA pipeline tests
+on:
+  pull_request:
+    paths:
+      - 'daily_agri_cta/**'
+      - '.github/workflows/agri-cta-ci.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: daily_agri_cta
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: daily_agri_cta/pyproject.toml
+      - run: pip install -e '.[test]'
+      - run: python -m compileall -q src tests
+      - run: python -m pytest -q --junitxml="$RUNNER_TEMP/cta-tests.xml"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cta-synthetic-test-results
+          path: ${{ runner.temp }}/cta-tests.xml
