@@ -42,5 +42,7 @@ def collect_daily(data,start=None,end=None):
         results.append(dict(source=source,status='not_connected_or_authorized_import_required'))
     manifest=dict(started_window=start,ended_window=end,completed_at=now(),sources=results,
                   all_nine_product_collection_complete=False)
+    from .operations import record_scheduled_collection
+    manifest['scheduler_verification']=record_scheduled_collection(root,manifest)
     (run/'collection_run.json').write_text(json.dumps(manifest,ensure_ascii=False,indent=2))
     return manifest

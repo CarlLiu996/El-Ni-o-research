@@ -53,3 +53,6 @@ readiness.json 分别检查生产冻结时点、九品种P0、研究复核、国
 新增agri-cta-parallel.yml仅定义workflow_dispatch：collect/report/storage-check/delivery-probe四个手动阶段。它尚未部署为每天运行；无S3配置立即失败，不做runner-only采集，不上传完整库或受限原文到公开artifact。真实工作流需要在可手动执行的仓库分支上部署并配置Secrets，当前草稿PR未合并，不宣称可直接调度。
 
 需要配置的名称：CTA_S3_BUCKET、CTA_AWS_ACCESS_KEY_ID、CTA_AWS_SECRET_ACCESS_KEY、CTA_AWS_REGION；可选CTA_DELIVERY_WEBHOOK_URL。密钥只能放GitHub Secrets/安全环境。恢复检查之后，工作流会再次私有备份以保存验证记录。定时采集与正式投递仍须通过真实验收；暂不添加cron，也不改原08:00任务。
+
+
+定时采集证明也不能靠手改开关：operations模块只在真实schedule事件下读取GitHub provider run元数据，并核对event/run ID/head SHA且存在已解析交易所文档，才记录scheduled_collection。workflow_dispatch不会被计入定时验收。当前工作流没有schedule，所以此门禁仍未通过；未来启用定时后还需真实运行。生成、采集触发、存储恢复、研究复核与投递分别验收。
