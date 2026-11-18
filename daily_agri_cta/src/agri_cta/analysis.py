@@ -2,11 +2,11 @@ from datetime import datetime
 
 
 def evidence_tag(published, first_seen, previous, freeze, already_reported=False):
-    if already_reported:
-        return 'CONTINUING'
     # Actual ingest time bounds visibility even when publication claims an earlier time.
     if first_seen > freeze or (published and published > freeze):
         return 'NOT_YET_VISIBLE'
+    if already_reported:
+        return 'CONTINUING'
     if published and previous < published <= freeze:
         return 'TODAY_NEW'
     if published and published.isocalendar()[:2] == freeze.isocalendar()[:2]:

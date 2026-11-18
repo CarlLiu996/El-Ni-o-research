@@ -10,7 +10,11 @@ from . import sources as s
 
 def main():
     p = argparse.ArgumentParser()
-    p.add_argument('command',choices=['collect','backfill','validate','report','audit','watch-risk'])
+    p.add_argument('command',choices=['collect','backfill','validate','report','audit','watch-risk','daily','delivery-status','delivery-probe'])
+    p.add_argument('--mode',choices=['parallel','production'],default='parallel')
+    p.add_argument('--report-date')
+    p.add_argument('--refresh',action='store_true')
+    p.add_argument('--run-id')
     p.add_argument('--data',default='data')
     p.add_argument('--source',choices=['all','mpob','noaa','shfe','shfe_daily','receipts','noaa_psl'],default='all')
     p.add_argument('--start')
@@ -20,7 +24,7 @@ def main():
     p.add_argument('--previous-freeze',default=None)
     p.add_argument('--output',default='reports/validation')
     args = p.parse_args()
-    if args.command=='collect':
+    if args.command in ['collect','daily']:
         from datetime import datetime
         from zoneinfo import ZoneInfo
         today=datetime.now(ZoneInfo('Asia/Shanghai')).date()
@@ -31,7 +35,33 @@ def main():
         args.end=args.end or '2025-12-31'
     if date.fromisoformat(args.start)>date.fromisoformat(args.end):
         p.error('start must not be after end')
+    if args.command=='daily' and args.refresh:
+        from .orchestrator import collect_daily
+        collect_daily(args.data,args.start,args.end)
     st = Store(args.data)
+    if args.command=='daily':
+        from .daily import daily_report,cutoffs
+        default_freeze,default_previous=cutoffs(args.report_date,args.mode) if not args.freeze else (args.freeze,None)
+        freeze=args.freeze or default_freeze
+        previous=args.previous_freeze or default_previous
+        if not previous:p.error('explicit freeze requires --previous-freeze')
+        result=daily_report(st,args.output,freeze,previous,args.mode)
+        st.export()
+        print(json.dumps(result,ensure_ascii=False,indent=2))
+        return
+    if args.command=='delivery-status':
+        from .daily import init_state
+        init_state(st)
+        if not args.run_id:p.error('delivery-status requires --run-id')
+        records=st.db.execute('SELECT status,receipt_id,error_message FROM delivery_attempt WHERE run_id=? ORDER BY attempted_at DESC',[args.run_id]).fetchall()
+        print(json.dumps(dict(run_id=args.run_id,attempts=records,delivery_confirmed=any(r[0]=='delivered' for r in records)),indent=2))
+        return
+    if args.command=='delivery-probe':
+        from .delivery import send_bundle
+        import uuid
+        result=send_bundle(st,dict(kind='delivery_smoke_test',run_id='probe-'+uuid.uuid4().hex,message='CTA日报投递链路测试；不是正式简报'),probe=True)
+        print(json.dumps(result,ensure_ascii=False,indent=2))
+        return
     if args.command=='watch-risk':
         from .risk import discover
         out=Path(args.output);out.mkdir(parents=True,exist_ok=True)
