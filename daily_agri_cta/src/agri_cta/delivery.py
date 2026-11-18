@@ -19,6 +19,12 @@ def send_bundle(store,bundle,endpoint=None,*,probe=False):
     if not probe and (bundle.get('mode')!='production' or not bundle.get('replacement_ready')):
         raise ValueError('replacement gates not passed; refusing production replacement')
     run_id=bundle['run_id'];attempt=uuid.uuid4().hex
+    if not probe:
+        known=store.db.execute("SELECT h.sha256 FROM handoff_digest h JOIN daily_run d USING(run_id) WHERE h.run_id=? AND d.mode='production'",[run_id]).fetchone()
+        actual=digest(json.dumps(bundle,ensure_ascii=False,default=str,sort_keys=True,separators=(',',':')).encode())
+        if not known or known[0]!=actual:
+            raise ValueError('unregistered or modified handoff bundle')
+
     old=store.db.execute("SELECT receipt_id FROM delivery_attempt WHERE run_id=? AND status='delivered' LIMIT 1",[run_id]).fetchone()
     if old:return dict(status='already_delivered',delivery_confirmed=True,receipt_id=old[0])
     try:

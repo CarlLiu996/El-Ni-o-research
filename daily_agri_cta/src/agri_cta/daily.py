@@ -19,6 +19,7 @@ def init_state(store):
     store.db.execute('''CREATE TABLE IF NOT EXISTS daily_run (
       run_id VARCHAR PRIMARY KEY,report_date DATE,freeze_at TIMESTAMPTZ,previous_freeze TIMESTAMPTZ,
       mode VARCHAR,generated_at TIMESTAMPTZ,bundle_path VARCHAR,content_sha256 VARCHAR);
+      CREATE TABLE IF NOT EXISTS handoff_digest (run_id VARCHAR PRIMARY KEY,sha256 VARCHAR);
       CREATE TABLE IF NOT EXISTS daily_evidence (
       run_id VARCHAR,observation_id VARCHAR,evidence_tag VARCHAR,PRIMARY KEY(run_id,observation_id));
       CREATE TABLE IF NOT EXISTS delivery_attempt (
@@ -231,6 +232,20 @@ def daily_report(store,output,freeze,previous,mode='parallel'):
             newly_disclosed_evidence=len(changes),valuation_view='仅做方向判断；未形成可复核估值',valuation_confidence='insufficient',
             safety_margin='unverified',concentrated_setup=False,
             source_cutoff=str(f.observation_date.max().date()) if len(f) else None,missing_data=missing))
+    from .research import load_review
+    review=load_review(store,freeze)
+    if review:
+        by_symbol={r['symbol']:r for r in review['products']}
+        visible_ids=set(frame.observation_id)
+        for r in overview:
+            approved=by_symbol[r['symbol']]
+            ids={oid for values in approved['evidence_by_dimension'].values() for oid in values}
+            if not ids<=visible_ids:continue
+            r.update(last_known_stage=approved['stage'],new_rating=approved['rating'],rating_status='reviewed',
+                     changed_rating=approved['rating']!=r['old_rating'],safety_margin=approved['safety_margin'],
+                     research_analysis=approved['analysis'],falsifiers=approved['falsifiers'],
+                     research_review_ref=review['reviewer']['review_ref'],
+                     concentrated_setup=approved.get('concentrated_setup') is True and approved['rating'].count('★')==4 and not r['missing_data'])
     risk=risk_asof(store,freeze);charts=draw_changed(frame,rows,out)
     run_id=digest((mode+freeze.isoformat()+previous.isoformat()).encode())[:24]
     from .readiness import assess
@@ -244,10 +259,10 @@ def daily_report(store,output,freeze,previous,mode='parallel'):
         unverified_metrics=[x['metric_id'] for x in p0 if x['status']!='verified'],historical_series_available=charts,
         margin_notice_checked_through=risk.get('latest_applicable_trade_date'),exceptions=[],replacement_readiness=readiness)
     (out/'qa.json').write_text(json.dumps(qa,ensure_ascii=False,default=str,indent=2))
-    lines=[f'# 九品种CTA并行日报｜{local.date()}','',f'实际冻结：{local.isoformat()}；模式：{mode}。本报告尚不能替代原08:00简报。','',
+    lines=[f'# 九品种CTA并行日报｜{local.date()}','',f"实际冻结：{local.isoformat()}；模式：{mode}。{'已通过切换门禁，投递以独立回执为准' if readiness['replacement_ready'] else '尚不能替代原08:00简报'}。",'',
       '|品种|新增有效变化|历史评级（未复核）|当前评级|缺少P0指标|','|---|---:|---|---|---:|']
-    for r in overview:lines.append(f"|{r['symbol']}|{r['newly_disclosed_evidence']}|{r['old_rating']}|未形成新评级|{len(r['missing_data'])}|")
-    lines+=['','本次不输出★★★★集中表达建议；历史评级基线不能当作今天重新确认。','','## 本次有效变化']
+    for r in overview:lines.append(f"|{r['symbol']}|{r['newly_disclosed_evidence']}|{r['old_rating']}|{r['new_rating'] or '未形成新评级'}|{len(r['missing_data'])}|")
+    lines+=['','历史评级基线不能当作今天重新确认；新评级须有外部研究复核与证据引用。','','## 本次有效变化']
     changes=[r for r in rows if r['meaningful_change'] and (not r['contract_code'] or r['contract_code'].endswith(('2701','2705')))]
     if not changes:lines+=['本次未取得可核实的关键新增，不代表客观市场没有变化。']
     for r in changes:
@@ -262,12 +277,17 @@ def daily_report(store,output,freeze,previous,mode='parallel'):
           f"历史位置：{chart['n']}个真实{r['frequency']}观测，未插值、未虚构分位。",
           '供需解释：单项指标须与供需、现货结构交叉验证。',
           'CTA含义/证伪：保留人工复核，不自动升降评级；口径或交割解释不成立时撤回信号。']
+    for r in overview:
+        if r['rating_status']=='reviewed':
+            lines+=['',f"## {r['symbol']} 外部复核研究",str(r['research_analysis']),
+              '证伪条件：'+'；'.join(r['falsifiers']),f"复核依据：{r['research_review_ref']}"]
     lines+=['','## 数据缺口与接管状态',f"P0已核验 {sum(x['status']=='verified' for x in p0)}/{len(p0)}；切换阻塞见readiness.json。",
       '完整证据留在私有数据包；未知或过期不补值。','','## 国投期货保证金及涨跌停板监测',
       f"状态：{risk['status']}；{risk['reason']}。完整公司费率基线未核实，不能宣称全站无变化。"]
     text='\n'.join(lines)+'\n';(out/'report.md').write_text(text)
+    run_id=digest((mode+freeze.isoformat()+previous.isoformat()+digest(text.encode())).encode())[:24]
     manifest=dict(run_id=run_id,report_date=local.date().isoformat(),freeze_at=freeze.isoformat(),previous_freeze=previous.isoformat(),mode=mode,
-      generated_at=now(),evidence_rows=len(rows),meaningful_changes=len(changes),charts=charts,current_rating_reviewed=False,
+      generated_at=now(),evidence_rows=len(rows),meaningful_changes=len(changes),charts=charts,current_rating_reviewed=all(r['rating_status']=='reviewed' for r in overview),
       delivery_status='not_attempted',replacement_ready=readiness['replacement_ready'],existing_0800_task_modified=False,
       report_sha256=digest(text.encode()))
     (out/'report_manifest.json').write_text(json.dumps(manifest,ensure_ascii=False,indent=2))
@@ -276,6 +296,8 @@ def daily_report(store,output,freeze,previous,mode='parallel'):
       changed_evidence=[r for r in rows if r['meaningful_change']],risk=risk,readiness=readiness,
       replacement_ready=readiness['replacement_ready'],instructions='Only cite visible facts. No automatic rating upgrades. Generated is not delivered.')
     (out/'briefing.json').write_text(json.dumps(handoff,ensure_ascii=False,default=str,indent=2))
+    handoff_sha=digest(json.dumps(handoff,ensure_ascii=False,default=str,sort_keys=True,separators=(',',':')).encode())
+    store.db.execute('INSERT OR REPLACE INTO handoff_digest VALUES (?,?)',[run_id,handoff_sha])
     store.db.execute('INSERT OR REPLACE INTO daily_run VALUES (?,?,?,?,?,current_timestamp,?,?)',
       [run_id,local.date(),freeze,previous,mode,str(out),manifest['report_sha256']])
     if rows:

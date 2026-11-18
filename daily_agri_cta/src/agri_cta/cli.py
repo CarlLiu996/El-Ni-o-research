@@ -10,11 +10,14 @@ from . import sources as s
 
 def main():
     p = argparse.ArgumentParser()
-    p.add_argument('command',choices=['collect','backfill','validate','report','audit','watch-risk','daily','delivery-status','delivery-probe'])
+    p.add_argument('command',choices=['collect','backfill','validate','report','audit','watch-risk','daily','delivery-status','delivery-probe','register-review','storage-check','register-parallel-review'])
     p.add_argument('--mode',choices=['parallel','production'],default='parallel')
     p.add_argument('--report-date')
     p.add_argument('--refresh',action='store_true')
     p.add_argument('--run-id')
+    p.add_argument('--review-file')
+    p.add_argument('--bucket')
+    p.add_argument('--prefix',default='agri-cta')
     p.add_argument('--data',default='data')
     p.add_argument('--source',choices=['all','mpob','noaa','shfe','shfe_daily','receipts','noaa_psl'],default='all')
     p.add_argument('--start')
@@ -38,7 +41,28 @@ def main():
     if args.command=='daily' and args.refresh:
         from .orchestrator import collect_daily
         collect_daily(args.data,args.start,args.end)
+    if args.command=='storage-check':
+        import os
+        from .persistence import verify_restore
+        bucket=args.bucket or os.environ.get('CTA_S3_BUCKET') or os.environ.get('CTA_BUCKET')
+        if not bucket:p.error('private S3 bucket/credentials are not configured')
+        result=verify_restore(args.data,bucket,args.prefix,str(Path(args.data)/'storage_restore_proof.json'))
+        print(json.dumps(result,ensure_ascii=False,indent=2))
+        return
     st = Store(args.data)
+    if args.command=='register-parallel-review':
+        from .research import register_parallel_review
+        if not args.review_file:p.error('register-parallel-review requires --review-file')
+        print(json.dumps(register_parallel_review(st,json.loads(Path(args.review_file).read_text())),ensure_ascii=False))
+        st.export()
+        return
+    if args.command=='register-review':
+        from .research import register_review
+        if not args.review_file:p.error('register-review requires --review-file')
+        result=register_review(st,json.loads(Path(args.review_file).read_text()))
+        st.export()
+        print(json.dumps(result,ensure_ascii=False,indent=2))
+        return
     if args.command=='daily':
         from .daily import daily_report,cutoffs
         default_freeze,default_previous=cutoffs(args.report_date,args.mode) if not args.freeze else (args.freeze,None)
@@ -61,6 +85,7 @@ def main():
         import uuid
         result=send_bundle(st,dict(kind='delivery_smoke_test',run_id='probe-'+uuid.uuid4().hex,message='CTA日报投递链路测试；不是正式简报'),probe=True)
         print(json.dumps(result,ensure_ascii=False,indent=2))
+        if not result.get('delivery_confirmed'):raise SystemExit(2)
         return
     if args.command=='watch-risk':
         from .risk import discover

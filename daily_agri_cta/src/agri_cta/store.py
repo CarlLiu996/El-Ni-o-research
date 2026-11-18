@@ -162,7 +162,7 @@ class Store:
         return len(pending)
 
     def export(self):
-        for table in ['source_document','fetch_attempt','observation','reported_evidence','notice_seen','risk_fact','daily_run','daily_evidence','delivery_attempt','operational_check','parallel_review']:
+        for table in ['source_document','fetch_attempt','observation','reported_evidence','notice_seen','risk_fact','daily_run','daily_evidence','delivery_attempt','operational_check','parallel_review','research_review','handoff_digest']:
             if not self.db.execute('SELECT 1 FROM information_schema.tables WHERE table_name=?',[table]).fetchone():
                 continue
             path = str((self.root / (table+'.parquet')).resolve()).replace("'", "''")

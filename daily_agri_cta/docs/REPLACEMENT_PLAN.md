@@ -40,3 +40,16 @@ readiness.json 分别检查生产冻结时点、九品种P0、研究复核、国
 2026-11-18本轮工作区在新模块测试前被平台标为unavailable。断开前取得11月16–17日官方增量，但尚未完成本轮数据包与哈希复核，不据此发布新的已验证覆盖数。已提交的历史验收仍以2026-11-16记录为准。
 
 已转用GitHub保存本轮代码和synthetic-only PR CI，不向公开CI上传受限原文/完整库。新增模块需以对应提交的CI结果为测试依据。CI成功也只证明代码与合成场景，不等于真实定时、私有云存储或投递已完成。原08:00任务保持不变，待实源补齐、部署验证与五交易日对照后再切换。
+
+
+## 新增操作入口（尚未用真实凭据验收）
+
+- register-review --review-file <private-json>：登记外部人工/模型研究复核。必须包含明确批准、复核者身份/外部轨迹、精确freeze、九品种四维证据引用、分析与证伪条件。只接受冻结时点可见的证据；代码不会自行生成批准。
+- register-parallel-review --review-file <private-json>：登记实际对照复核。要求生产冻结报告、原任务真实run ID与正文基线、同日报告日期、官方交易日证据和无未解决漏报/严重错误；P0未齐不计为通过。重复同一天只占一条，不能凑5天。
+- storage-check --data data：实际私有S3快照→隔离目录恢复→校验数据库，成功才登记私有恢复证明。真实S3尚无配置；CI使用内存模拟，不是实际云存储验收。
+- 恢复先在隔离目录解包和校验数据库，再原子替换；坏哈希、路径穿越和软/硬链接不覆盖现有库。备份时只读持有数据库，要求先关闭写连接；快照跳过缓存。
+- send_bundle检查已登记生产bundle摘要，不能只把replacement_ready手改为true就发送。内容更改产生新的run ID，回执状态独立保存。
+
+新增agri-cta-parallel.yml仅定义workflow_dispatch：collect/report/storage-check/delivery-probe四个手动阶段。它尚未部署为每天运行；无S3配置立即失败，不做runner-only采集，不上传完整库或受限原文到公开artifact。真实工作流需要在可手动执行的仓库分支上部署并配置Secrets，当前草稿PR未合并，不宣称可直接调度。
+
+需要配置的名称：CTA_S3_BUCKET、CTA_AWS_ACCESS_KEY_ID、CTA_AWS_SECRET_ACCESS_KEY、CTA_AWS_REGION；可选CTA_DELIVERY_WEBHOOK_URL。密钥只能放GitHub Secrets/安全环境。恢复检查之后，工作流会再次私有备份以保存验证记录。定时采集与正式投递仍须通过真实验收；暂不添加cron，也不改原08:00任务。
