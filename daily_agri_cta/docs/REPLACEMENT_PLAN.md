@@ -56,3 +56,7 @@ readiness.json 分别检查生产冻结时点、九品种P0、研究复核、国
 
 
 定时采集证明也不能靠手改开关：operations模块只在真实schedule事件下读取GitHub provider run元数据，并核对event/run ID/head SHA且存在已解析交易所文档，才记录scheduled_collection。workflow_dispatch不会被计入定时验收。当前工作流没有schedule，所以此门禁仍未通过；未来启用定时后还需真实运行。生成、采集触发、存储恢复、研究复核与投递分别验收。
+
+## 已执行的独立CI验收（2026-11-18）
+
+提交 ebfb5ff48e0a3afe3288ae5f33d23f3681318a12 在 GitHub Actions 运行 44217529453 完成：compileall通过，pytest实测71 passed、63条依赖弃用警告、4.53秒。日志及JUnit只含测试场景，不含受限原文或完整行情库。运行链接：https://github.com/CarlLiu996/El-Ni-o-research/actions/runs/44217529453 。这不是本轮真实数据端到端运行或云投递证明；当前尚无每日无人值守交付。
