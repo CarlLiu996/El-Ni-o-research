@@ -1,3 +1,32 @@
+【必须先按运行时段分流；这是同一个任务的两个阶段】
+本任务只在北京时间08:00发布一份研究日报。07:00调度用于提前准备数据，成功时不向用户另发日报；失败记录日志，供08:00明确说明。不要把07:00准备阶段当成发送报告的时点。
+
+运行开始先读取本次调度消息的真实provider run_id和scheduled_for，执行“python -m agri_cta.handoff phase --data <数据根> --scheduled-for <本次provider scheduled_for>”确定阶段与报告日期。不要按进程实际启动时间猜阶段：07:00任务即使延迟到08:00，只能准备数据，不能另发报告。只能用本次触发消息/对应run记录，不把其他run的last_run或latest_result当本次调度；无法确认阶段时只记录故障，不重复发布。明确补跑指令另按补跑规则执行。
+使用实际继承的Codex云工作区：
+代码工作目录 /workspace/cta-runtime-20261119/daily_agri_cta
+Python /workspace/El-Ni-o-research/.venv/bin/python
+私有数据根目录 /workspace/El-Ni-o-research/daily_agri_cta/data
+执行命令时设PYTHONPATH=src，并使用上述代码工作目录。不要覆盖旧工作区未提交改动。新模块已实现为agri_cta.handoff、agri_cta.continuity。
+
+【07:00数据准备】
+1. 先通过automations.peek读取本任务 Automation_d98151445b48819181272485b7fa9dba 上次已完成的08:00报告结果（若last_run是本次进行中，不把它和上次latest_result混淆）。若完整文本、run_id、scheduled_for、created_at、completed_at可取得且content_truncated=false，将真实结果写入私有JSON，source_kind=automation_published_result，task_id为实际任务ID，run_id为真实provider run，report_date为scheduled_for对应北京时间日期，source_created_at=created_at；用“python -m agri_cta.handoff archive-report --data <数据根> --report-json <私有JSON>”归档。截断或仅生成草稿不能冒充完整已发布报告。初始11月18/19日真实报告已归档，无须从配置猜星级。
+2. 执行“python -m agri_cta.handoff prepare --data <数据根> --mode parallel --refresh”，真实取数并私有保存原始快照、DuckDB/Parquet和准备包。常规沙箱若报无法连接代理，按云网络诊断将同一官方请求/采集命令用exec_command require_escalated执行；保留代理变量及TLS，不规避网站403/412/429，逐源失败关闭。代码collect_daily独立记录各源状态。
+3. 校验准备结果与原文件哈希；不生成07:50尚未发生的生产冻结，不将未成功源标完成。准备阶段只更新私有资料，成功无需通知用户；不要输出另一份研究日报。
+
+【08:00报告阶段】
+1. 不仅读取GitHub契约。执行“python -m agri_cta.handoff prepare --data <数据根> --mode production”在已过的当天07:50时点过滤vintage，再执行“python -m agri_cta.handoff verify --data <数据根> --report-date YYYY-MM-DD”。此阶段不把08:00后才取得的记录倒填07:50。若07:00准备失败，明确最新实际数据日和缺口；需要补跑的只能标实际时点恢复版。
+2. 读取data/handoff/latest.json指向的manifest、frozen.duckdb、handoff.json、continuity_state.json、previous_report.md、rating_snapshot.json及chart_data.json。验证日期/模式/哈希，实际以只读SQL打开frozen.duckdb，核对observation_asof和report_snapshot。这个冻结库仅包含截止时点真实可见记录；不是完整库文件的任意最新视图。报告开头简述实际已读冻结日期、行情截止日、上期报告日期，不再笼统说历史资料未取得。
+3. 用continuity中的实际已发布历史观点保持连续，明确rating_report_date；新报告没有评级不能擦掉11月18日的旧观点，但旧评级不是今日重新确认。不得用metrics.yaml baseline_rating补成今天的评级。对上期已写过的证据不重复标今日新增。
+4. 将chart_data中的真实序列直接渲染在对应报告正文，按用户偏好优先原生/内嵌交互图，不专门制作或发送PNG图片包。保持频率、样本量、单位、合约、价种与不足历史标记；两点对比必须标n=2。
+5. 输出实际九品种日报；发布前将拟交付的完整文本以source_kind=generated_draft存入report_archive（注明生成、交付未确认），不能提前当作已发布或投递回执。下次07:00再用provider真实完成记录归档确认。私有完整数据不上传公开GitHub。
+
+【用户明确要求补跑时】
+若在其它时刻收到明确补跑指令，执行prepare --mode parallel，注明实际冻结时点“补充核验版”，不得伪称当日07:50已经落盘或已在08:00送达。
+
+任何数据库/历史读取失败须指出具体步骤和路径。可以在明确缺口后补充公开研究，但不能用网页搜索替代上述实际读取，也不能声称全九品种P0、私有S3、五交易日验收已完成；当前这些仍有缺口。仅做研究，不自动交易。
+
+
+【研究与展示契约；遇运行阶段冲突以上述分流为准】
 生成并向我发送当日九品种CTA研究报告，采用我已认可的2026年11月18日样本结构，并执行以下最新版要求。直接在报告正文展示关键边际变化的图表，不把单独图片、附件或文件链接作为主要交付。此要求替代本任务旧版中不一致的图表和“无变化”措辞；保持观点连续和九品种研究深度。
 
 一、日期、范围与证据边界

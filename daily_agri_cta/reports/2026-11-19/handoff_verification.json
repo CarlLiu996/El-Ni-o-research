@@ -1,0 +1,45 @@
+{
+  "status": "real_frozen_database_and_previous_report_read_successfully",
+  "freeze_at": "2026-11-19T00:56:26.148645+00:00",
+  "mode": "parallel",
+  "asof_observations": 41710,
+  "raw_documents_hash_verified": 286,
+  "previous_report_date": "2026-11-18",
+  "historical_ratings_available": 9,
+  "last_exchange_trade_date": "2026-11-18",
+  "warehouse_rows": [
+    [
+      "NR",
+      "warehouse_receipts_factory",
+      "2026-11-18 00:00:00",
+      0.0
+    ],
+    [
+      "NR",
+      "warehouse_receipts_warehouse",
+      "2026-11-18 00:00:00",
+      3527.0
+    ],
+    [
+      "RU",
+      "warehouse_receipts_warehouse",
+      "2026-11-18 00:00:00",
+      125190.0
+    ]
+  ],
+  "native_charts": 14,
+  "files_verified": 10,
+  "all_p0_verified": false,
+  "delivery_verified": false,
+  "next_scheduled_data_preparation": "2026-11-20T07:00:00+08:00",
+  "next_scheduled_briefing": "2026-11-20T08:00:00+08:00",
+  "environment_binding_verified": true,
+  "old_automation_enabled": false,
+  "tests": {
+    "passed": 86,
+    "warnings": 97,
+    "seconds": 9.53,
+    "scope": "synthetic tests; real handoff was verified separately"
+  },
+  "all_nine_product_P0_complete": false
+}
