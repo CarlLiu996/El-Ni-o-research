@@ -72,11 +72,19 @@ def material(metric,delta,pct,old):
 
 
 def evidence(store,freeze,previous):
+    from .continuity import init_archive
+    init_archive(store)
     current=visible(store,freeze).sort_values(GROUP+['observation_date'])
     prior=visible(store,previous)
     prior_keys={r['series_key']:r for r in prior.to_dict('records')}
     generated={r[0] for r in store.db.execute('''SELECT DISTINCT e.observation_id
        FROM daily_evidence e JOIN daily_run r USING(run_id) WHERE r.freeze_at<=?''',[previous]).fetchall()}
+    # A late supplemental response can be newer than yesterday's 07:50 cutoff.
+    # Count only the explicitly cited observations, keeping draft provenance in
+    # report_snapshot; this is continuity, not proof of delivery.
+    generated.update(r[0] for r in store.db.execute('''SELECT DISTINCT e.observation_id
+       FROM report_evidence e JOIN report_snapshot s USING(snapshot_id)
+       WHERE s.source_created_at<=?''',[freeze]).fetchall())
     rows=[]
     for _,group in current.groupby(GROUP,dropna=False,sort=False):
         entries=group.to_dict('records')

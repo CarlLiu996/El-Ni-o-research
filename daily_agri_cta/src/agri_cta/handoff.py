@@ -128,6 +128,8 @@ def export_handoff(store,report_date,freeze,previous,mode='parallel'):
     write_json(stage/'chart_data.json',charts)
     if continuity['previous_report']:
         (stage/'previous_report.md').write_text(continuity['previous_report']['content_text'])
+    if continuity['previous_generated_report']:
+        (stage/'previous_generated_report.md').write_text(continuity['previous_generated_report']['content_text'])
     pd.DataFrame(rows).to_csv(stage/'evidence_ledger.csv',index=False)
     pd.DataFrame(coverage).to_csv(stage/'source_coverage.csv',index=False)
     # The physical freeze contains only observations visible at freeze, including lineage.
@@ -138,10 +140,10 @@ def export_handoff(store,report_date,freeze,previous,mode='parallel'):
         frozen.execute('CREATE VIEW latest AS SELECT * FROM observation_asof')
         frozen.register('_documents',documents)
         frozen.execute('CREATE TABLE source_document AS SELECT * FROM _documents')
-        eligible=store.db.execute("SELECT * FROM report_snapshot WHERE report_date<? AND source_created_at<=? AND source_kind='automation_published_result'",[report_date,freeze]).df()
+        eligible=store.db.execute("SELECT * FROM report_snapshot WHERE report_date<? AND source_created_at<=?",[report_date,freeze]).df()
         frozen.register('_reports',eligible)
         frozen.execute('CREATE TABLE report_snapshot AS SELECT * FROM _reports')
-        ratings=store.db.execute('SELECT r.* FROM rating_snapshot r JOIN report_snapshot s USING(snapshot_id) WHERE s.report_date<? AND s.source_created_at<=? AND s.source_kind=\'automation_published_result\'',[report_date,freeze]).df()
+        ratings=store.db.execute('SELECT r.* FROM rating_snapshot r JOIN report_snapshot s USING(snapshot_id) WHERE s.report_date<? AND s.source_created_at<=?',[report_date,freeze]).df()
         frozen.register('_ratings',ratings)
         frozen.execute('CREATE TABLE rating_snapshot AS SELECT * FROM _ratings')
         frozen.execute('CREATE TABLE freeze_metadata AS SELECT ?::TIMESTAMPTZ freeze_at, ?::VARCHAR report_date, ?::VARCHAR mode',[freeze,report_date,mode])

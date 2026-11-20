@@ -1,0 +1,331 @@
+{
+  "report_date": "2026-11-20",
+  "mode": "parallel",
+  "freeze_at": "2026-11-20T00:52:23.216061+00:00",
+  "manifest_sha256": "373abbce68bc345b5fc1775807ca94d95ea30cac68ce518d4f4810fd7c559b99",
+  "asof_observations": 41864,
+  "raw_documents_hash_verified": 288,
+  "last_exchange_trade_date": "2026-11-19",
+  "historical_ratings_available": 9,
+  "P0_verified": 5,
+  "P0_total": 47,
+  "all_P0_complete": false,
+  "local_test_result": "98 passed, 103 warnings, 11.59s",
+  "provider_metadata_available": false,
+  "provider_metadata_required": false,
+  "response_sha256": "fdedac1f8c7163d82514c98eb802bf7cd2f0965fd30fdb125977f926cf0b37d3",
+  "response_status": "response_ready_delivery_unconfirmed",
+  "duplicate_attempt_action": "skip_already_completed",
+  "notification_delivery_verified": false,
+  "automation_prompt_readback_verified": true,
+  "external_object_storage_recovery_verified": false,
+  "five_trading_day_acceptance": false,
+  "source_gaps": [
+    {
+      "symbol": "SR",
+      "metric_id": "SR2701_SR2705_spread",
+      "status": "unverified",
+      "reason": "not_obtained_or_conflicting_sources",
+      "dates": []
+    },
+    {
+      "symbol": "SR",
+      "metric_id": "SR_warehouse_receipts",
+      "status": "unverified",
+      "reason": "not_obtained_or_conflicting_sources",
+      "dates": []
+    },
+    {
+      "symbol": "SR",
+      "metric_id": "Guangxi_spot",
+      "status": "unverified",
+      "reason": "not_obtained_or_conflicting_sources",
+      "dates": []
+    },
+    {
+      "symbol": "SR",
+      "metric_id": "ICE_no11_daily",
+      "status": "unverified",
+      "reason": "not_obtained_or_conflicting_sources",
+      "dates": []
+    },
+    {
+      "symbol": "CF",
+      "metric_id": "CF2701_CF2705_spread",
+      "status": "unverified",
+      "reason": "not_obtained_or_conflicting_sources",
+      "dates": []
+    },
+    {
+      "symbol": "CF",
+      "metric_id": "CF_warehouse_receipts",
+      "status": "unverified",
+      "reason": "not_obtained_or_conflicting_sources",
+      "dates": []
+    },
+    {
+      "symbol": "CF",
+      "metric_id": "cotton_official_daily_inspection",
+      "status": "unverified",
+      "reason": "not_obtained_or_conflicting_sources",
+      "dates": []
+    },
+    {
+      "symbol": "CF",
+      "metric_id": "seed_cotton_cost",
+      "status": "unverified",
+      "reason": "not_obtained_or_conflicting_sources",
+      "dates": []
+    },
+    {
+      "symbol": "CF",
+      "metric_id": "cotton_3128B_spot",
+      "status": "unverified",
+      "reason": "not_obtained_or_conflicting_sources",
+      "dates": []
+    },
+    {
+      "symbol": "RU",
+      "metric_id": "Qingdao_warehouse_stock",
+      "status": "unverified",
+      "reason": "not_obtained_or_conflicting_sources",
+      "dates": []
+    },
+    {
+      "symbol": "RU",
+      "metric_id": "Thailand_cup_lump_latex_price",
+      "status": "unverified",
+      "reason": "not_obtained_or_conflicting_sources",
+      "dates": []
+    },
+    {
+      "symbol": "RU",
+      "metric_id": "tire_plant_utilization",
+      "status": "unverified",
+      "reason": "not_obtained_or_conflicting_sources",
+      "dates": []
+    },
+    {
+      "symbol": "M",
+      "metric_id": "M2701_M2705_spread",
+      "status": "unverified",
+      "reason": "not_obtained_or_conflicting_sources",
+      "dates": []
+    },
+    {
+      "symbol": "M",
+      "metric_id": "M_warehouse_receipts",
+      "status": "unverified",
+      "reason": "not_obtained_or_conflicting_sources",
+      "dates": []
+    },
+    {
+      "symbol": "M",
+      "metric_id": "China_soymeal_stock",
+      "status": "unverified",
+      "reason": "not_obtained_or_conflicting_sources",
+      "dates": []
+    },
+    {
+      "symbol": "M",
+      "metric_id": "soybean_arrivals_rolling_1to3m",
+      "status": "unverified",
+      "reason": "not_obtained_or_conflicting_sources",
+      "dates": []
+    },
+    {
+      "symbol": "M",
+      "metric_id": "soybean_crush_profit",
+      "status": "unverified",
+      "reason": "not_obtained_or_conflicting_sources",
+      "dates": []
+    },
+    {
+      "symbol": "C",
+      "metric_id": "C2701_C2705_spread",
+      "status": "unverified",
+      "reason": "not_obtained_or_conflicting_sources",
+      "dates": []
+    },
+    {
+      "symbol": "C",
+      "metric_id": "Northeast_new_crop_purchase",
+      "status": "unverified",
+      "reason": "not_obtained_or_conflicting_sources",
+      "dates": []
+    },
+    {
+      "symbol": "C",
+      "metric_id": "North_South_port_inventory",
+      "status": "unverified",
+      "reason": "not_obtained_or_conflicting_sources",
+      "dates": []
+    },
+    {
+      "symbol": "C",
+      "metric_id": "corn_starch_spread",
+      "status": "unverified",
+      "reason": "not_obtained_or_conflicting_sources",
+      "dates": []
+    },
+    {
+      "symbol": "C",
+      "metric_id": "deep_processing_profit",
+      "status": "unverified",
+      "reason": "not_obtained_or_conflicting_sources",
+      "dates": []
+    },
+    {
+      "symbol": "P",
+      "metric_id": "P2701_P2705_spread",
+      "status": "unverified",
+      "reason": "not_obtained_or_conflicting_sources",
+      "dates": []
+    },
+    {
+      "symbol": "P",
+      "metric_id": "Y2701_minus_P2701",
+      "status": "unverified",
+      "reason": "not_obtained_or_conflicting_sources",
+      "dates": []
+    },
+    {
+      "symbol": "P",
+      "metric_id": "palm_24deg_spot_basis",
+      "status": "unverified",
+      "reason": "same_day_contract_location_quality_legs_not_verified",
+      "dates": []
+    },
+    {
+      "symbol": "P",
+      "metric_id": "China_palm_port_inventory",
+      "status": "unverified",
+      "reason": "not_obtained_or_conflicting_sources",
+      "dates": []
+    },
+    {
+      "symbol": "Y",
+      "metric_id": "China_soy_oil_inventory",
+      "status": "unverified",
+      "reason": "not_obtained_or_conflicting_sources",
+      "dates": []
+    },
+    {
+      "symbol": "Y",
+      "metric_id": "Y2701_Y2705_spread",
+      "status": "unverified",
+      "reason": "not_obtained_or_conflicting_sources",
+      "dates": []
+    },
+    {
+      "symbol": "Y",
+      "metric_id": "Y2701_minus_P2701",
+      "status": "unverified",
+      "reason": "not_obtained_or_conflicting_sources",
+      "dates": []
+    },
+    {
+      "symbol": "Y",
+      "metric_id": "China_soy_oil_spot_basis",
+      "status": "unverified",
+      "reason": "same_day_contract_location_quality_legs_not_verified",
+      "dates": []
+    },
+    {
+      "symbol": "Y",
+      "metric_id": "soybean_crush_profit",
+      "status": "unverified",
+      "reason": "not_obtained_or_conflicting_sources",
+      "dates": []
+    },
+    {
+      "symbol": "OI",
+      "metric_id": "China_rapeseed_oil_stock",
+      "status": "unverified",
+      "reason": "not_obtained_or_conflicting_sources",
+      "dates": []
+    },
+    {
+      "symbol": "OI",
+      "metric_id": "OI2701_OI2705_spread",
+      "status": "unverified",
+      "reason": "not_obtained_or_conflicting_sources",
+      "dates": []
+    },
+    {
+      "symbol": "OI",
+      "metric_id": "OI2701_minus_Y2701",
+      "status": "unverified",
+      "reason": "not_obtained_or_conflicting_sources",
+      "dates": []
+    },
+    {
+      "symbol": "OI",
+      "metric_id": "OI2701_minus_P2701",
+      "status": "unverified",
+      "reason": "not_obtained_or_conflicting_sources",
+      "dates": []
+    },
+    {
+      "symbol": "OI",
+      "metric_id": "OI_spot_basis",
+      "status": "unverified",
+      "reason": "same_day_contract_location_quality_legs_not_verified",
+      "dates": []
+    },
+    {
+      "symbol": "OI",
+      "metric_id": "OI_receipts",
+      "status": "unverified",
+      "reason": "not_obtained_or_conflicting_sources",
+      "dates": []
+    },
+    {
+      "symbol": "RM",
+      "metric_id": "RM2701_RM2705_spread",
+      "status": "unverified",
+      "reason": "not_obtained_or_conflicting_sources",
+      "dates": []
+    },
+    {
+      "symbol": "RM",
+      "metric_id": "RM_receipts",
+      "status": "unverified",
+      "reason": "not_obtained_or_conflicting_sources",
+      "dates": []
+    },
+    {
+      "symbol": "RM",
+      "metric_id": "rapeseed_meal_stock",
+      "status": "unverified",
+      "reason": "not_obtained_or_conflicting_sources",
+      "dates": []
+    },
+    {
+      "symbol": "RM",
+      "metric_id": "M2701_minus_RM2701",
+      "status": "unverified",
+      "reason": "not_obtained_or_conflicting_sources",
+      "dates": []
+    },
+    {
+      "symbol": "RM",
+      "metric_id": "RM_spot_basis",
+      "status": "unverified",
+      "reason": "same_day_contract_location_quality_legs_not_verified",
+      "dates": []
+    }
+  ],
+  "inline_chart_validation": {
+    "chart_count": 3,
+    "sample_counts": [
+      246,
+      2,
+      2
+    ],
+    "bindings_checked": true,
+    "browser_runtime_checked": false,
+    "reason": "cloud skill renderer companion assets unavailable"
+  },
+  "reported_observations_archived": 5
+}
