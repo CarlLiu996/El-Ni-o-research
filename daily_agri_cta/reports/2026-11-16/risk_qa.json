@@ -1,0 +1,127 @@
+{
+  "article_failures": [],
+  "coverage": [
+    {
+      "symbol": "SR",
+      "checked_articles": 12,
+      "matched_facts": 2,
+      "required_contracts": [
+        "main",
+        "2701",
+        "expiry_special"
+      ],
+      "rate_baseline_status": "unverified",
+      "complete": false
+    },
+    {
+      "symbol": "CF",
+      "checked_articles": 12,
+      "matched_facts": 2,
+      "required_contracts": [
+        "main",
+        "2701",
+        "expiry_special"
+      ],
+      "rate_baseline_status": "unverified",
+      "complete": false
+    },
+    {
+      "symbol": "RU",
+      "checked_articles": 12,
+      "matched_facts": 3,
+      "required_contracts": [
+        "main",
+        "2701",
+        "expiry_special"
+      ],
+      "rate_baseline_status": "unverified",
+      "complete": false
+    },
+    {
+      "symbol": "NR",
+      "checked_articles": 12,
+      "matched_facts": 4,
+      "required_contracts": [
+        "main",
+        "2701",
+        "expiry_special"
+      ],
+      "rate_baseline_status": "unverified",
+      "complete": false
+    },
+    {
+      "symbol": "M",
+      "checked_articles": 12,
+      "matched_facts": 2,
+      "required_contracts": [
+        "main",
+        "2701",
+        "expiry_special"
+      ],
+      "rate_baseline_status": "unverified",
+      "complete": false
+    },
+    {
+      "symbol": "C",
+      "checked_articles": 12,
+      "matched_facts": 2,
+      "required_contracts": [
+        "main",
+        "2701",
+        "expiry_special"
+      ],
+      "rate_baseline_status": "unverified",
+      "complete": false
+    },
+    {
+      "symbol": "P",
+      "checked_articles": 12,
+      "matched_facts": 2,
+      "required_contracts": [
+        "main",
+        "2701",
+        "expiry_special"
+      ],
+      "rate_baseline_status": "unverified",
+      "complete": false
+    },
+    {
+      "symbol": "Y",
+      "checked_articles": 12,
+      "matched_facts": 2,
+      "required_contracts": [
+        "main",
+        "2701",
+        "expiry_special"
+      ],
+      "rate_baseline_status": "unverified",
+      "complete": false
+    },
+    {
+      "symbol": "OI",
+      "checked_articles": 12,
+      "matched_facts": 2,
+      "required_contracts": [
+        "main",
+        "2701",
+        "expiry_special"
+      ],
+      "rate_baseline_status": "unverified",
+      "complete": false
+    },
+    {
+      "symbol": "RM",
+      "checked_articles": 12,
+      "matched_facts": 2,
+      "required_contracts": [
+        "main",
+        "2701",
+        "expiry_special"
+      ],
+      "rate_baseline_status": "unverified",
+      "complete": false
+    }
+  ],
+  "official_release_time_precision": "date_only",
+  "conclusion": "已核查公告正文；完整费率基线未核实，不能宣称全站无变化"
+}

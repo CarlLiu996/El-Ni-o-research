@@ -1,0 +1,242 @@
+[
+  {
+    "source": "CZCE",
+    "kind": "page",
+    "url": "https://www.czce.com.cn",
+    "status": "unverified",
+    "error": "412 Client Error: Precondition Failed for url: https://www.czce.com.cn/",
+    "http_status": 412,
+    "document_id": "7cbd3b0e0c6b6af5e9fd5d34245f7443c698e9b9133d41028e4cafbec9ebb751"
+  },
+  {
+    "source": "CZCE",
+    "kind": "robots",
+    "url": "https://www.czce.com.cn/robots.txt",
+    "status": "unverified",
+    "error": "404 Client Error: Not Found for url: https://www.czce.com.cn/robots.txt",
+    "http_status": 404,
+    "document_id": "6d0694f151f6e249516be93a2590a1b374004f9c2eba43e7477e5628fe5929a5"
+  },
+  {
+    "source": "DCE",
+    "kind": "page",
+    "url": "https://www.dce.com.cn",
+    "status": "unverified",
+    "error": "503 Server Error: Service Unavailable for url: https://www.dce.com.cn/",
+    "http_status": 503,
+    "document_id": "d52a28bf532996b2d3b9364e11754b2d05b339c43ef76456ff84599b45e0102f"
+  },
+  {
+    "source": "DCE",
+    "kind": "robots",
+    "url": "https://www.dce.com.cn/robots.txt",
+    "status": "unverified",
+    "error": "503 Server Error: Service Unavailable for url: https://www.dce.com.cn/robots.txt",
+    "http_status": 503,
+    "document_id": "95563c591948cb0d2516000a0f403f3cc50712236de9bd76508c0b0153d47664"
+  },
+  {
+    "source": "SHFE",
+    "kind": "page",
+    "url": "https://www.shfe.cn/reports/tradedata/dailyandweeklydata/",
+    "status": "page_only_http_200",
+    "bytes": 543804,
+    "document_id": "2f6b922952eeb4cf184cf64ca7b2f1f353d9dc49c0d9fe33519e5e391dcfc2ff",
+    "http_status": 200
+  },
+  {
+    "source": "SHFE",
+    "kind": "robots",
+    "url": "https://www.shfe.cn/robots.txt",
+    "status": "unverified",
+    "error": "404 Client Error: Not Found for url: https://www.shfe.cn/robots.txt",
+    "http_status": 404,
+    "document_id": "2c7c47e5c3463c07358e6eec8a06c8f689989c4a986a8c343eff5ecf911a2d34"
+  },
+  {
+    "source": "INE",
+    "kind": "page",
+    "url": "https://www.ine.cn",
+    "status": "page_only_http_200",
+    "bytes": 10648,
+    "document_id": "7cdfc53a495e3b9b7e29e9e18c6119872355310220e50c4e2559dd1cecfc08c8",
+    "http_status": 200
+  },
+  {
+    "source": "INE",
+    "kind": "robots",
+    "url": "https://www.ine.cn/robots.txt",
+    "status": "unverified",
+    "error": "404 Client Error: Not Found for url: https://www.ine.cn/robots.txt",
+    "http_status": 404,
+    "document_id": "97ed1f7ac41e3771bbd0494316bb733a86182bb43b9eed9ea239e5a2d8edab99"
+  },
+  {
+    "source": "MPOB",
+    "kind": "page",
+    "url": "https://bepi.mpob.gov.my/stat/web_report1.php?val=202684",
+    "status": "page_only_http_200",
+    "bytes": 18366,
+    "document_id": "020de84ca2dfcbf6c6507018ff03f379c5fc7c7f89f58087fc66316b370879b8",
+    "http_status": 200
+  },
+  {
+    "source": "MPOB",
+    "kind": "robots",
+    "url": "https://bepi.mpob.gov.my/robots.txt",
+    "status": "unverified",
+    "error": "404 Client Error: Not Found for url: https://bepi.mpob.gov.my/robots.txt",
+    "http_status": 404,
+    "document_id": "2533c61c7aa0dd497f889be34a316846285229c6786892a643545915d6609904"
+  },
+  {
+    "source": "MPOB_HISTORY",
+    "kind": "page",
+    "url": "https://bepi.mpob.gov.my/",
+    "status": "page_only_http_200",
+    "bytes": 188208,
+    "document_id": "3b0171b4673e32f21ada1c0a44de473f7edc80809b3d619717eb64c62dcb7d35",
+    "http_status": 200
+  },
+  {
+    "source": "MPOB_HISTORY",
+    "kind": "robots",
+    "url": "https://bepi.mpob.gov.my/robots.txt",
+    "status": "unverified",
+    "error": "404 Client Error: Not Found for url: https://bepi.mpob.gov.my/robots.txt",
+    "http_status": 404,
+    "document_id": "2533c61c7aa0dd497f889be34a316846285229c6786892a643545915d6609904"
+  },
+  {
+    "source": "NOAA_ENSO",
+    "kind": "page",
+    "url": "https://www.cpc.ncep.noaa.gov/data/indices/ersst5.nino.mth.91-20.ascii",
+    "status": "page_only_http_200",
+    "bytes": 67087,
+    "document_id": "5739878e6fec1056325d1a837ff574fb6efe85c494db1e4e5c259c2aee1d4c07",
+    "http_status": 200
+  },
+  {
+    "source": "NOAA_ENSO",
+    "kind": "robots",
+    "url": "https://www.cpc.ncep.noaa.gov/robots.txt",
+    "status": "unverified",
+    "error": "404 Client Error: Not Found for url: https://www.cpc.ncep.noaa.gov/robots.txt",
+    "http_status": 404,
+    "document_id": "1548272c395f50061a93b50a7c5a872035705ae766724ab318614baf15f0a2bf"
+  },
+  {
+    "source": "USDA_NASS",
+    "kind": "page",
+    "url": "https://www.nass.usda.gov/Quick_Stats/",
+    "status": "unverified",
+    "error": "404 Client Error: Not Found for url: https://www.nass.usda.gov/Quick_Stats/",
+    "http_status": 404,
+    "document_id": "2244e69512bcc202935b7fd65acc9c8d5e9724af67bd07c0b302b76240bdcc6f"
+  },
+  {
+    "source": "USDA_NASS",
+    "kind": "robots",
+    "url": "https://www.nass.usda.gov/robots.txt",
+    "status": "page_only_http_200",
+    "bytes": 26,
+    "document_id": "3b401f05deed1e497e6fe26a3737bd9521aab9b428c8a9080e7a9e43363e3932",
+    "http_status": 200
+  },
+  {
+    "source": "USDA_WASDE",
+    "kind": "page",
+    "url": "https://www.usda.gov/oce/commodity/wasde",
+    "status": "page_only_http_200",
+    "bytes": 159713,
+    "document_id": "7cce2975d7f21062b6cdc4bea481e23a423b9685e3e1d281dbe2a30210338755",
+    "http_status": 200
+  },
+  {
+    "source": "USDA_WASDE",
+    "kind": "robots",
+    "url": "https://www.usda.gov/robots.txt",
+    "status": "page_only_http_200",
+    "bytes": 2027,
+    "document_id": "8c34ed075e18bb4748eaed42534c61bd217c7e6a1d7d08805ed33b6af5ef675a",
+    "http_status": 200
+  },
+  {
+    "source": "UNICA",
+    "kind": "page",
+    "url": "https://unica.com.br",
+    "status": "unverified_challenge_html",
+    "bytes": 168,
+    "document_id": "51c705673de7a0b523e79a5dd469f2ccbfc77828f527a0418bee61dda48e9532",
+    "http_status": 202
+  },
+  {
+    "source": "UNICA",
+    "kind": "robots",
+    "url": "https://unica.com.br/robots.txt",
+    "status": "unverified_challenge_html",
+    "bytes": 178,
+    "document_id": "f39a7d9ac15c15c5dac86fc2f6b701d854f3d06f7f08073d1928b3559558f451",
+    "http_status": 202
+  },
+  {
+    "source": "NCC",
+    "kind": "page",
+    "url": "https://www.china-cotton.org/",
+    "status": "unverified",
+    "error": "503 Server Error: Service Unavailable for url: https://www.china-cotton.org/",
+    "http_status": 503,
+    "document_id": "ddb706a7b19a1f738d1906e225fffd214db8219acf1b26c902dd28558d485619"
+  },
+  {
+    "source": "NCC",
+    "kind": "robots",
+    "url": "https://www.china-cotton.org/robots.txt",
+    "status": "unverified",
+    "error": "503 Server Error: Service Unavailable for url: https://www.china-cotton.org/robots.txt",
+    "http_status": 503,
+    "document_id": "9bf405d762cc51222a8f3b8e6fd5cfc9b499b58b8cffb3475379e1cb0d15d4cd"
+  },
+  {
+    "source": "SDIC_NOTICE",
+    "kind": "page",
+    "url": "https://www.sdicfutures.com.cn/annc/business/11098.html",
+    "status": "page_only_http_200",
+    "bytes": 30664,
+    "document_id": "dec0921e11f015070dee32f0a24e1d16998ec894312477763341a53f18f9e9a7",
+    "http_status": 200
+  },
+  {
+    "source": "SDIC_NOTICE",
+    "kind": "robots",
+    "url": "https://www.sdicfutures.com.cn/robots.txt",
+    "status": "unverified",
+    "error": "503 Server Error: Service Unavailable for url: https://www.sdicfutures.com.cn/robots.txt",
+    "http_status": 503,
+    "document_id": "303e0d847e95647468a4ffe5a535a8ad36f836292a19861525b59b95d6a44abd"
+  },
+  {
+    "source": "SDIC_MARGIN",
+    "kind": "page",
+    "url": "https://www.sdicfutures.com.cn/service/publicity/11247.html",
+    "status": "page_only_http_200",
+    "bytes": 27418,
+    "document_id": "e3ce627f1875ea4e60e17be9cd1def44b07d9d1c02103300cf42478ef8810e99",
+    "http_status": 200
+  },
+  {
+    "source": "SDIC_MARGIN",
+    "kind": "robots",
+    "url": "https://www.sdicfutures.com.cn/robots.txt",
+    "status": "unverified",
+    "error": "503 Server Error: Service Unavailable for url: https://www.sdicfutures.com.cn/robots.txt",
+    "http_status": 503,
+    "document_id": "303e0d847e95647468a4ffe5a535a8ad36f836292a19861525b59b95d6a44abd"
+  },
+  {
+    "source": "VENDOR_IMPORT",
+    "url": "MANUAL_AUTHORIZED_IMPORT",
+    "status": "requires_authorization",
+    "bytes": 0
+  }
+]

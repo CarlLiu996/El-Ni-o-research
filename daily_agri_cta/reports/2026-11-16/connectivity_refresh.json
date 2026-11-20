@@ -1,0 +1,61 @@
+[
+  {
+    "url": "https://www.shfe.com.cn/images/api.js",
+    "status": 200,
+    "final_url": "https://www.shfe.com.cn/images/api.js",
+    "bytes": 16823
+  },
+  {
+    "url": "https://www.dce.com.cn/",
+    "status": 503,
+    "final_url": "https://www.dce.com.cn/",
+    "bytes": 91
+  },
+  {
+    "url": "https://psl.noaa.gov/data/timeseries/monthly/Nino34/",
+    "status": 404,
+    "final_url": "https://psl.noaa.gov/data/timeseries/monthly/Nino34/",
+    "bytes": 29073
+  },
+  {
+    "url": "https://www.shfe.com.cn/reports/tradedata/dailyandweeklydata/",
+    "status": 200,
+    "final_url": "https://www.shfe.com.cn/reports/tradedata/dailyandweeklydata/",
+    "bytes": 543804
+  },
+  {
+    "url": "https://www.sdicfutures.com.cn/annc/business/21899.html",
+    "status": 200,
+    "final_url": "https://www.sdicfutures.com.cn/annc/business/21899.html",
+    "bytes": 22911
+  },
+  {
+    "url": "https://www.czce.com.cn/cn/jysj/lshqxz/H770319index_1.htm",
+    "status": 412,
+    "final_url": "https://www.czce.com.cn/cn/jysj/lshqxz/H770319index_1.htm",
+    "bytes": 2824
+  },
+  {
+    "url": "https://www.czce.com.cn/cn/DFSStaticFiles/Future/2023/ALLFUTURES2023.zip",
+    "status": 412,
+    "final_url": "https://www.czce.com.cn/cn/DFSStaticFiles/Future/2023/ALLFUTURES2023.zip",
+    "bytes": 2782
+  },
+  {
+    "url": "https://www.shfe.com.cn/data/tradedata/future/dailydata/20251231dailystock.dat",
+    "status": 404,
+    "final_url": "https://www.shfe.com.cn/data/tradedata/future/dailydata/20251231dailystock.dat",
+    "bytes": 4832
+  },
+  {
+    "url": "https://www.sdicfutures.com.cn/annc/business/11098.html",
+    "status": 200,
+    "final_url": "https://www.sdicfutures.com.cn/annc/business/11098.html",
+    "bytes": 30664
+  },
+  {
+    "url": "https://tsite.shfe.com.cn/data/dailydata/20251231dailystock.dat",
+    "status": "proxy_CONNECT_403",
+    "action": "no further attempts"
+  }
+]
