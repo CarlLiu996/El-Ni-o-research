@@ -1,0 +1,1366 @@
+{
+  "qa_passed": true,
+  "hard_errors": 0,
+  "excluded_observations": [
+    {
+      "data_status": "duplicate_schema_migration",
+      "n": 1509
+    }
+  ],
+  "complete_9_symbols": false,
+  "future_data_leakage_check": "enforced_at_report_freeze",
+  "source_missing": [
+    "CZCE",
+    "DCE",
+    "SDIC_verified_rates",
+    "industrial_P0_metrics"
+  ],
+  "unverified_metrics": [
+    "all spot/basis/inventory except MPOB and RU/NR receipts"
+  ],
+  "exceptions": [
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20250102/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20250102/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20250103/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20250103/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20250108/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20250108/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20250110/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20250110/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20250113/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20250113/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20250114/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20250114/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20250115/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20250115/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20250116/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20250116/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20250117/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20250117/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20250120/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20250120/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20250121/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20250121/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20250122/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20250122/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20250124/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20250124/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20250127/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20250127/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20250205/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20250205/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20250206/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20250206/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20250210/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20250210/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20250212/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20250212/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20250217/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20250217/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20250218/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20250218/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20250219/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20250219/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20250221/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20250221/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20250224/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20250224/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20251115/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20251115/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20251116/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20251116/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20251122/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20251122/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20251123/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20251123/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20251129/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20251129/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20251130/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20251130/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20251206/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20251206/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20251207/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20251207/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20251213/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20251213/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20251214/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20251214/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20251220/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20251220/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20251221/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20251221/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20251227/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20251227/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20251228/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20251228/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260101/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260101/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260102/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260102/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260103/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260103/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260104/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260104/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260110/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260110/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260111/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260111/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260117/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260117/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260118/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260118/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260124/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260124/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260125/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260125/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260131/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260131/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260201/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260201/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260207/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260207/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260208/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260208/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260214/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260214/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260215/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260215/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260216/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260216/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260217/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260217/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260218/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260218/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260219/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260219/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260220/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260220/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260221/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260221/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260222/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260222/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260223/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260223/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260228/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260228/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260301/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260301/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260307/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260307/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260308/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260308/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260314/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260314/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260315/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260315/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260321/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260321/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260322/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260322/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260328/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260328/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260329/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260329/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260404/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260404/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260405/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260405/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260406/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260406/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260411/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260411/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260412/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260412/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260418/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260418/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260419/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260419/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260425/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260425/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260426/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260426/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260501/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260501/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260502/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260502/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260503/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260503/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260504/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260504/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260505/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260505/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260509/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260509/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260510/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260510/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260516/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260516/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260517/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260517/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260523/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260523/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260524/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260524/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260530/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260530/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260531/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260531/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260606/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260606/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260607/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260607/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260613/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260613/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260614/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260614/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260619/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260619/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260620/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260620/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260621/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260621/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260627/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260627/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260628/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260628/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260704/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260704/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260705/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260705/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260711/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260711/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260712/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260712/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260718/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260718/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260719/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260719/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260725/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260725/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260726/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260726/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260801/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260801/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260802/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260802/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260808/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260808/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260809/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260809/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260815/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260815/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260816/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260816/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260822/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260822/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260823/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260823/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260829/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260829/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260830/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260830/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260905/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260905/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260906/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260906/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260912/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260912/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260913/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260913/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260919/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260919/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260920/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260920/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260925/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260925/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260926/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260926/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260927/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20260927/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20261001/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20261001/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20261002/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20261002/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20261003/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20261003/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20261004/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20261004/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20261005/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20261005/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20261006/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20261006/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20261007/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20261007/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20261010/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20261010/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20261011/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20261011/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20261017/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20261017/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20261018/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20261018/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20261024/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20261024/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20261025/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20261025/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20261031/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20261031/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20261101/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20261101/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20261107/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20261107/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20261108/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20261108/ZH/all.html"
+    }
+  ],
+  "historical_series_available": [
+    {
+      "source_id": "MPOB",
+      "commodity": "P",
+      "metric_id": "mpob_exports",
+      "frequency": "monthly",
+      "unit": "tonnes",
+      "start_date": "2023-01-31 00:00:00",
+      "end_date": "2026-10-31 00:00:00",
+      "n": 46,
+      "dates": 46,
+      "known_release_dates": 0
+    },
+    {
+      "source_id": "MPOB",
+      "commodity": "P",
+      "metric_id": "mpob_production",
+      "frequency": "monthly",
+      "unit": "tonnes",
+      "start_date": "2023-01-31 00:00:00",
+      "end_date": "2026-10-31 00:00:00",
+      "n": 46,
+      "dates": 46,
+      "known_release_dates": 0
+    },
+    {
+      "source_id": "MPOB",
+      "commodity": "P",
+      "metric_id": "mpob_stock",
+      "frequency": "monthly",
+      "unit": "tonnes",
+      "start_date": "2023-01-31 00:00:00",
+      "end_date": "2026-10-31 00:00:00",
+      "n": 46,
+      "dates": 46,
+      "known_release_dates": 0
+    },
+    {
+      "source_id": "NOAA_ENSO",
+      "commodity": "ENSO",
+      "metric_id": "nino34_anomaly",
+      "frequency": "monthly",
+      "unit": "degC",
+      "start_date": "1950-01-31 00:00:00",
+      "end_date": "2026-06-30 00:00:00",
+      "n": 918,
+      "dates": 918,
+      "known_release_dates": 0
+    },
+    {
+      "source_id": "NOAA_PSL",
+      "commodity": "ENSO",
+      "metric_id": "nino34_ersstv6_anomaly_1981_2010",
+      "frequency": "monthly",
+      "unit": "degC",
+      "start_date": "1948-01-31 00:00:00",
+      "end_date": "2026-10-31 00:00:00",
+      "n": 946,
+      "dates": 946,
+      "known_release_dates": 0
+    },
+    {
+      "source_id": "NOAA_PSL",
+      "commodity": "ENSO",
+      "metric_id": "nino34_hadisst_anomaly_1981_2010",
+      "frequency": "monthly",
+      "unit": "degC",
+      "start_date": "1870-01-31 00:00:00",
+      "end_date": "2026-09-30 00:00:00",
+      "n": 1881,
+      "dates": 1881,
+      "known_release_dates": 0
+    },
+    {
+      "source_id": "SHFE",
+      "commodity": "NR",
+      "metric_id": "futures_close",
+      "frequency": "daily",
+      "unit": "CNY/tonne",
+      "start_date": "2025-01-02 00:00:00",
+      "end_date": "2026-11-13 00:00:00",
+      "n": 348,
+      "dates": 29,
+      "known_release_dates": 0
+    },
+    {
+      "source_id": "SHFE",
+      "commodity": "NR",
+      "metric_id": "futures_high",
+      "frequency": "daily",
+      "unit": "CNY/tonne",
+      "start_date": "2026-11-09 00:00:00",
+      "end_date": "2026-11-13 00:00:00",
+      "n": 47,
+      "dates": 5,
+      "known_release_dates": 0
+    },
+    {
+      "source_id": "SHFE",
+      "commodity": "NR",
+      "metric_id": "futures_low",
+      "frequency": "daily",
+      "unit": "CNY/tonne",
+      "start_date": "2026-11-09 00:00:00",
+      "end_date": "2026-11-13 00:00:00",
+      "n": 47,
+      "dates": 5,
+      "known_release_dates": 0
+    },
+    {
+      "source_id": "SHFE",
+      "commodity": "NR",
+      "metric_id": "futures_open",
+      "frequency": "daily",
+      "unit": "CNY/tonne",
+      "start_date": "2026-11-09 00:00:00",
+      "end_date": "2026-11-13 00:00:00",
+      "n": 47,
+      "dates": 5,
+      "known_release_dates": 0
+    },
+    {
+      "source_id": "SHFE",
+      "commodity": "NR",
+      "metric_id": "futures_open_interest",
+      "frequency": "daily",
+      "unit": "contracts",
+      "start_date": "2025-01-02 00:00:00",
+      "end_date": "2026-11-13 00:00:00",
+      "n": 348,
+      "dates": 29,
+      "known_release_dates": 0
+    },
+    {
+      "source_id": "SHFE",
+      "commodity": "NR",
+      "metric_id": "futures_settlement",
+      "frequency": "daily",
+      "unit": "CNY/tonne",
+      "start_date": "2025-01-02 00:00:00",
+      "end_date": "2026-11-13 00:00:00",
+      "n": 348,
+      "dates": 29,
+      "known_release_dates": 0
+    },
+    {
+      "source_id": "SHFE",
+      "commodity": "NR",
+      "metric_id": "futures_volume",
+      "frequency": "daily",
+      "unit": "contracts",
+      "start_date": "2025-01-02 00:00:00",
+      "end_date": "2026-11-13 00:00:00",
+      "n": 348,
+      "dates": 29,
+      "known_release_dates": 0
+    },
+    {
+      "source_id": "SHFE",
+      "commodity": "RU",
+      "metric_id": "futures_close",
+      "frequency": "daily",
+      "unit": "CNY/tonne",
+      "start_date": "2025-01-02 00:00:00",
+      "end_date": "2026-11-13 00:00:00",
+      "n": 290,
+      "dates": 29,
+      "known_release_dates": 0
+    },
+    {
+      "source_id": "SHFE",
+      "commodity": "RU",
+      "metric_id": "futures_high",
+      "frequency": "daily",
+      "unit": "CNY/tonne",
+      "start_date": "2026-11-09 00:00:00",
+      "end_date": "2026-11-13 00:00:00",
+      "n": 49,
+      "dates": 5,
+      "known_release_dates": 0
+    },
+    {
+      "source_id": "SHFE",
+      "commodity": "RU",
+      "metric_id": "futures_low",
+      "frequency": "daily",
+      "unit": "CNY/tonne",
+      "start_date": "2026-11-09 00:00:00",
+      "end_date": "2026-11-13 00:00:00",
+      "n": 49,
+      "dates": 5,
+      "known_release_dates": 0
+    },
+    {
+      "source_id": "SHFE",
+      "commodity": "RU",
+      "metric_id": "futures_open",
+      "frequency": "daily",
+      "unit": "CNY/tonne",
+      "start_date": "2026-11-09 00:00:00",
+      "end_date": "2026-11-13 00:00:00",
+      "n": 49,
+      "dates": 5,
+      "known_release_dates": 0
+    },
+    {
+      "source_id": "SHFE",
+      "commodity": "RU",
+      "metric_id": "futures_open_interest",
+      "frequency": "daily",
+      "unit": "contracts",
+      "start_date": "2025-01-02 00:00:00",
+      "end_date": "2026-11-13 00:00:00",
+      "n": 290,
+      "dates": 29,
+      "known_release_dates": 0
+    },
+    {
+      "source_id": "SHFE",
+      "commodity": "RU",
+      "metric_id": "futures_settlement",
+      "frequency": "daily",
+      "unit": "CNY/tonne",
+      "start_date": "2025-01-02 00:00:00",
+      "end_date": "2026-11-13 00:00:00",
+      "n": 290,
+      "dates": 29,
+      "known_release_dates": 0
+    },
+    {
+      "source_id": "SHFE",
+      "commodity": "RU",
+      "metric_id": "futures_volume",
+      "frequency": "daily",
+      "unit": "contracts",
+      "start_date": "2025-01-02 00:00:00",
+      "end_date": "2026-11-13 00:00:00",
+      "n": 290,
+      "dates": 29,
+      "known_release_dates": 0
+    },
+    {
+      "source_id": "SHFE_ARCHIVE",
+      "commodity": "NR",
+      "metric_id": "futures_close",
+      "frequency": "daily",
+      "unit": "CNY/tonne",
+      "start_date": "2025-01-06 00:00:00",
+      "end_date": "2025-12-31 00:00:00",
+      "n": 2628,
+      "dates": 219,
+      "known_release_dates": 0
+    },
+    {
+      "source_id": "SHFE_ARCHIVE",
+      "commodity": "NR",
+      "metric_id": "futures_high",
+      "frequency": "daily",
+      "unit": "CNY/tonne",
+      "start_date": "2025-01-02 00:00:00",
+      "end_date": "2025-12-31 00:00:00",
+      "n": 2577,
+      "dates": 243,
+      "known_release_dates": 0
+    },
+    {
+      "source_id": "SHFE_ARCHIVE",
+      "commodity": "NR",
+      "metric_id": "futures_low",
+      "frequency": "daily",
+      "unit": "CNY/tonne",
+      "start_date": "2025-01-02 00:00:00",
+      "end_date": "2025-12-31 00:00:00",
+      "n": 2577,
+      "dates": 243,
+      "known_release_dates": 0
+    },
+    {
+      "source_id": "SHFE_ARCHIVE",
+      "commodity": "NR",
+      "metric_id": "futures_open",
+      "frequency": "daily",
+      "unit": "CNY/tonne",
+      "start_date": "2025-01-02 00:00:00",
+      "end_date": "2025-12-31 00:00:00",
+      "n": 2577,
+      "dates": 243,
+      "known_release_dates": 0
+    },
+    {
+      "source_id": "SHFE_ARCHIVE",
+      "commodity": "NR",
+      "metric_id": "futures_open_interest",
+      "frequency": "daily",
+      "unit": "contracts",
+      "start_date": "2025-01-06 00:00:00",
+      "end_date": "2025-12-31 00:00:00",
+      "n": 2628,
+      "dates": 219,
+      "known_release_dates": 0
+    },
+    {
+      "source_id": "SHFE_ARCHIVE",
+      "commodity": "NR",
+      "metric_id": "futures_settlement",
+      "frequency": "daily",
+      "unit": "CNY/tonne",
+      "start_date": "2025-01-06 00:00:00",
+      "end_date": "2025-12-31 00:00:00",
+      "n": 2628,
+      "dates": 219,
+      "known_release_dates": 0
+    },
+    {
+      "source_id": "SHFE_ARCHIVE",
+      "commodity": "NR",
+      "metric_id": "futures_volume",
+      "frequency": "daily",
+      "unit": "contracts",
+      "start_date": "2025-01-06 00:00:00",
+      "end_date": "2025-12-31 00:00:00",
+      "n": 2628,
+      "dates": 219,
+      "known_release_dates": 0
+    },
+    {
+      "source_id": "SHFE_ARCHIVE",
+      "commodity": "RU",
+      "metric_id": "futures_close",
+      "frequency": "daily",
+      "unit": "CNY/tonne",
+      "start_date": "2025-01-06 00:00:00",
+      "end_date": "2025-12-31 00:00:00",
+      "n": 2190,
+      "dates": 219,
+      "known_release_dates": 0
+    },
+    {
+      "source_id": "SHFE_ARCHIVE",
+      "commodity": "RU",
+      "metric_id": "futures_high",
+      "frequency": "daily",
+      "unit": "CNY/tonne",
+      "start_date": "2025-01-02 00:00:00",
+      "end_date": "2025-12-31 00:00:00",
+      "n": 2326,
+      "dates": 243,
+      "known_release_dates": 0
+    },
+    {
+      "source_id": "SHFE_ARCHIVE",
+      "commodity": "RU",
+      "metric_id": "futures_low",
+      "frequency": "daily",
+      "unit": "CNY/tonne",
+      "start_date": "2025-01-02 00:00:00",
+      "end_date": "2025-12-31 00:00:00",
+      "n": 2326,
+      "dates": 243,
+      "known_release_dates": 0
+    },
+    {
+      "source_id": "SHFE_ARCHIVE",
+      "commodity": "RU",
+      "metric_id": "futures_open",
+      "frequency": "daily",
+      "unit": "CNY/tonne",
+      "start_date": "2025-01-02 00:00:00",
+      "end_date": "2025-12-31 00:00:00",
+      "n": 2326,
+      "dates": 243,
+      "known_release_dates": 0
+    },
+    {
+      "source_id": "SHFE_ARCHIVE",
+      "commodity": "RU",
+      "metric_id": "futures_open_interest",
+      "frequency": "daily",
+      "unit": "contracts",
+      "start_date": "2025-01-06 00:00:00",
+      "end_date": "2025-12-31 00:00:00",
+      "n": 2190,
+      "dates": 219,
+      "known_release_dates": 0
+    },
+    {
+      "source_id": "SHFE_ARCHIVE",
+      "commodity": "RU",
+      "metric_id": "futures_settlement",
+      "frequency": "daily",
+      "unit": "CNY/tonne",
+      "start_date": "2025-01-06 00:00:00",
+      "end_date": "2025-12-31 00:00:00",
+      "n": 2190,
+      "dates": 219,
+      "known_release_dates": 0
+    },
+    {
+      "source_id": "SHFE_ARCHIVE",
+      "commodity": "RU",
+      "metric_id": "futures_volume",
+      "frequency": "daily",
+      "unit": "contracts",
+      "start_date": "2025-01-06 00:00:00",
+      "end_date": "2025-12-31 00:00:00",
+      "n": 2190,
+      "dates": 219,
+      "known_release_dates": 0
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "commodity": "NR",
+      "metric_id": "warehouse_receipts_factory",
+      "frequency": "daily",
+      "unit": "tonnes",
+      "start_date": "2026-07-24 00:00:00",
+      "end_date": "2026-11-13 00:00:00",
+      "n": 75,
+      "dates": 75,
+      "known_release_dates": 0
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "commodity": "NR",
+      "metric_id": "warehouse_receipts_warehouse",
+      "frequency": "daily",
+      "unit": "tonnes",
+      "start_date": "2025-11-14 00:00:00",
+      "end_date": "2026-11-13 00:00:00",
+      "n": 242,
+      "dates": 242,
+      "known_release_dates": 0
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "commodity": "RU",
+      "metric_id": "warehouse_receipts_warehouse",
+      "frequency": "daily",
+      "unit": "tonnes",
+      "start_date": "2025-11-14 00:00:00",
+      "end_date": "2026-11-13 00:00:00",
+      "n": 242,
+      "dates": 242,
+      "known_release_dates": 0
+    }
+  ],
+  "margin_notice_checked_through": null,
+  "publication_warning": "Unknown publication time is NULL; first seen is not a release timestamp.",
+  "calendar_warning": "Coverage dates are actual official records; missing dates are never filled.",
+  "as_of_observations": 41263,
+  "warehouse_publication_sequence": {
+    "start_date": "2025-11-14",
+    "end_date": "2026-11-13",
+    "documents": 242,
+    "serials_found": 242,
+    "first_serial": 4160,
+    "last_serial": 4401,
+    "missing_serials": [],
+    "boundary_dates_present": true,
+    "chronological": true,
+    "complete_published_bulletin_sequence": true,
+    "exchange_holiday_classifications": "not_inferred",
+    "factory_scope": "only explicitly reported factory rows; absence is not zero"
+  },
+  "risk_rate_baseline_verified": false,
+  "risk_notice_publication_checked_through": "2026-11-13",
+  "risk_applicable_trade_date_checked_through": "2026-11-16"
+}

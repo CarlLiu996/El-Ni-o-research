@@ -1,0 +1,515 @@
+{
+  "qa_passed": true,
+  "hard_errors": 0,
+  "excluded_observations": [
+    {
+      "data_status": "duplicate_schema_migration",
+      "n": 1509
+    }
+  ],
+  "complete_9_symbols": false,
+  "future_data_leakage_check": "enforced_at_report_freeze",
+  "source_missing": [
+    "CZCE",
+    "DCE",
+    "SDIC_verified_rates",
+    "industrial_P0_metrics"
+  ],
+  "unverified_metrics": [
+    "all spot/basis/inventory except MPOB and RU/NR receipts"
+  ],
+  "exceptions": [
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20250102/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20250102/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20250103/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20250103/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20250108/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20250108/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20250110/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20250110/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20250113/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20250113/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20250114/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20250114/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20250115/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20250115/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20250116/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20250116/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20250117/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20250117/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20250120/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20250120/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20250121/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20250121/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20250122/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20250122/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20250124/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20250124/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20250127/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20250127/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20250205/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20250205/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20250206/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20250206/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20250210/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20250210/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20250212/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20250212/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20250217/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20250217/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20250218/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20250218/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20250219/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20250219/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20250221/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20250221/ZH/all.html"
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "source_url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20250224/ZH/all.html",
+      "parse_status": "unverified",
+      "error_message": "404 Client Error: Not Found for url: https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20250224/ZH/all.html"
+    }
+  ],
+  "historical_series_available": [
+    {
+      "source_id": "MPOB",
+      "commodity": "P",
+      "metric_id": "mpob_exports",
+      "frequency": "monthly",
+      "unit": "tonnes",
+      "start_date": "2023-01-31 00:00:00",
+      "end_date": "2026-10-31 00:00:00",
+      "n": 46,
+      "dates": 46,
+      "known_release_dates": 0
+    },
+    {
+      "source_id": "MPOB",
+      "commodity": "P",
+      "metric_id": "mpob_production",
+      "frequency": "monthly",
+      "unit": "tonnes",
+      "start_date": "2023-01-31 00:00:00",
+      "end_date": "2026-10-31 00:00:00",
+      "n": 46,
+      "dates": 46,
+      "known_release_dates": 0
+    },
+    {
+      "source_id": "MPOB",
+      "commodity": "P",
+      "metric_id": "mpob_stock",
+      "frequency": "monthly",
+      "unit": "tonnes",
+      "start_date": "2023-01-31 00:00:00",
+      "end_date": "2026-10-31 00:00:00",
+      "n": 46,
+      "dates": 46,
+      "known_release_dates": 0
+    },
+    {
+      "source_id": "NOAA_ENSO",
+      "commodity": "ENSO",
+      "metric_id": "nino34_anomaly",
+      "frequency": "monthly",
+      "unit": "degC",
+      "start_date": "1950-01-31 00:00:00",
+      "end_date": "2026-06-30 00:00:00",
+      "n": 918,
+      "dates": 918,
+      "known_release_dates": 0
+    },
+    {
+      "source_id": "SHFE",
+      "commodity": "NR",
+      "metric_id": "futures_close",
+      "frequency": "daily",
+      "unit": "CNY/tonne",
+      "start_date": "2025-01-02 00:00:00",
+      "end_date": "2025-02-25 00:00:00",
+      "n": 288,
+      "dates": 24,
+      "known_release_dates": 0
+    },
+    {
+      "source_id": "SHFE",
+      "commodity": "NR",
+      "metric_id": "futures_open_interest",
+      "frequency": "daily",
+      "unit": "contracts",
+      "start_date": "2025-01-02 00:00:00",
+      "end_date": "2025-02-25 00:00:00",
+      "n": 288,
+      "dates": 24,
+      "known_release_dates": 0
+    },
+    {
+      "source_id": "SHFE",
+      "commodity": "NR",
+      "metric_id": "futures_settlement",
+      "frequency": "daily",
+      "unit": "CNY/tonne",
+      "start_date": "2025-01-02 00:00:00",
+      "end_date": "2025-02-25 00:00:00",
+      "n": 288,
+      "dates": 24,
+      "known_release_dates": 0
+    },
+    {
+      "source_id": "SHFE",
+      "commodity": "NR",
+      "metric_id": "futures_volume",
+      "frequency": "daily",
+      "unit": "contracts",
+      "start_date": "2025-01-02 00:00:00",
+      "end_date": "2025-02-25 00:00:00",
+      "n": 288,
+      "dates": 24,
+      "known_release_dates": 0
+    },
+    {
+      "source_id": "SHFE",
+      "commodity": "RU",
+      "metric_id": "futures_close",
+      "frequency": "daily",
+      "unit": "CNY/tonne",
+      "start_date": "2025-01-02 00:00:00",
+      "end_date": "2025-02-25 00:00:00",
+      "n": 240,
+      "dates": 24,
+      "known_release_dates": 0
+    },
+    {
+      "source_id": "SHFE",
+      "commodity": "RU",
+      "metric_id": "futures_open_interest",
+      "frequency": "daily",
+      "unit": "contracts",
+      "start_date": "2025-01-02 00:00:00",
+      "end_date": "2025-02-25 00:00:00",
+      "n": 240,
+      "dates": 24,
+      "known_release_dates": 0
+    },
+    {
+      "source_id": "SHFE",
+      "commodity": "RU",
+      "metric_id": "futures_settlement",
+      "frequency": "daily",
+      "unit": "CNY/tonne",
+      "start_date": "2025-01-02 00:00:00",
+      "end_date": "2025-02-25 00:00:00",
+      "n": 240,
+      "dates": 24,
+      "known_release_dates": 0
+    },
+    {
+      "source_id": "SHFE",
+      "commodity": "RU",
+      "metric_id": "futures_volume",
+      "frequency": "daily",
+      "unit": "contracts",
+      "start_date": "2025-01-02 00:00:00",
+      "end_date": "2025-02-25 00:00:00",
+      "n": 240,
+      "dates": 24,
+      "known_release_dates": 0
+    },
+    {
+      "source_id": "SHFE_ARCHIVE",
+      "commodity": "NR",
+      "metric_id": "futures_close",
+      "frequency": "daily",
+      "unit": "CNY/tonne",
+      "start_date": "2025-01-06 00:00:00",
+      "end_date": "2025-12-31 00:00:00",
+      "n": 2628,
+      "dates": 219,
+      "known_release_dates": 0
+    },
+    {
+      "source_id": "SHFE_ARCHIVE",
+      "commodity": "NR",
+      "metric_id": "futures_high",
+      "frequency": "daily",
+      "unit": "CNY/tonne",
+      "start_date": "2025-01-02 00:00:00",
+      "end_date": "2025-12-31 00:00:00",
+      "n": 2577,
+      "dates": 243,
+      "known_release_dates": 0
+    },
+    {
+      "source_id": "SHFE_ARCHIVE",
+      "commodity": "NR",
+      "metric_id": "futures_low",
+      "frequency": "daily",
+      "unit": "CNY/tonne",
+      "start_date": "2025-01-02 00:00:00",
+      "end_date": "2025-12-31 00:00:00",
+      "n": 2577,
+      "dates": 243,
+      "known_release_dates": 0
+    },
+    {
+      "source_id": "SHFE_ARCHIVE",
+      "commodity": "NR",
+      "metric_id": "futures_open",
+      "frequency": "daily",
+      "unit": "CNY/tonne",
+      "start_date": "2025-01-02 00:00:00",
+      "end_date": "2025-12-31 00:00:00",
+      "n": 2577,
+      "dates": 243,
+      "known_release_dates": 0
+    },
+    {
+      "source_id": "SHFE_ARCHIVE",
+      "commodity": "NR",
+      "metric_id": "futures_open_interest",
+      "frequency": "daily",
+      "unit": "contracts",
+      "start_date": "2025-01-06 00:00:00",
+      "end_date": "2025-12-31 00:00:00",
+      "n": 2628,
+      "dates": 219,
+      "known_release_dates": 0
+    },
+    {
+      "source_id": "SHFE_ARCHIVE",
+      "commodity": "NR",
+      "metric_id": "futures_settlement",
+      "frequency": "daily",
+      "unit": "CNY/tonne",
+      "start_date": "2025-01-06 00:00:00",
+      "end_date": "2025-12-31 00:00:00",
+      "n": 2628,
+      "dates": 219,
+      "known_release_dates": 0
+    },
+    {
+      "source_id": "SHFE_ARCHIVE",
+      "commodity": "NR",
+      "metric_id": "futures_volume",
+      "frequency": "daily",
+      "unit": "contracts",
+      "start_date": "2025-01-06 00:00:00",
+      "end_date": "2025-12-31 00:00:00",
+      "n": 2628,
+      "dates": 219,
+      "known_release_dates": 0
+    },
+    {
+      "source_id": "SHFE_ARCHIVE",
+      "commodity": "RU",
+      "metric_id": "futures_close",
+      "frequency": "daily",
+      "unit": "CNY/tonne",
+      "start_date": "2025-01-06 00:00:00",
+      "end_date": "2025-12-31 00:00:00",
+      "n": 2190,
+      "dates": 219,
+      "known_release_dates": 0
+    },
+    {
+      "source_id": "SHFE_ARCHIVE",
+      "commodity": "RU",
+      "metric_id": "futures_high",
+      "frequency": "daily",
+      "unit": "CNY/tonne",
+      "start_date": "2025-01-02 00:00:00",
+      "end_date": "2025-12-31 00:00:00",
+      "n": 2326,
+      "dates": 243,
+      "known_release_dates": 0
+    },
+    {
+      "source_id": "SHFE_ARCHIVE",
+      "commodity": "RU",
+      "metric_id": "futures_low",
+      "frequency": "daily",
+      "unit": "CNY/tonne",
+      "start_date": "2025-01-02 00:00:00",
+      "end_date": "2025-12-31 00:00:00",
+      "n": 2326,
+      "dates": 243,
+      "known_release_dates": 0
+    },
+    {
+      "source_id": "SHFE_ARCHIVE",
+      "commodity": "RU",
+      "metric_id": "futures_open",
+      "frequency": "daily",
+      "unit": "CNY/tonne",
+      "start_date": "2025-01-02 00:00:00",
+      "end_date": "2025-12-31 00:00:00",
+      "n": 2326,
+      "dates": 243,
+      "known_release_dates": 0
+    },
+    {
+      "source_id": "SHFE_ARCHIVE",
+      "commodity": "RU",
+      "metric_id": "futures_open_interest",
+      "frequency": "daily",
+      "unit": "contracts",
+      "start_date": "2025-01-06 00:00:00",
+      "end_date": "2025-12-31 00:00:00",
+      "n": 2190,
+      "dates": 219,
+      "known_release_dates": 0
+    },
+    {
+      "source_id": "SHFE_ARCHIVE",
+      "commodity": "RU",
+      "metric_id": "futures_settlement",
+      "frequency": "daily",
+      "unit": "CNY/tonne",
+      "start_date": "2025-01-06 00:00:00",
+      "end_date": "2025-12-31 00:00:00",
+      "n": 2190,
+      "dates": 219,
+      "known_release_dates": 0
+    },
+    {
+      "source_id": "SHFE_ARCHIVE",
+      "commodity": "RU",
+      "metric_id": "futures_volume",
+      "frequency": "daily",
+      "unit": "contracts",
+      "start_date": "2025-01-06 00:00:00",
+      "end_date": "2025-12-31 00:00:00",
+      "n": 2190,
+      "dates": 219,
+      "known_release_dates": 0
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "commodity": "NR",
+      "metric_id": "warehouse_receipts_factory",
+      "frequency": "daily",
+      "unit": "tonnes",
+      "start_date": "2026-11-09 00:00:00",
+      "end_date": "2026-11-12 00:00:00",
+      "n": 4,
+      "dates": 4,
+      "known_release_dates": 0
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "commodity": "NR",
+      "metric_id": "warehouse_receipts_warehouse",
+      "frequency": "daily",
+      "unit": "tonnes",
+      "start_date": "2026-11-09 00:00:00",
+      "end_date": "2026-11-12 00:00:00",
+      "n": 4,
+      "dates": 4,
+      "known_release_dates": 0
+    },
+    {
+      "source_id": "SHFE_RECEIPTS",
+      "commodity": "RU",
+      "metric_id": "warehouse_receipts_warehouse",
+      "frequency": "daily",
+      "unit": "tonnes",
+      "start_date": "2026-11-09 00:00:00",
+      "end_date": "2026-11-12 00:00:00",
+      "n": 4,
+      "dates": 4,
+      "known_release_dates": 0
+    }
+  ],
+  "margin_notice_checked_through": null,
+  "publication_warning": "Unknown publication time is NULL; first seen is not a release timestamp.",
+  "calendar_warning": "Coverage dates are actual official records; missing dates are never filled.",
+  "as_of_observations": 37161
+}

@@ -1,0 +1,88 @@
+{
+  "official_sources_with_structured_series": [
+    "MPOB",
+    "SHFE/INE official archive",
+    "NOAA CPC"
+  ],
+  "canonical_observations": 37161,
+  "raw_document_hash_checks": 59,
+  "raw_hash_checks_passed": true,
+  "tests": "20 passed, 6 dependency deprecation warnings",
+  "offline_replay": {
+    "replayed": 34,
+    "added": 0
+  },
+  "online_repeat_mpob": [
+    {
+      "source": "MPOB",
+      "url": "https://bepi.mpob.gov.my/stat/web_internal.php?val=202384",
+      "status": "parsed",
+      "rows": 36,
+      "added": 0
+    },
+    {
+      "source": "MPOB",
+      "url": "https://bepi.mpob.gov.my/stat/web_internal.php?val=202484",
+      "status": "parsed",
+      "rows": 36,
+      "added": 0
+    },
+    {
+      "source": "MPOB",
+      "url": "https://bepi.mpob.gov.my/stat/web_internal.php?val=202584",
+      "status": "parsed",
+      "rows": 36,
+      "added": 0
+    },
+    {
+      "source": "MPOB",
+      "url": "https://bepi.mpob.gov.my/stat/web_report1.php?val=202684",
+      "status": "parsed",
+      "rows": 30,
+      "added": 0
+    }
+  ],
+  "online_repeat_noaa": [
+    {
+      "source": "NOAA_ENSO",
+      "url": "https://www.cpc.ncep.noaa.gov/data/indices/ersst5.nino.mth.91-20.ascii",
+      "status": "parsed",
+      "rows": 918,
+      "added": 0
+    }
+  ],
+  "receipts": [
+    {
+      "source": "SHFE_RECEIPTS",
+      "url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20261109/ZH/all.html",
+      "status": "parsed",
+      "rows": 3,
+      "added": 3
+    },
+    {
+      "source": "SHFE_RECEIPTS",
+      "url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20261110/ZH/all.html",
+      "status": "parsed",
+      "rows": 3,
+      "added": 3
+    },
+    {
+      "source": "SHFE_RECEIPTS",
+      "url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20261111/ZH/all.html",
+      "status": "parsed",
+      "rows": 3,
+      "added": 3
+    },
+    {
+      "source": "SHFE_RECEIPTS",
+      "url": "https://www.shfe.cn/data/tradedata/future/stockdata/dailystock_20261112/ZH/all.html",
+      "status": "parsed",
+      "rows": 3,
+      "added": 3
+    }
+  ],
+  "remote_actions_executed": false,
+  "s3_restore_exercised": false,
+  "five_trading_days_validation_complete": false,
+  "existing_0800_task_modified": false
+}

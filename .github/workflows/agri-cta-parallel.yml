@@ -1,0 +1,71 @@
+name: Private CTA parallel pipeline
+on:
+  workflow_dispatch:
+    inputs:
+      phase:
+        type: choice
+        options: [collect, report, storage-check, delivery-probe]
+        default: collect
+      report_mode:
+        type: choice
+        options: [parallel, production]
+        default: parallel
+      report_date:
+        description: 'Optional Asia/Shanghai report date, YYYY-MM-DD'
+        type: string
+        required: false
+permissions:
+  contents: read
+concurrency:
+  group: agri-cta-private-store
+  cancel-in-progress: false
+jobs:
+  pipeline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: daily_agri_cta
+    env:
+      PYTHONPATH: src
+      CTA_S3_BUCKET: ${{ secrets.CTA_S3_BUCKET }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.CTA_AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.CTA_AWS_SECRET_ACCESS_KEY }}
+      AWS_DEFAULT_REGION: ${{ secrets.CTA_AWS_REGION }}
+      CTA_DELIVERY_WEBHOOK_URL: ${{ secrets.CTA_DELIVERY_WEBHOOK_URL }}
+      REPORT_DATE: ${{ inputs.report_date }}
+      REPORT_MODE: ${{ inputs.report_mode }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -e '.[test]' boto3
+      - name: Require private persistence and restore
+        id: restore
+        run: |
+          test -n "$CTA_S3_BUCKET" || { echo 'Private storage is unconfigured; refusing transient-only execution'; exit 1; }
+          python -c "import os; from agri_cta.persistence import sync; sync('data',os.environ['CTA_S3_BUCKET'],'agri-cta',restore=True)"
+      - name: Collect independently with source failure accounting
+        if: ${{ inputs.phase == 'collect' }}
+        run: python -c "from agri_cta.orchestrator import collect_daily; collect_daily('data')"
+      - name: Verify actual private restore
+        if: ${{ inputs.phase == 'storage-check' }}
+        run: python -m agri_cta.cli storage-check --data data
+      - name: Generate gated report only, without sending
+        if: ${{ inputs.phase == 'report' }}
+        run: |
+          if test -n "$REPORT_DATE"; then
+            python -m agri_cta.cli daily --data data --mode "$REPORT_MODE" --report-date "$REPORT_DATE" --output data/current_briefing
+          else
+            python -m agri_cta.cli daily --data data --mode "$REPORT_MODE" --output data/current_briefing
+          fi
+          python -c "import json; m=json.load(open('data/current_briefing/report_manifest.json')); print('Generated:',m['run_id'],'replacement_ready:',m['replacement_ready'],'delivery: not attempted')"
+      - name: Explicit delivery smoke test
+        if: ${{ inputs.phase == 'delivery-probe' }}
+        run: python -m agri_cta.cli delivery-probe --data data
+      - name: Persist state and failed-source evidence privately
+        if: ${{ always() && steps.restore.outcome == 'success' }}
+        run: |
+          test -f data/history.duckdb || exit 1
+          python -c "import os; from agri_cta.persistence import sync; sync('data',os.environ['CTA_S3_BUCKET'],'agri-cta')"

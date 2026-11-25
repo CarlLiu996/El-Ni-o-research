@@ -1,0 +1,104 @@
+<div id="__ROOT_ID__">
+  <header class="report-heading">
+    <h2>九品种 · 长历史观察</h2>
+    <p>库存、期限结构与相对价格</p>
+    <p class="text-small text-muted">__ASOF_NOTE__ · 数据截止日随指标列示 · 点击品种展开</p>
+  </header>
+  __PRODUCTS__
+  <p class="text-small text-muted">日度新增图与周度持续观察分别判断。指定合约不换月、不与主连拼接；缺失不补值。单一专业行情尚未完成交易所逐条交叉校验。</p>
+  <script id="agri-long-history-data" type="application/json">__DATA__</script>
+</div>
+<style>
+  #__ROOT_ID__ { color:var(--foreground); display:grid; gap:calc(var(--font-size-base) * 1.4); }
+  #__ROOT_ID__ .report-heading { display:grid; gap:calc(var(--font-size-base) * .5); padding-right:calc(var(--font-size-base) * 6.5); }
+  #__ROOT_ID__ h2, #__ROOT_ID__ h3 { font-weight:500; }
+  #__ROOT_ID__ .commodity { min-width:0; }
+  #__ROOT_ID__ .commodity > summary { display:list-item; padding:calc(var(--font-size-base) * .75) 0; border-bottom:1px solid var(--border); }
+  #__ROOT_ID__ .summary-line { display:inline-flex; flex-wrap:wrap; gap:calc(var(--font-size-base) * .5); justify-content:space-between; width:calc(100% - 1.5em); }
+  #__ROOT_ID__ .commodity-content { display:grid; gap:calc(var(--font-size-base) * 2); padding-top:calc(var(--font-size-base) * 1); }
+  #__ROOT_ID__ .commodity:not([open]) > .commodity-content { display:none; }
+  #__ROOT_ID__ .figure { display:grid; gap:calc(var(--font-size-base) * .6); min-width:0; }
+  #__ROOT_ID__ .figure-header { display:grid; gap:calc(var(--font-size-base) * .25); }
+  #__ROOT_ID__ .legend { display:flex; flex-wrap:wrap; gap:calc(var(--font-size-base) * .5) calc(var(--font-size-base) * 1.1); font-variant-numeric:tabular-nums; }
+  #__ROOT_ID__ .legend-item { display:inline-flex; gap:calc(var(--font-size-base) * .35); align-items:center; }
+  #__ROOT_ID__ .swatch { width:1.2em; height:3px; display:inline-block; flex-shrink:0; }
+  #__ROOT_ID__ .plot-frame { display:grid; grid-template-columns:4.3em minmax(0,1fr); gap:calc(var(--font-size-base) * .4); padding-right:5px; }
+  #__ROOT_ID__ .y-labels { position:relative; height:260px; font-variant-numeric:tabular-nums; text-align:right; }
+  #__ROOT_ID__ .y-labels span { position:absolute; right:0; transform:translateY(-50%); }
+  #__ROOT_ID__ .chart-svg { display:block; width:100%; height:260px; overflow:visible; }
+  #__ROOT_ID__ .chart-svg line.grid { stroke:var(--border); stroke-width:1; vector-effect:non-scaling-stroke; }
+  #__ROOT_ID__ .chart-svg line.zero { stroke:var(--muted-foreground); stroke-width:1; vector-effect:non-scaling-stroke; }
+  #__ROOT_ID__ .chart-svg .curve { fill:none; vector-effect:non-scaling-stroke; }
+  #__ROOT_ID__ .chart-svg .guide { stroke:var(--muted-foreground); stroke-dasharray:3 4; stroke-width:1; vector-effect:non-scaling-stroke; opacity:.65; }
+  #__ROOT_ID__ .chart-svg .dot { stroke:var(--background); stroke-width:1.5; vector-effect:non-scaling-stroke; }
+  #__ROOT_ID__ .x-labels { position:relative; height:1.4em; margin-left:calc(4.3em + var(--font-size-base) * .4); margin-right:5px; font-variant-numeric:tabular-nums; }
+  #__ROOT_ID__ .x-labels span { position:absolute; top:0; white-space:nowrap; }
+  #__ROOT_ID__ .inspect { display:grid; gap:calc(var(--font-size-base) * .25); margin-left:calc(4.3em + var(--font-size-base) * .4); }
+  #__ROOT_ID__ output { display:block; font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
+  #__ROOT_ID__ .zoom { margin-top:calc(var(--font-size-base) * .25); }
+  #__ROOT_ID__ .zoom > summary { padding:calc(var(--font-size-base) * .35) 0; }
+  #__ROOT_ID__ .zoom .figure { padding-top:calc(var(--font-size-base) * .8); }
+  #__ROOT_ID__ .zoom:not([open]) > .figure { display:none; }
+  @media (max-width:480px) {
+    #__ROOT_ID__ .report-heading { padding-right:0; }
+    #__ROOT_ID__ .x-labels span:nth-child(even):not(:last-child) { display:none; }
+  }
+</style>
+<script>
+(() => {
+  const root=document.getElementById('__ROOT_ID__');
+  if(!root)return;
+  const charts=JSON.parse(root.querySelector('#agri-long-history-data').textContent);
+  const selected={};
+  const number=new Intl.NumberFormat('zh-CN',{maximumFractionDigits:4});
+  const reduce=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const frames=new Map();
+  function paint(id,index,animate=false) {
+    const c=charts[id],section=root.querySelector('[data-chart-id="'+id+'"]');
+    if(!c||!section)return;
+    index=Math.max(0,Math.min(c.rows.length-1,Number(index)));
+    if(!Number.isInteger(index))return;
+    selected[id]=index;
+    const row=c.rows[index],x=c.x[index],y=c.series.map((_,j)=>row[j+1]===null?null:260-(row[j+1]-c.domain[0])/(c.domain[1]-c.domain[0])*260);
+    const output=section.querySelector('output'),input=section.querySelector('input');
+    output.textContent=row[0]+' · '+c.series.map((s,j)=>s+': '+(row[j+1]===null?'未取得':number.format(row[j+1]))).join('；')+' '+c.unit;
+    input.value=String(index);
+    const guide=section.querySelector('.guide'),dots=[...section.querySelectorAll('.dot')];
+    const from=Number(guide.getAttribute('x1')),oldY=dots.map(d=>Number(d.getAttribute('cy')));
+    if(frames.has(id))cancelAnimationFrame(frames.get(id));
+    const start=performance.now(),duration=animate&&!reduce?160:0;
+    function step(time) {
+      const fraction=duration?Math.min(1,(time-start)/duration):1;
+      const f=1-Math.pow(1-fraction,3),xx=from+(x-from)*f;
+      guide.setAttribute('x1',xx);guide.setAttribute('x2',xx);
+      dots.forEach((dot,j)=>{
+        dot.style.display=y[j]===null?'none':'';
+        if(y[j]!==null){dot.setAttribute('cx',xx);dot.setAttribute('cy',oldY[j]+(y[j]-oldY[j])*f);}
+      });
+      if(fraction<1)frames.set(id,requestAnimationFrame(step));
+    }
+    step(start);
+  }
+  function save() {
+    const open=[...root.querySelectorAll('details.commodity')].find(d=>d.open)?.dataset.symbol||'P';
+    if(typeof window.openai?.setWidgetState==='function')window.openai.setWidgetState({modelContent:{view:'long-history',commodity:open},privateContent:{kind:'agri-long-history-v1',selected,open}}).catch(()=>{});
+  }
+  function restore(state) {
+    const saved=state?.privateContent??state;
+    if(saved?.kind!=='agri-long-history-v1')return;
+    for(const [id,index] of Object.entries(saved.selected||{}))if(charts[id]&&Number.isInteger(index))paint(id,index);
+    const detail=[...root.querySelectorAll('details.commodity')].find(d=>d.dataset.symbol===saved.open);
+    if(detail)detail.open=true;
+  }
+  for(const [id,c] of Object.entries(charts)) {
+    const section=root.querySelector('[data-chart-id="'+id+'"]');
+    if(!section)continue;
+    paint(id,c.initial_index);
+    section.querySelector('input').addEventListener('input',event=>paint(id,event.target.value,true));
+    section.querySelector('input').addEventListener('change',save);
+  }
+  restore(window.openai?.widgetState);
+  root.addEventListener('click',event=>{const summary=event.target.closest('summary');if(summary?.parentElement.matches('details.commodity'))setTimeout(save,0);});
+  window.addEventListener('openai:set_globals',event=>restore(event.detail?.globals?.widgetState));
+})();
+</script>
